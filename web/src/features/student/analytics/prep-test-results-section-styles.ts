@@ -34,9 +34,10 @@ const PT_RESULTS_SUMMARY_ROW_CLASS =
 
 /** Figma `18644:33841` — section block: elevated surface + gray header + passage groups */
 const PT_RESULTS_SECTION_BLOCK_CLASS =
-  "flex flex-col gap-[24px] overflow-hidden rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-[24px]"
+  "flex flex-col gap-3 overflow-hidden rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-3 md:gap-[24px] md:p-[24px]"
 
-const PT_RESULTS_SECTION_HEADER_CLASS = "rounded-[16px] bg-[var(--greyscale-25)] px-[24px] py-4"
+const PT_RESULTS_SECTION_HEADER_CLASS =
+  "rounded-[12px] bg-[var(--greyscale-25)] px-3 py-2.5 md:rounded-[16px] md:px-[24px] md:py-4"
 
 const PT_RESULTS_SECTION_CLASS =
   "overflow-hidden rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)]"

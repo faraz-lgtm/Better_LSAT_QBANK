@@ -42,7 +42,7 @@ const EXAM_MORE_PANEL_OVERLAY_CLASS =
   "fixed inset-0 z-[200] bg-[rgba(0,0,0,0.3)] backdrop-blur-[3px]"
 
 const EXAM_MORE_PANEL_CLASS =
-  "fixed inset-y-0 right-0 z-[210] flex h-full w-[360px] flex-col items-start bg-[var(--primary-0)] p-3"
+  "fixed inset-y-0 right-0 z-[210] flex h-full w-full max-w-[360px] flex-col items-start overflow-x-hidden bg-[var(--primary-0)] p-3"
 
 const EXAM_MORE_PANEL_CLOSE_ROW_CLASS = "flex h-12 w-full shrink-0 items-center justify-end"
 
@@ -61,10 +61,10 @@ const EXAM_MORE_PANEL_DIVIDER_CLASS =
   "h-[3px] w-full border-b-2 border-t border-[var(--greyscale-100)]"
 
 const EXAM_MORE_PANEL_TOGGLE_ROW_CLASS =
-  "flex h-12 w-full shrink-0 items-center justify-between rounded-[14px] p-2"
+  "flex min-h-12 w-full min-w-0 shrink-0 items-center justify-between gap-2 rounded-[14px] p-2"
 
 const EXAM_MORE_PANEL_TOGGLE_LABEL_CLASS =
-  "text-[18px] font-medium leading-[1.4] tracking-[0.36px] text-[var(--color-student-heading)]"
+  "min-w-0 flex-1 text-[18px] font-medium leading-[1.4] tracking-[0.36px] text-[var(--color-student-heading)]"
 
 /** Figma `20268:105580` — exam header chrome (compact on phone, desktop sizing from md) */
 const ACTIVE_DRILL_HEADER_SHELL_CLASS =

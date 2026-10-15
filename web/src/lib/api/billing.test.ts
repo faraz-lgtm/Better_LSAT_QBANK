@@ -138,6 +138,20 @@ describe('createBillingApi', () => {
     })
   })
 
+  it('getPaymentMethods passes replacePaymentMethodId', async () => {
+    const invoke = vi.fn().mockResolvedValue({
+      data: { paymentMethods: [] },
+      error: null,
+    })
+    const api = createBillingApi(mockSupabase(invoke))
+    await api.getPaymentMethods({ replacePaymentMethodId: 'pm_old' })
+    expect(invoke).toHaveBeenCalledWith('billing-get-payment-methods', {
+      method: 'POST',
+      body: { replacePaymentMethodId: 'pm_old' },
+      headers: { Authorization: 'Bearer t1' },
+    })
+  })
+
   it('getInvoices invokes billing-get-invoices', async () => {
     const invoke = vi.fn().mockResolvedValue({
       data: {
@@ -181,4 +195,25 @@ describe('createBillingApi', () => {
       headers: { Authorization: 'Bearer t1' },
     })
   })
+
+  it('createBillingPortalSession passes replacePaymentMethodId', async () => {
+    const invoke = vi.fn().mockResolvedValue({
+      data: { url: 'https://billing.stripe.test/session' },
+      error: null,
+    })
+    const api = createBillingApi(mockSupabase(invoke))
+    await api.createBillingPortalSession({
+      appBaseUrl: 'http://localhost:5173',
+      replacePaymentMethodId: 'pm_old',
+    })
+    expect(invoke).toHaveBeenCalledWith('billing-create-portal-session', {
+      method: 'POST',
+      body: {
+        appBaseUrl: 'http://localhost:5173',
+        replacePaymentMethodId: 'pm_old',
+      },
+      headers: { Authorization: 'Bearer t1' },
+    })
+  })
+
 })

@@ -67,13 +67,13 @@ const FILTER_PILL_INACTIVE_CLASS =
   "inline-flex h-8 shrink-0 items-center justify-center whitespace-nowrap rounded-[10px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-4 py-2 text-[12px] font-semibold leading-[1.5] tracking-[0.24px] text-[var(--primary)] shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)] transition-colors hover:bg-[var(--greyscale-25)]"
 
 const CONTINUE_ACTION_CLASS =
-  "ds-btn-sm h-10 w-[106px] shrink-0 rounded-[12px] px-4 py-2 text-[14px] font-semibold leading-[1.5] tracking-[0.28px]"
+  "ds-btn-sm h-8 w-auto min-w-0 shrink-0 whitespace-nowrap rounded-[10px] px-2.5 py-1.5 text-[12px] font-semibold leading-[1.5] tracking-[0.24px] md:h-10 md:w-[106px] md:rounded-[12px] md:px-4 md:py-2 md:text-[14px] md:tracking-[0.28px]"
 const RETAKE_ACTION_CLASS =
-  "inline-flex h-10 w-[106px] shrink-0 items-center justify-center gap-2 rounded-[12px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-4 py-2 text-[14px] font-semibold leading-[1.5] tracking-[0.28px] text-[var(--greyscale-500)] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[var(--greyscale-25)]"
+  "inline-flex h-8 w-auto min-w-0 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-[10px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-2.5 py-1.5 text-[12px] font-semibold leading-[1.5] tracking-[0.24px] text-[var(--greyscale-500)] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[var(--greyscale-25)] md:h-10 md:w-[106px] md:gap-2 md:rounded-[12px] md:px-4 md:py-2 md:text-[14px] md:tracking-[0.28px]"
 const BLIND_REVIEW_ACTION_CLASS =
-  "inline-flex h-10 shrink-0 items-center justify-center rounded-[12px] border border-[#ffe5b7] bg-[#ffbd4c] px-4 py-2 text-[14px] font-semibold leading-[1.5] tracking-[0.28px] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#f5b03f] disabled:opacity-60"
+  "inline-flex h-8 w-auto min-w-0 shrink-0 items-center justify-center whitespace-nowrap rounded-[10px] border border-[#ffe5b7] bg-[#ffbd4c] px-2.5 py-1.5 text-[11px] font-semibold leading-[1.35] tracking-[0.22px] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#f5b03f] disabled:opacity-60 md:h-10 md:rounded-[12px] md:px-4 md:py-2 md:text-[14px] md:leading-[1.5] md:tracking-[0.28px]"
 const RESULT_ACTION_CLASS =
-  "inline-flex h-10 w-[106px] shrink-0 items-center justify-center gap-2 rounded-[12px] border border-[var(--primary)] bg-[var(--primary-0)] px-4 py-2 text-[14px] font-semibold leading-[1.5] tracking-[0.28px] text-[var(--primary)] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[var(--primary-25)]"
+  "inline-flex h-8 w-auto min-w-0 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-[10px] border border-[var(--primary)] bg-[var(--primary-0)] px-2.5 py-1.5 text-[12px] font-semibold leading-[1.5] tracking-[0.24px] text-[var(--primary)] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[var(--primary-25)] md:h-10 md:w-[106px] md:gap-2 md:rounded-[12px] md:px-4 md:py-2 md:text-[14px] md:tracking-[0.28px]"
 
 /** Default white card; Figma `19956:59132` on hover (collapsed only). */
 const PREPTEST_CARD_SHELL_CLASS =
@@ -215,9 +215,7 @@ function FigmaIcon({
   )
 }
 
-/** Match explanations tree PT chip (`PREP_TEST_BADGE_SIZE` 64×64, 14px radius). */
-const PT_BADGE_SIZE = { width: 64, height: 64, minWidth: 64, minHeight: 64, borderRadius: 14 } as const
-
+/** Match explanations tree PT chip on md+ (`PREP_TEST_BADGE_SIZE` 64×64); compact on mobile. */
 function PtBadge({ number, tone = "default" }: { number: number; tone?: BadgeTone }) {
   const palette =
     tone === "muted"
@@ -228,11 +226,15 @@ function PtBadge({ number, tone = "default" }: { number: number; tone?: BadgeTon
   return (
     <div
       data-pt-badge
-      className={cn("flex shrink-0 flex-col items-center justify-center border p-px", palette)}
-      style={PT_BADGE_SIZE}
+      className={cn(
+        "flex size-12 shrink-0 flex-col items-center justify-center rounded-[12px] border p-px md:size-16 md:rounded-[14px]",
+        palette,
+      )}
     >
-      <span className="w-[35px] text-center text-[12px] font-semibold leading-[1.35]">PT</span>
-      <span className="text-[24px] font-bold leading-[1.3] tabular-nums">{number || "—"}</span>
+      <span className="w-[28px] text-center text-[10px] font-semibold leading-[1.35] md:w-[35px] md:text-[12px]">
+        PT
+      </span>
+      <span className="text-[18px] font-bold leading-[1.3] tabular-nums md:text-[24px]">{number || "—"}</span>
     </div>
   )
 }
@@ -268,10 +270,10 @@ function PrepTestIdentity({
   return (
     <>
       <PtBadge number={ptNumber} tone={badgeTone} />
-      <div className="flex min-w-0 flex-col items-start justify-center gap-2">
-        <p className={cn("truncate text-[16px] font-semibold leading-[1.5] tracking-[0.32px]", titleClass)}>{title}</p>
+      <div className="flex min-w-0 flex-1 flex-col items-start justify-center gap-1 overflow-hidden md:gap-2">
+        <p className={cn("w-full truncate text-[14px] font-semibold leading-[1.5] tracking-[0.28px] md:text-[16px] md:tracking-[0.32px]", titleClass)}>{title}</p>
         {subtitle ? (
-          <p className="truncate text-[12px] font-medium leading-[1.5] tracking-[0.24px] text-[var(--greyscale-500)]">
+          <p className="w-full truncate text-[13px] font-medium leading-[1.5] tracking-[0.26px] text-[var(--greyscale-500)]">
             {subtitle}
           </p>
         ) : null}
@@ -313,9 +315,12 @@ function PrepTestListCardShell({
   expanded?: boolean
   expandedContent?: ReactNode
 }) {
+  const hasPrimaryAction = actions != null
   const identityClass = cn(
-    "flex min-w-0 items-center gap-3 md:gap-4",
-    center ? "min-w-0 flex-1 md:w-[198px] md:flex-none md:shrink-0" : "min-h-0 flex-1",
+    "flex min-w-0 items-center gap-2 overflow-hidden md:gap-4",
+    center
+      ? "md:w-[198px] md:shrink-0"
+      : "min-w-0 flex-1",
   )
   const identity = (
     <PrepTestIdentity
@@ -340,12 +345,6 @@ function PrepTestListCardShell({
   ) : (
     <div className={identityClass}>{identity}</div>
   )
-  const actionsNode = (
-    <div className={cn("flex shrink-0 items-center", center ? "gap-2 md:gap-4" : "gap-4")}>
-      {actions}
-      <MoreMenuButton />
-    </div>
-  )
 
   return (
     <article
@@ -361,17 +360,49 @@ function PrepTestListCardShell({
     >
       <div
         className={cn(
-          "flex transition-colors",
+          "grid w-full min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-2 px-3 py-2.5 transition-colors",
           center
-            ? "grid h-auto grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-3 px-3 py-3 md:flex md:h-[88px] md:flex-row md:justify-between md:gap-0 md:px-4 md:py-0"
-            : "h-[88px] items-center gap-4 px-4",
+            ? "md:grid-cols-[198px_minmax(0,1fr)_auto] md:gap-x-4"
+            : "md:flex md:h-[88px] md:grid-cols-none md:flex-row md:gap-4",
+          center ? "md:h-[88px] md:px-4 md:py-0" : "md:px-4 md:py-0",
           expanded ? "rounded-t-[16px]" : undefined,
           !expanded && badgeTone !== "muted" && "group-hover:bg-[var(--primary-25)]",
         )}
       >
         {identityNode}
-        {center ? <div className="col-start-2 row-start-1 md:contents">{actionsNode}</div> : actionsNode}
-        {center ? <div className="col-span-2 min-w-0 md:col-span-1 md:contents">{center}</div> : null}
+
+        {/* Mobile: ⋮ stays on the title row; CTA moves below so it cannot cover status text */}
+        {hasPrimaryAction || center ? (
+          <div className="col-start-2 row-start-1 flex shrink-0 items-center justify-self-end md:hidden">
+            <MoreMenuButton />
+          </div>
+        ) : null}
+
+        {center ? (
+          <div className="col-span-2 min-w-0 md:col-span-1 md:col-start-2 md:row-start-1 md:justify-self-center">
+            {center}
+          </div>
+        ) : null}
+
+        <div
+          data-preptest-card-actions
+          className={cn(
+            "flex shrink-0 items-center gap-2 md:gap-4",
+            hasPrimaryAction || center
+              ? "col-span-2 justify-end md:col-span-1 md:row-start-1 md:justify-self-end"
+              : "col-start-2 row-start-1 justify-self-end md:ml-auto",
+            center ? "md:col-start-3" : undefined,
+          )}
+        >
+          {actions}
+          {hasPrimaryAction || center ? (
+            <span className="hidden md:inline-flex">
+              <MoreMenuButton />
+            </span>
+          ) : (
+            <MoreMenuButton />
+          )}
+        </div>
       </div>
 
       {expandedContent}
@@ -436,7 +467,7 @@ function PrepTestListCard({
     </button>
   ) : unavailableLabel ? (
     <span
-      className="inline-flex h-10 max-w-[280px] items-center justify-center gap-2 rounded-2xl px-4 py-2 text-center text-[14px] font-normal leading-[1.5] tracking-[0.28px] text-[var(--greyscale-500)]"
+      className="inline-flex h-8 max-w-[9rem] items-center justify-center gap-1.5 rounded-xl px-2.5 py-1.5 text-center text-[11px] font-normal leading-[1.35] tracking-[0.22px] text-[var(--greyscale-500)] md:h-10 md:max-w-[280px] md:gap-2 md:rounded-2xl md:px-4 md:py-2 md:text-[14px] md:leading-[1.5] md:tracking-[0.28px]"
       title={unavailableLabel}
     >
       <span className="inline-flex size-5 shrink-0 items-center justify-center">

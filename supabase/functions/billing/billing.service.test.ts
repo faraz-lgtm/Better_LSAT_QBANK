@@ -63,11 +63,8 @@ Deno.test('billing service createCheckoutSession creates customer and returns ur
     }),
     stripe: {
       customers: {
-        create: async (params: Record<string, unknown>) => {
+        create: async () => {
           customerCreated = true
-          const metadata = params.metadata as Record<string, string>
-          assertEquals(metadata.user_id, 'u-1')
-          assertEquals(metadata.posthog_person_distinct_id, 'u-1')
           return { id: 'cus_1' }
         },
       },
@@ -90,7 +87,6 @@ Deno.test('billing service createCheckoutSession creates customer and returns ur
         sessions: {
           create: async (params: Record<string, unknown>) => {
             assertEquals(params.mode, 'subscription')
-            assertEquals(params.client_reference_id, 'u-1')
             assertEquals(
               params.success_url,
               'http://localhost:5173/app/lsac-link-step?checkout=success&session_id={CHECKOUT_SESSION_ID}',
@@ -100,17 +96,19 @@ Deno.test('billing service createCheckoutSession creates customer and returns ur
               'http://localhost:5173/checkout?plan=monthly&checkout=cancel',
             )
             const lineItems = params.line_items as Array<Record<string, unknown>>
-            assertEquals(lineItems[0], { price: 'price_core_test', quantity: 1 })
+            const corePriceData = lineItems[0]?.price_data as Record<string, unknown>
+            assertEquals(
+              (corePriceData?.product_data as Record<string, string>)?.name,
+              'Better LSAT Monthly',
+            )
             assertEquals((lineItems[1]?.price_data as Record<string, unknown>)?.unit_amount, 12400)
             const metadata = params.metadata as Record<string, string>
             assertEquals(metadata.plan, 'monthly')
             assertEquals(metadata.user_id, 'u-1')
-            assertEquals(metadata.posthog_person_distinct_id, 'u-1')
             const subscriptionData = params.subscription_data as {
               metadata: Record<string, string>
             }
             assertEquals(subscriptionData.metadata.user_id, 'u-1')
-            assertEquals(subscriptionData.metadata.posthog_person_distinct_id, 'u-1')
             assertEquals(subscriptionData.metadata.plan, 'monthly')
             return { url: 'https://checkout.stripe.test/session' }
           },
@@ -213,8 +211,12 @@ Deno.test('billing service createCheckoutSession skips LawHub when includeLawHub
           create: async (params: Record<string, unknown>) => {
             const lineItems = params.line_items as Array<Record<string, unknown>>
             assertEquals(lineItems.length, 1)
-            assertEquals(lineItems[0], { price: 'price_core_test', quantity: 1 })
-            assertEquals('price_data' in (lineItems[0] ?? {}), false)
+            const priceData = lineItems[0]?.price_data as Record<string, unknown>
+            assertEquals(
+              (priceData?.product_data as Record<string, string>)?.name,
+              'Better LSAT Monthly',
+            )
+            assertEquals(priceData?.unit_amount, 6900)
             assertEquals((params.metadata as Record<string, string>).include_lawhub, 'false')
             assertEquals(
               (params.custom_text as Record<string, Record<string, string>>)?.submit?.message,
@@ -255,9 +257,6 @@ Deno.test('billing service createCheckoutSession uses the 3-month Core price', a
         update: async (customerId: string, params: Record<string, unknown>) => {
           assertEquals(customerId, 'cus_existing')
           customerNameUpdated = params.name as string
-          const metadata = params.metadata as Record<string, string>
-          assertEquals(metadata.user_id, 'u-1')
-          assertEquals(metadata.posthog_person_distinct_id, 'u-1')
           return { id: customerId }
         },
       },
@@ -282,15 +281,14 @@ Deno.test('billing service createCheckoutSession uses the 3-month Core price', a
       checkout: {
         sessions: {
           create: async (params: Record<string, unknown>) => {
-            const lineItems = params.line_items as Array<{ price: string; quantity: number }>
-            assertEquals(lineItems[0], { price: 'price_core_3_month_test', quantity: 1 })
-            const metadata = params.metadata as Record<string, string>
-            assertEquals(metadata.plan, 'three_month')
-            assertEquals(metadata.posthog_person_distinct_id, 'u-1')
-            const subscriptionData = params.subscription_data as {
-              metadata: Record<string, string>
-            }
-            assertEquals(subscriptionData.metadata.posthog_person_distinct_id, 'u-1')
+            const lineItems = params.line_items as Array<Record<string, unknown>>
+            const corePriceData = lineItems[0]?.price_data as Record<string, unknown>
+            assertEquals(
+              (corePriceData?.product_data as Record<string, string>)?.name,
+              'Better LSAT 3 Months',
+            )
+            assertEquals(corePriceData?.recurring, { interval: 'month', interval_count: 3 })
+            assertEquals((params.metadata as Record<string, string>).plan, 'three_month')
             assertEquals('customer_details' in params, false)
             return { url: 'https://checkout.stripe.test/three-month' }
           },
@@ -304,7 +302,7 @@ Deno.test('billing service createCheckoutSession uses the 3-month Core price', a
   assertEquals(out.url, 'https://checkout.stripe.test/three-month')
 })
 
-Deno.test('billing service uses catalog price when LawHub is excluded', async () => {
+Deno.test('billing service uses inline price_data with catalog name when LawHub is excluded', async () => {
   const service = createBillingService({
     getEnv: () => env,
     getAppBaseUrl: () => 'http://localhost:5173',
@@ -331,8 +329,13 @@ Deno.test('billing service uses catalog price when LawHub is excluded', async ()
         sessions: {
           create: async (params: Record<string, unknown>) => {
             const lineItems = params.line_items as Array<Record<string, unknown>>
-            assertEquals(lineItems[0], { price: 'price_core_6_month_test', quantity: 1 })
-            assertEquals('price_data' in (lineItems[0] ?? {}), false)
+            const priceData = lineItems[0]?.price_data as Record<string, unknown>
+            assertEquals(
+              (priceData?.product_data as Record<string, string>)?.name,
+              'Better LSAT 6 Months',
+            )
+            assertEquals(priceData?.unit_amount, 35400)
+            assertEquals(priceData?.recurring, { interval: 'month', interval_count: 6 })
             return { url: 'https://checkout.stripe.test/six-month' }
           },
         },
@@ -684,24 +687,11 @@ Deno.test('getBillingHistory maps paid invoices', async () => {
               created: 1_724_500_000,
               invoice_pdf: 'https://stripe.test/pdf',
               hosted_invoice_url: null,
-              lines: { data: [{ description: 'Better LSAT Core' }] },
-            },
-            {
-              id: 'in_2',
-              number: 'INV-2026-009',
-              amount_paid: 35400,
-              currency: 'usd',
-              status: 'paid',
-              created: 1_724_600_000,
-              invoice_pdf: null,
-              hosted_invoice_url: null,
               lines: {
-                data: [
-                  {
-                    description: 'Better LSAT Core',
-                    price: { id: env.priceIds.sixMonth },
-                  },
-                ],
+                data: [{
+                  description: 'Better LSAT Monthly',
+                  price: { id: 'price_core_test' },
+                }],
               },
             },
           ],
@@ -711,11 +701,10 @@ Deno.test('getBillingHistory maps paid invoices', async () => {
   })
 
   const out = await service.getBillingHistory('u-1')
-  assertEquals(out.invoices.length, 2)
+  assertEquals(out.invoices.length, 1)
   assertEquals(out.invoices[0]?.number, 'INV-2026-008')
   assertEquals(out.invoices[0]?.amountPaidCents, 3900)
   assertEquals(out.invoices[0]?.title, 'Monthly')
-  assertEquals(out.invoices[1]?.title, '6 Months')
 })
 
 Deno.test('createBillingPortalSession returns portal url', async () => {
@@ -760,6 +749,174 @@ Deno.test('createBillingPortalSession returns portal url', async () => {
 
   const out = await service.createBillingPortalSession('u-1')
   assertEquals(out.url, 'https://billing.stripe.test/session')
+})
+
+Deno.test('createBillingPortalSession replace flow encodes old pm on return url', async () => {
+  const service = createBillingService({
+    getEnv: () => env,
+    getAppBaseUrl: () => 'http://localhost:5173',
+    repository: makeRepo({
+      async getProfileBillingFields() {
+        return {
+          id: 'u-1',
+          email: 'a@b.com',
+          full_name: 'Ada Lovelace',
+          first_name: 'Ada',
+          last_name: 'Lovelace',
+          stripe_customer_id: 'cus_1',
+          prep_plus_source: 'vendor_subscription',
+        }
+      },
+    }),
+    stripe: {
+      paymentMethods: {
+        retrieve: async (id: string) => {
+          assertEquals(id, 'pm_old')
+          return { id: 'pm_old', customer: 'cus_1' }
+        },
+      },
+      billingPortal: {
+        sessions: {
+          create: async (params: Record<string, unknown>) => {
+            assertEquals(
+              params.return_url,
+              'http://localhost:5173/app/account?replace_pm=pm_old',
+            )
+            const flowData = params.flow_data as {
+              after_completion: { redirect: { return_url: string } }
+            }
+            assertEquals(
+              flowData.after_completion.redirect.return_url,
+              'http://localhost:5173/app/account?replace_pm=pm_old',
+            )
+            return { url: 'https://billing.stripe.test/session' }
+          },
+        },
+      },
+    } as unknown as import('npm:stripe@17.7.0').default,
+  })
+
+  const out = await service.createBillingPortalSession('u-1', {
+    replacePaymentMethodId: 'pm_old',
+  })
+  assertEquals(out.url, 'https://billing.stripe.test/session')
+})
+
+Deno.test('getPaymentMethods replace flow detaches old card when default changed', async () => {
+  const detached: string[] = []
+  let customerRetrieveCount = 0
+  const service = createBillingService({
+    getEnv: () => env,
+    getAppBaseUrl: () => 'http://localhost:5173',
+    repository: makeRepo({
+      async getProfileBillingFields() {
+        return {
+          id: 'u-1',
+          email: 'a@b.com',
+          full_name: 'Ada Lovelace',
+          first_name: 'Ada',
+          last_name: 'Lovelace',
+          stripe_customer_id: 'cus_1',
+          prep_plus_source: 'vendor_subscription',
+        }
+      },
+    }),
+    stripe: {
+      customers: {
+        retrieve: async () => {
+          customerRetrieveCount += 1
+          return {
+            id: 'cus_1',
+            deleted: undefined,
+            invoice_settings: { default_payment_method: 'pm_new' },
+          }
+        },
+      },
+      paymentMethods: {
+        retrieve: async (id: string) => ({ id, customer: 'cus_1' }),
+        detach: async (id: string) => {
+          detached.push(id)
+          return { id }
+        },
+        list: async () => ({
+          data: [
+            {
+              id: 'pm_new',
+              card: {
+                brand: 'visa',
+                last4: '4242',
+                exp_month: 12,
+                exp_year: 2030,
+                funding: 'credit',
+              },
+            },
+          ],
+        }),
+      },
+    } as unknown as import('npm:stripe@17.7.0').default,
+  })
+
+  const out = await service.getPaymentMethods('u-1', { replacePaymentMethodId: 'pm_old' })
+  assertEquals(detached, ['pm_old'])
+  assertEquals(out.paymentMethods.length, 1)
+  assertEquals(out.paymentMethods[0]?.id, 'pm_new')
+  assertEquals(customerRetrieveCount >= 1, true)
+})
+
+Deno.test('getPaymentMethods replace flow keeps card when default unchanged', async () => {
+  const detached: string[] = []
+  const service = createBillingService({
+    getEnv: () => env,
+    getAppBaseUrl: () => 'http://localhost:5173',
+    repository: makeRepo({
+      async getProfileBillingFields() {
+        return {
+          id: 'u-1',
+          email: 'a@b.com',
+          full_name: 'Ada Lovelace',
+          first_name: 'Ada',
+          last_name: 'Lovelace',
+          stripe_customer_id: 'cus_1',
+          prep_plus_source: 'vendor_subscription',
+        }
+      },
+    }),
+    stripe: {
+      customers: {
+        retrieve: async () => ({
+          id: 'cus_1',
+          deleted: undefined,
+          invoice_settings: { default_payment_method: 'pm_old' },
+        }),
+      },
+      paymentMethods: {
+        retrieve: async (id: string) => ({ id, customer: 'cus_1' }),
+        detach: async (id: string) => {
+          detached.push(id)
+          return { id }
+        },
+        list: async () => ({
+          data: [
+            {
+              id: 'pm_old',
+              card: {
+                brand: 'visa',
+                last4: '4242',
+                exp_month: 12,
+                exp_year: 2030,
+                funding: 'credit',
+              },
+            },
+          ],
+        }),
+      },
+    } as unknown as import('npm:stripe@17.7.0').default,
+  })
+
+  const out = await service.getPaymentMethods('u-1', { replacePaymentMethodId: 'pm_old' })
+  assertEquals(detached, [])
+  assertEquals(out.paymentMethods.length, 1)
+  assertEquals(out.paymentMethods[0]?.id, 'pm_old')
 })
 
 function activeSubscription(

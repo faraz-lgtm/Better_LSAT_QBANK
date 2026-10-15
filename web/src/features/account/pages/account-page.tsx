@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import { Camera, Check, CreditCard, Calendar, ExternalLink, FileText, Globe2, ImagePlus, LockKeyhole, Mail, Phone, Trash2, UserRound } from "lucide-react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useSearchParams } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -195,7 +195,7 @@ function NameRow({
   onSave,
 }: NameRowProps) {
   return (
-    <div className="flex items-start gap-4 border-b border-[rgba(44,49,67,0.07)] px-6 py-[18px]">
+    <div className="flex items-start gap-4 border-b border-[rgba(44,49,67,0.07)] px-4 py-[18px]">
       <span className="mt-5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-[var(--greyscale-50)] text-[var(--muted-foreground)]">
         <UserRound className="size-3.5" strokeWidth={1.75} />
       </span>
@@ -290,7 +290,7 @@ function LsatDateRow({
   onSave,
 }: LsatDateRowProps) {
   return (
-    <div className="flex items-start gap-4 border-b border-[rgba(44,49,67,0.07)] px-6 py-[18px]">
+    <div className="flex items-start gap-4 border-b border-[rgba(44,49,67,0.07)] px-4 py-[18px]">
       <span className="mt-5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-[var(--greyscale-50)] text-[var(--muted-foreground)]">
         <Calendar className="size-3.5" strokeWidth={1.75} />
       </span>
@@ -375,7 +375,7 @@ function ProfileRow({
 }: ProfileRowProps) {
   const isEditing = editable && editing
   return (
-    <div className="flex items-start gap-4 border-b border-[rgba(44,49,67,0.07)] px-6 py-[18px] last:border-b-0">
+    <div className="flex items-start gap-4 border-b border-[rgba(44,49,67,0.07)] px-4 py-[18px] last:border-b-0">
       <span className="mt-5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-[var(--greyscale-50)] text-[var(--muted-foreground)]">
         <Icon className="size-3.5" strokeWidth={1.75} />
       </span>
@@ -449,7 +449,7 @@ function PasswordRow({
   onSave,
 }: PasswordRowProps) {
   return (
-    <div className="flex items-start gap-4 border-b border-[rgba(44,49,67,0.07)] px-6 py-[18px]">
+    <div className="flex items-start gap-4 border-b border-[rgba(44,49,67,0.07)] px-4 py-[18px]">
       <span className="mt-5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-[var(--greyscale-50)] text-[var(--muted-foreground)]">
         <LockKeyhole className="size-3.5" strokeWidth={1.75} />
       </span>
@@ -529,7 +529,7 @@ function TimezoneRow({
   const selectedOption = findTimezoneOption(value)
 
   return (
-    <div className="flex items-center gap-4 px-6 py-[18px]">
+    <div className="flex items-center gap-4 px-4 py-[18px]">
       <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[var(--greyscale-50)] text-[var(--muted-foreground)]">
         <Globe2 className="size-3.5" strokeWidth={1.75} />
       </span>
@@ -599,7 +599,7 @@ function AccountSection({
 }) {
   return (
     <section className="overflow-hidden rounded-[10px] border border-[rgba(44,49,67,0.07)] bg-[var(--greyscale-0)]">
-      <div className="flex items-center gap-2 border-b border-[rgba(44,49,67,0.07)] px-6 py-4">
+      <div className="flex items-center gap-2 border-b border-[rgba(44,49,67,0.07)] px-4 py-4">
         <Icon className="size-[15px] text-[var(--muted-foreground)]" strokeWidth={1.75} />
         <h2 className="text-sm font-semibold tracking-[0.28px] text-[var(--color-student-heading)]">{title}</h2>
       </div>
@@ -685,7 +685,7 @@ function BillingHistoryRow({ invoice }: { invoice: BillingInvoice }) {
   const pdfUrl = invoice.invoicePdfUrl ?? invoice.hostedInvoiceUrl
   const isPaid = invoice.status === "paid"
   return (
-    <div className="flex flex-wrap items-center gap-3.5 border-b border-[rgba(44,49,67,0.06)] px-6 py-3.5 last:border-b-0">
+    <div className="flex flex-wrap items-center gap-3.5 border-b border-[rgba(44,49,67,0.06)] px-4 py-3.5 last:border-b-0">
       <div className="min-w-0 flex-1">
         <p className="text-xs font-semibold tracking-[0.24px] text-[var(--color-student-heading)]">{invoice.title}</p>
         <p className="mt-0.5 text-xs tracking-[0.24px] text-[var(--greyscale-500)]">{formatInvoiceMeta(invoice)}</p>
@@ -722,6 +722,7 @@ function BillingHistoryRow({ invoice }: { invoice: BillingInvoice }) {
 
 function AccountPage() {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   useTrackCheckoutPurchase()
   const { openPricingModal } = useGuestPricingModal()
   const { entitlement, loading: entitlementLoading, refresh } = useStudentEntitlement()
@@ -757,6 +758,7 @@ function AccountPage() {
   const [billingDetailsLoading, setBillingDetailsLoading] = useState(false)
   const [openingPortal, setOpeningPortal] = useState(false)
   const [planDialogOpen, setPlanDialogOpen] = useState(false)
+  const [planChangeMenuOpen, setPlanChangeMenuOpen] = useState(false)
   const [selectedPlan, setSelectedPlan] = useState<CheckoutPlanId>("monthly")
   const [changingPlan, setChangingPlan] = useState(false)
   const [planChangeError, setPlanChangeError] = useState<string | null>(null)
@@ -881,6 +883,8 @@ function AccountPage() {
     [entitlement, profile],
   )
 
+  const replacePaymentMethodParam = searchParams.get("replace_pm")?.trim() || null
+
   useEffect(() => {
     if (!hasProPlan || entitlementLoading) return
     let alive = true
@@ -890,10 +894,19 @@ function AccountPage() {
         const billingApi = createBillingApi(getSupabaseBrowserClient())
         const [status, methods, invoices] = await Promise.all([
           billingApi.getStatus(),
-          billingApi.getPaymentMethods(),
+          billingApi.getPaymentMethods(
+            replacePaymentMethodParam
+              ? { replacePaymentMethodId: replacePaymentMethodParam }
+              : undefined,
+          ),
           billingApi.getInvoices(),
         ])
         if (!alive) return
+        if (replacePaymentMethodParam) {
+          const next = new URLSearchParams(searchParams)
+          next.delete("replace_pm")
+          setSearchParams(next, { replace: true })
+        }
         setBillingStatus(status)
         setPaymentMethods(methods)
         setBillingInvoices(invoices)
@@ -910,14 +923,17 @@ function AccountPage() {
     return () => {
       alive = false
     }
-  }, [entitlementLoading, hasProPlan])
+    // replacePaymentMethodParam: re-run once after portal return so we detach the old card.
+  }, [entitlementLoading, hasProPlan, replacePaymentMethodParam, searchParams, setSearchParams])
 
-  async function openBillingPortal() {
+  async function openBillingPortal(options?: { replacePaymentMethodId?: string }) {
     setOpeningPortal(true)
     setPaymentError(null)
     try {
       const billingApi = createBillingApi(getSupabaseBrowserClient())
-      const url = await billingApi.createBillingPortalSession()
+      const url = await billingApi.createBillingPortalSession({
+        replacePaymentMethodId: options?.replacePaymentMethodId,
+      })
       window.location.assign(url)
     } catch (portalError) {
       setPaymentError(portalError instanceof Error ? portalError.message : "Unable to open billing portal.")
@@ -1204,15 +1220,15 @@ function AccountPage() {
 
   if (loading || entitlementLoading) {
     return (
-      <StudentMain fullBleed contentClassName="px-6">
+      <StudentMain fullBleed contentClassName="px-4">
         <StudentPageLoader centered className="min-h-0 flex-1" label="Loading account…" />
       </StudentMain>
     )
   }
 
   return (
-    <StudentMain fullBleed contentClassName="px-6">
-      <div className="mx-auto w-full max-w-[1304px] rounded-[24px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6">
+    <StudentMain fullBleed contentClassName="px-4">
+      <div className="mx-auto w-full max-w-[1304px] rounded-[24px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-4">
         <h2 className="m-0 text-2xl font-bold leading-[1.3] text-[var(--color-student-heading)]">Account</h2>
 
         {error ? <p className="mt-4 text-sm text-[#95122b]">{error}</p> : null}
@@ -1221,7 +1237,7 @@ function AccountPage() {
         <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
           <div className="flex min-w-0 flex-col gap-6">
             <AccountSection title="Profile" icon={UserRound}>
-              <div className="flex items-center gap-4 border-b border-[rgba(44,49,67,0.07)] p-6">
+              <div className="flex items-center gap-4 border-b border-[rgba(44,49,67,0.07)] px-4 py-5">
                 <div ref={avatarMenuRef} className="relative shrink-0">
                   <div className="flex size-16 items-center justify-center overflow-hidden rounded-full bg-[var(--primary)] text-xl font-extrabold tracking-[-0.45px] text-[#f0f4ff]">
                     {avatarUrl ? (
@@ -1381,7 +1397,7 @@ function AccountPage() {
               />
             </AccountSection>
 
-            <section className="rounded-[10px] border border-[rgba(44,49,67,0.07)] bg-[var(--greyscale-0)] px-6 py-5">
+            <section className="rounded-[10px] border border-[rgba(44,49,67,0.07)] bg-[var(--greyscale-0)] px-4 py-5">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0 space-y-1">
                   <h2 className="text-sm font-semibold tracking-[0.28px] text-[var(--color-student-heading)]">LSAC Account</h2>
@@ -1415,7 +1431,7 @@ function AccountPage() {
             </section>
 
             <AccountSection title="Payment Method" icon={CreditCard}>
-              <div className="px-6 py-5">
+              <div className="px-4 py-5">
                 {hasProPlan && billingDetailsLoading ? (
                   <p className="text-xs tracking-[0.24px] text-[var(--greyscale-500)]">Loading payment method…</p>
                 ) : hasProPlan && paymentMethods.length > 0 ? (
@@ -1425,7 +1441,7 @@ function AccountPage() {
                         key={method.id}
                         method={method}
                         replacing={openingPortal}
-                        onReplace={() => void openBillingPortal()}
+                        onReplace={() => void openBillingPortal({ replacePaymentMethodId: method.id })}
                       />
                     ))}
                     {paymentError ? <p className="text-xs text-[#95122b]">{paymentError}</p> : null}
@@ -1516,7 +1532,7 @@ function AccountPage() {
             {hasProPlan ? (
               <AccountSection title="Billing History" icon={FileText}>
                 {billingDetailsLoading ? (
-                  <div className="px-6 py-5">
+                  <div className="px-4 py-5">
                     <p className="text-xs tracking-[0.24px] text-[var(--greyscale-500)]">Loading billing history…</p>
                   </div>
                 ) : billingInvoices.length > 0 ? (
@@ -1526,7 +1542,7 @@ function AccountPage() {
                     ))}
                   </div>
                 ) : (
-                  <div className="px-6 py-5">
+                  <div className="px-4 py-5">
                     <p className="text-xs tracking-[0.24px] text-[var(--greyscale-500)]">
                       No invoices yet. Paid invoices will appear here after your first billing cycle.
                     </p>
@@ -1624,10 +1640,13 @@ function AccountPage() {
       <DialogRoot
         open={planDialogOpen}
         onOpenChange={(open) => {
-          if (!changingPlan) setPlanDialogOpen(open)
+          if (!changingPlan) {
+            setPlanDialogOpen(open)
+            if (!open) setPlanChangeMenuOpen(false)
+          }
         }}
       >
-        <DialogContent>
+        <DialogContent className="overflow-visible">
           <DialogHeader>
             <DialogTitle>Change your plan</DialogTitle>
             <DialogDescription>
@@ -1636,19 +1655,21 @@ function AccountPage() {
               charged today.
             </DialogDescription>
           </DialogHeader>
-          <div>
+          <div className={cn(planChangeMenuOpen && FIGMA_DROPDOWN_CARD_OPEN_CLASS)}>
             <label
               className="mb-2 block text-xs font-semibold tracking-[0.24px] text-[var(--color-student-heading)]"
               htmlFor="change-plan"
             >
               New plan
             </label>
-            <Select
+            <FigmaDropdown
               id="change-plan"
               value={selectedPlan}
               disabled={changingPlan}
               options={PAYMENT_PLAN_OPTIONS.filter((option) => option.value !== resolvedCheckoutPlan)}
-              onChange={(event) => setSelectedPlan(event.target.value as CheckoutPlanId)}
+              placeholder="Select a plan"
+              onOpenChange={setPlanChangeMenuOpen}
+              onChange={(value) => setSelectedPlan(value as CheckoutPlanId)}
             />
             <p className="mt-3 text-xs leading-5 text-[var(--greyscale-500)]">
               The new billing interval starts at your next renewal. Your LawHub fee will not be charged again.

@@ -15,6 +15,7 @@ import {
   checkoutPlanFromRecurringPrice,
   priceIdForCheckoutPlan,
   resolveCheckoutPlanFromPriceId,
+  resolveCheckoutPlanFromRecurring,
   resolvePlanFromPriceId,
   storedPlanTierFromMetadata,
   type StripeRuntimeEnv,
@@ -43,33 +44,91 @@ export type BillingServiceDeps = {
   onCheckoutCompleted?: (ctx: CheckoutCompletedContext) => Promise<void>
 }
 
+/** Query param used when returning from a Replace payment-method portal flow. */
+export const REPLACE_PAYMENT_METHOD_QUERY = 'replace_pm'
+
 function unixToIso(seconds: number | null | undefined): string | null {
   if (seconds == null) return null
   return new Date(seconds * 1000).toISOString()
+}
+
+function assertStripePaymentMethodId(paymentMethodId: string): void {
+  if (!/^pm_[A-Za-z0-9]+$/.test(paymentMethodId)) {
+    throw new Error('Invalid payment method id')
+  }
+}
+
+async function assertPaymentMethodOwnedByCustomer(
+  stripe: Stripe,
+  paymentMethodId: string,
+  customerId: string,
+): Promise<void> {
+  const pm = await stripe.paymentMethods.retrieve(paymentMethodId)
+  const pmCustomer = typeof pm.customer === 'string' ? pm.customer : pm.customer?.id ?? null
+  if (pmCustomer !== customerId) {
+    throw new Error('Payment method not found for this account.')
+  }
+}
+
+function buildAccountReturnUrl(baseUrl: string, replacePaymentMethodId: string | null): string {
+  const accountUrl = `${baseUrl}/app/account`
+  if (!replacePaymentMethodId) return accountUrl
+  const url = new URL(accountUrl)
+  url.searchParams.set(REPLACE_PAYMENT_METHOD_QUERY, replacePaymentMethodId)
+  return url.toString()
+}
+
+function isStripeResourceMissing(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error != null &&
+    'code' in error &&
+    (error as { code?: unknown }).code === 'resource_missing'
+  )
+}
+
+/**
+ * After a Replace portal flow: detach the previous card only if Stripe already
+ * switched the customer default to a different payment method. If they cancelled,
+ * the default is unchanged and we keep the card.
+ */
+async function maybeDetachReplacedPaymentMethod(
+  stripe: Stripe,
+  customerId: string,
+  paymentMethodId: string,
+): Promise<void> {
+  const trimmedId = paymentMethodId.trim()
+  assertStripePaymentMethodId(trimmedId)
+
+  try {
+    await assertPaymentMethodOwnedByCustomer(stripe, trimmedId, customerId)
+  } catch (error) {
+    if (isStripeResourceMissing(error)) return
+    throw error
+  }
+
+  const customer = await stripe.customers.retrieve(customerId)
+  if (customer.deleted) return
+
+  const defaultPm =
+    typeof customer.invoice_settings?.default_payment_method === 'string'
+      ? customer.invoice_settings.default_payment_method
+      : customer.invoice_settings?.default_payment_method?.id ?? null
+
+  if (defaultPm == null || defaultPm === trimmedId) return
+
+  try {
+    await stripe.paymentMethods.detach(trimmedId)
+  } catch (error) {
+    if (isStripeResourceMissing(error)) return
+    throw error
+  }
 }
 
 function subscriptionItemPriceId(item: Stripe.SubscriptionItem): string {
   const price = item.price as string | Stripe.Price | null | undefined
   if (!price) return ''
   return typeof price === 'string' ? price : price.id ?? ''
-}
-
-function subscriptionItemPriceObject(
-  item: Stripe.SubscriptionItem,
-): Stripe.Price | null {
-  const price = item.price as string | Stripe.Price | null | undefined
-  if (!price || typeof price === 'string') return null
-  return price
-}
-
-function checkoutPlanFromSubscriptionItem(
-  item: Stripe.SubscriptionItem,
-  env: StripeRuntimeEnv,
-): CheckoutPlanId | null {
-  const fromRecurring = checkoutPlanFromRecurringPrice(subscriptionItemPriceObject(item))
-  if (fromRecurring) return fromRecurring
-  const priceId = subscriptionItemPriceId(item)
-  return priceId ? resolveCheckoutPlanFromPriceId(env.priceIds, priceId) : null
 }
 
 function invoiceLinePriceId(line: Stripe.InvoiceLineItem): string | null {
@@ -104,23 +163,40 @@ function subscriptionScheduleId(subscription: Stripe.Subscription): string | nul
     : subscription.schedule.id
 }
 
+function resolveItemCheckoutPlan(
+  item: Pick<Stripe.SubscriptionItem, 'price'>,
+  env: StripeRuntimeEnv,
+): CheckoutPlanId | null {
+  const price = item.price as string | Stripe.Price | null | undefined
+  const priceId = !price ? '' : typeof price === 'string' ? price : price.id ?? ''
+  // Prefer real Stripe interval over env price-ID match when those disagree.
+  if (price && typeof price === 'object') {
+    const fromRecurring =
+      checkoutPlanFromRecurringPrice(price) ??
+      resolveCheckoutPlanFromRecurring(price.recurring)
+    if (fromRecurring) return fromRecurring
+  }
+  return priceId ? resolveCheckoutPlanFromPriceId(env.priceIds, priceId) : null
+}
+
 function coreSubscriptionItem(
   subscription: Stripe.Subscription,
   env: StripeRuntimeEnv,
 ): Stripe.SubscriptionItem | null {
-  return subscription.items.data.find((item) =>
-    checkoutPlanFromSubscriptionItem(item, env) != null
-  ) ?? null
+  return subscription.items.data.find((item) => resolveItemCheckoutPlan(item, env) != null) ?? null
 }
 
 function billingSubscriptionItem(
   subscription: Stripe.Subscription,
   env: StripeRuntimeEnv,
 ): Stripe.SubscriptionItem | null {
-  return subscription.items.data.find((item) => {
-    if (checkoutPlanFromSubscriptionItem(item, env) != null) return true
-    return resolvePlanFromPriceId(env.priceIds, subscriptionItemPriceId(item)) != null
-  }) ?? null
+  return (
+    subscription.items.data.find((item) => {
+      if (resolvePlanFromPriceId(env.priceIds, subscriptionItemPriceId(item)) != null) return true
+      // Inline Checkout price_data creates ad-hoc Core prices outside STRIPE_PRICE_ID_*.
+      return resolveItemCheckoutPlan(item, env) != null
+    }) ?? null
+  )
 }
 
 function scheduleItemPriceId(item: Stripe.SubscriptionSchedule.Phase.Item): string {
@@ -147,9 +223,7 @@ async function pendingPlanChange(
   if (!nextPlan) return null
 
   const currentItem = coreSubscriptionItem(subscription, env)
-  const currentPlan = currentItem
-    ? checkoutPlanFromSubscriptionItem(currentItem, env)
-    : null
+  const currentPlan = currentItem ? resolveItemCheckoutPlan(currentItem, env) : null
   if (nextPlan === currentPlan) return null
 
   return {
@@ -221,14 +295,38 @@ const EXISTING_LSAC_CHECKOUT_NOTE =
   'Better LSAT membership only. You keep your existing LawHub PrepPlus through LSAC — no LawHub fee from Better LSAT.'
 const BETTERLSAT_PLAN_CHANGE_SCHEDULE = 'betterlsat_plan_change'
 
-/** Always uses stable catalog Price IDs so getStatus can resolve checkoutPlan. Existing-LSAC copy goes via session custom_text. */
+/**
+ * Always use inline product copy so Checkout shows catalog names
+ * (`Better LSAT 6 Months`, etc.) instead of the shared Stripe product name (`Core`).
+ * Interval is recovered later via recurring.interval_count / metadata / invoice lines.
+ */
 async function buildSubscriptionCheckoutLineItem(
   stripe: Stripe,
   priceId: string,
   plan: CheckoutPlanId,
+  includeLawHub: boolean,
 ): Promise<Stripe.Checkout.SessionCreateParams.LineItem> {
-  await validatePlanPrice(stripe, priceId, plan)
-  return { price: priceId, quantity: 1 }
+  const price = await validatePlanPrice(stripe, priceId, plan)
+  const catalog = checkoutPlanFromId(plan)
+  const interval = price.recurring?.interval === 'year' ? 'year' : 'month'
+  const intervalCount =
+    price.recurring?.interval_count ??
+    (interval === 'year' ? 1 : catalog.intervalCount)
+
+  return {
+    price_data: {
+      currency: price.currency ?? 'usd',
+      unit_amount: price.unit_amount ?? catalog.priceUsd * 100,
+      recurring: { interval, interval_count: intervalCount },
+      product_data: {
+        name: `Better LSAT ${catalog.name}`,
+        description: includeLawHub
+          ? catalog.description
+          : `${catalog.description} ${EXISTING_LSAC_CHECKOUT_NOTE}`,
+      },
+    },
+    quantity: 1,
+  }
 }
 
 /** LawHub cannot be a yearly recurring line item with a monthly plan — Stripe rejects mixed intervals. */
@@ -282,7 +380,7 @@ export function createBillingService(deps: BillingServiceDeps) {
     const billingItem = billingSubscriptionItem(subscription, env)
     const metadataCheckoutPlan = checkoutPlanFromMetadata(subscription.metadata?.plan)
     const checkoutPlanFromItem = billingItem
-      ? checkoutPlanFromSubscriptionItem(billingItem, env)
+      ? resolveItemCheckoutPlan(billingItem, env)
       : null
     let stripePriceId = billingItem ? subscriptionItemPriceId(billingItem) : ''
     if (!stripePriceId) {
@@ -362,7 +460,7 @@ export function createBillingService(deps: BillingServiceDeps) {
         ? coreSubscriptionItem(stripeSubscription, env)
         : null
       const checkoutPlanFromLiveItem = currentItem
-        ? checkoutPlanFromSubscriptionItem(currentItem, env)
+        ? resolveItemCheckoutPlan(currentItem, env)
         : null
       const checkoutPlanFromStored = storedSubscription?.stripe_price_id
         ? resolveCheckoutPlanFromPriceId(env.priceIds, storedSubscription.stripe_price_id)
@@ -429,10 +527,7 @@ export function createBillingService(deps: BillingServiceDeps) {
       if (!currentItem) {
         throw new Error('The active subscription does not contain a supported BetterLSAT plan.')
       }
-      const currentPlan = resolveCheckoutPlanFromPriceId(
-        env.priceIds,
-        subscriptionItemPriceId(currentItem),
-      )
+      const currentPlan = resolveItemCheckoutPlan(currentItem, env)
       if (currentPlan === plan) {
         throw new Error('The selected plan is already active.')
       }
@@ -527,10 +622,18 @@ export function createBillingService(deps: BillingServiceDeps) {
       return { pendingChange: null }
     },
 
-    async getPaymentMethods(userId: string): Promise<{ paymentMethods: BillingPaymentMethodDto[] }> {
+    async getPaymentMethods(
+      userId: string,
+      options: { replacePaymentMethodId?: string } = {},
+    ): Promise<{ paymentMethods: BillingPaymentMethodDto[] }> {
       const profile = await deps.repository.getProfileBillingFields(userId)
       const customerId = profile?.stripe_customer_id?.trim() ?? ''
       if (!customerId) return { paymentMethods: [] }
+
+      const replacePaymentMethodId = options.replacePaymentMethodId?.trim() || null
+      if (replacePaymentMethodId) {
+        await maybeDetachReplacedPaymentMethod(deps.stripe, customerId, replacePaymentMethodId)
+      }
 
       const customer = await deps.stripe.customers.retrieve(customerId)
       if (customer.deleted) return { paymentMethods: [] }
@@ -564,11 +667,11 @@ export function createBillingService(deps: BillingServiceDeps) {
     },
 
     async getBillingHistory(userId: string): Promise<{ invoices: BillingInvoiceDto[] }> {
-      const env = deps.getEnv()
       const profile = await deps.repository.getProfileBillingFields(userId)
       const customerId = profile?.stripe_customer_id?.trim() ?? ''
       if (!customerId) return { invoices: [] }
 
+      const env = deps.getEnv()
       const subscription = await deps.repository.getLatestSubscriptionByUserId(userId)
       const planTierFallback = subscription?.plan_tier ?? null
       const subscriptionCheckoutPlan = subscription?.stripe_price_id
@@ -595,7 +698,8 @@ export function createBillingService(deps: BillingServiceDeps) {
           return ''
         })
 
-        const checkoutPlanFromLines = checkoutPlanFromInvoiceLines(lines, env)
+        const checkoutPlanHint =
+          checkoutPlanFromInvoiceLines(lines, env) ?? subscriptionCheckoutPlan
 
         return mapStripeInvoice({
           id: invoice.id,
@@ -608,7 +712,7 @@ export function createBillingService(deps: BillingServiceDeps) {
           hostedInvoiceUrl: invoice.hosted_invoice_url ?? null,
           lineDescriptions,
           planTierFallback,
-          checkoutPlan: checkoutPlanFromLines ?? subscriptionCheckoutPlan,
+          checkoutPlanHint,
         })
       })
 
@@ -618,16 +722,33 @@ export function createBillingService(deps: BillingServiceDeps) {
     /**
      * Opens Stripe Customer Portal in payment-method-update flow only.
      * Intentionally avoids the portal home (cancel subscription / plan changes).
+     *
+     * Stripe's portal adds a new default card rather than removing the old one.
+     * When `replacePaymentMethodId` is set, the return URL carries that id so
+     * `getPaymentMethods` can detach the old card on return.
      */
-    async createBillingPortalSession(userId: string): Promise<{ url: string }> {
+    async createBillingPortalSession(
+      userId: string,
+      options: { replacePaymentMethodId?: string } = {},
+    ): Promise<{ url: string }> {
       const profile = await deps.repository.getProfileBillingFields(userId)
       const customerId = profile?.stripe_customer_id?.trim() ?? ''
       if (!customerId) {
         throw new Error('No Stripe customer on file. Add a payment method via checkout first.')
       }
 
+      const replacePaymentMethodId = options.replacePaymentMethodId?.trim() || null
+      if (replacePaymentMethodId) {
+        assertStripePaymentMethodId(replacePaymentMethodId)
+        await assertPaymentMethodOwnedByCustomer(
+          deps.stripe,
+          replacePaymentMethodId,
+          customerId,
+        )
+      }
+
       const baseUrl = deps.getAppBaseUrl().replace(/\/$/, '')
-      const returnUrl = `${baseUrl}/app/account`
+      const returnUrl = buildAccountReturnUrl(baseUrl, replacePaymentMethodId)
       const session = await deps.stripe.billingPortal.sessions.create({
         customer: customerId,
         return_url: returnUrl,
@@ -666,17 +787,11 @@ export function createBillingService(deps: BillingServiceDeps) {
       const profileName = joinLawHubFullName(nameParts.firstName, nameParts.lastName)
       let customerId = profile?.stripe_customer_id?.trim() ?? ''
 
-      // posthog_person_distinct_id must match browser identify(user.id) for Revenue Analytics join.
-      const identityMetadata = {
-        user_id: userId,
-        posthog_person_distinct_id: userId,
-      }
-
       if (!customerId) {
         const customer = await deps.stripe.customers.create({
           email: checkoutEmail,
           name: profileName,
-          metadata: identityMetadata,
+          metadata: { user_id: userId },
         })
         customerId = customer.id
         await deps.repository.setStripeCustomerId(userId, customerId)
@@ -684,7 +799,6 @@ export function createBillingService(deps: BillingServiceDeps) {
         await deps.stripe.customers.update(customerId, {
           email: checkoutEmail,
           name: profileName,
-          metadata: identityMetadata,
         })
       }
 
@@ -695,7 +809,12 @@ export function createBillingService(deps: BillingServiceDeps) {
       }
 
       const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [
-        await buildSubscriptionCheckoutLineItem(deps.stripe, recurringPriceId, plan),
+        await buildSubscriptionCheckoutLineItem(
+          deps.stripe,
+          recurringPriceId,
+          plan,
+          includeLawHub,
+        ),
       ]
       if (includeLawHub) {
         lineItems.push(
@@ -713,13 +832,9 @@ export function createBillingService(deps: BillingServiceDeps) {
         line_items: lineItems,
         success_url: `${baseUrl}${normalizedSuccessPath}${successUrlSeparator}session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${baseUrl}/checkout?plan=${plan}&checkout=cancel`,
-        metadata: {
-          ...identityMetadata,
-          plan,
-          include_lawhub: includeLawHub ? 'true' : 'false',
-        },
+        metadata: { user_id: userId, plan, include_lawhub: includeLawHub ? 'true' : 'false' },
         subscription_data: {
-          metadata: { ...identityMetadata, plan },
+          metadata: { user_id: userId, plan },
         },
         ...(includeLawHub
           ? {}
