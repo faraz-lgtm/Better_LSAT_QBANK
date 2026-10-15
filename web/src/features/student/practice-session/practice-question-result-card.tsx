@@ -239,25 +239,27 @@ function PracticeQuestionResultCard({
     return (
       <article
         className={cn(
-          "relative w-full min-w-0 max-w-full overflow-hidden rounded-[24px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6 shadow-[0px_1px_1px_rgba(13,13,18,0.04)]",
+          "relative w-full min-w-0 max-w-full overflow-hidden rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-4 shadow-[0px_1px_1px_rgba(13,13,18,0.04)] sm:rounded-[24px] sm:p-6",
           className,
         )}
       >
-        <div className="grid min-w-0 grid-cols-[56px_minmax(0,1fr)] items-start gap-x-6 gap-y-2">
+        <div className="grid min-w-0 grid-cols-[44px_minmax(0,1fr)] items-start gap-x-3 gap-y-2 sm:grid-cols-[56px_minmax(0,1fr)] sm:gap-x-6">
           <div
             className={cn(
-              "flex size-14 shrink-0 items-center justify-center rounded-[14px]",
+              "flex size-11 shrink-0 items-center justify-center rounded-[12px] sm:size-14 sm:rounded-[14px]",
               isUnanswered ? "bg-[#ff6683]" : isCorrect ? "bg-[#00d492]" : "bg-[#df1c41]",
             )}
           >
-            <span className="text-2xl font-bold leading-[1.3] text-white">{number}</span>
+            <span className="text-xl font-bold leading-[1.3] text-white sm:text-2xl">{number}</span>
           </div>
 
-          <div className="flex min-h-[60px] min-w-0 items-center justify-between gap-4">
-            <div className="flex min-w-0 flex-col gap-2">
-              <h3 className="m-0 text-xl font-bold leading-[1.35] text-[var(--primary-800)]">{title}</h3>
+          <div className="flex min-h-0 min-w-0 items-start justify-between gap-2 sm:min-h-[60px] sm:items-center sm:gap-4">
+            <div className="flex min-w-0 flex-col gap-1.5 sm:gap-2">
+              <h3 className="m-0 text-base font-bold leading-[1.35] text-[var(--primary-800)] sm:text-xl">
+                {title}
+              </h3>
               {tags.length > 0 ? (
-                <div className="flex flex-wrap gap-2.5">
+                <div className="flex flex-wrap gap-1.5 sm:gap-2.5">
                   {tags.map((tag) => (
                     <span
                       key={tag}
@@ -279,7 +281,7 @@ function PracticeQuestionResultCard({
             className="justify-self-center"
           />
 
-          <div className="flex min-w-0 flex-col gap-4">
+          <div className="flex min-w-0 flex-col gap-3 sm:gap-4">
             {showBlindReviewResult ? (
               <div className="flex min-w-0 flex-col gap-3">
                 <p className="m-0 text-sm font-semibold leading-normal tracking-[0.02em] text-[var(--greyscale-500)]">

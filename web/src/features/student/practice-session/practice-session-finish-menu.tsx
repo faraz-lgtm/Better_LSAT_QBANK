@@ -122,7 +122,9 @@ function PracticeSessionFinishMenu({
     return (
       <div
         ref={containerRef}
-        className={officialChrome ? "relative size-7 shrink-0" : "relative h-[52px] w-[54px] shrink-0"}
+        className={
+          officialChrome ? "relative size-7 shrink-0" : "relative size-9 shrink-0 md:h-[52px] md:w-[54px]"
+        }
       >
         <button
           type="button"

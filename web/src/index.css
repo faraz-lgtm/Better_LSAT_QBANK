@@ -273,10 +273,14 @@ html.student-shell-active #root {
   }
 }
 
-/* Intent picker on a phone: lay out at the real device width.
-   The 840px cap still matches iPhone 6 while the 0.75 app zoom is active (375 / 0.75 = 500). */
+/* Phones / small tablets: lay out at the real device width.
+   Desktop keeps 0.75 app zoom to match Figma density; on narrow viewports that
+   zoom leaves a empty right gutter and crushes Insights / shell chrome. */
 @media (max-width: 840px) {
-  html.intent-mobile-layout {
+  html,
+  html.intent-mobile-layout,
+  html.student-shell-active,
+  html.student-shell-immersive {
     --app-zoom: 1;
     --app-svh: 100svh;
     zoom: 1;
@@ -285,11 +289,20 @@ html.student-shell-active #root {
 
 @supports not (zoom: 1) {
   @media (max-width: 840px) {
-    html.intent-mobile-layout #root {
+    html #root,
+    html.intent-mobile-layout #root,
+    html.student-shell-active #root,
+    html.student-shell-immersive #root {
       transform: none;
       width: 100%;
       height: auto;
       min-height: 100svh;
+    }
+
+    html.student-shell-active #root,
+    html.student-shell-immersive #root {
+      height: 100svh;
+      min-height: 0;
     }
   }
 }
@@ -5484,6 +5497,13 @@ section[data-lesson-section][data-variant="empty"] {
   gap: 12px;
 }
 
+/* Side rail is md+ only — drop the reserved gap beside choices on phones. */
+@media (max-width: 767px) {
+  .practice-session-card--active-drill:not(.practice-session-card--official) .practice-session-question-panel-with-widget {
+    gap: 0;
+  }
+}
+
 /* Keep vertical scroll working; clip only the x-axis so side-widget labels can still paint. */
 .practice-session-card--active-drill .practice-session-pane:has(.practice-session-side-widget) {
   overflow-x: clip;
@@ -5672,10 +5692,22 @@ html.practice-exam-more-open .practice-session-question-panel-with-widget {
 }
 
 /**
- * Official mobile stacked view — one full-column scroll (stimulus + question).
- * Overrides pane max-height/overflow and body>div overflow:hidden above.
+ * Mobile stacked view — one full-column scroll (stimulus + question).
+ * Official: inner grid scrolls. BetterLSAT (non-official): body scrolls
+ * so passage + answers are not clipped by grid-template-rows / overflow:hidden.
  */
 @media (max-width: 767px) {
+  html.student-shell-immersive .practice-session-card,
+  html.student-shell-immersive .practice-session-card--active-drill {
+    height: 100%;
+    max-height: 100%;
+  }
+
+  /* —— Official: scroll the inner column —— */
+  .practice-session-card--official .practice-session-body--mobile-stack-scroll {
+    overflow: hidden;
+  }
+
   .practice-session-card--official .practice-session-body--mobile-stack-scroll > div {
     display: flex;
     flex-direction: column;
@@ -5697,8 +5729,75 @@ html.practice-exam-more-open .practice-session-question-panel-with-widget {
   .practice-session-card--official
     .practice-session-body--mobile-stack-scroll
     .practice-session-pane--mobile-question-stack {
-    min-height: 72vh;
+    min-height: 60vh;
     padding-bottom: 1.5rem;
+  }
+
+  /* —— BetterLSAT (Official Interface OFF): body is the scrollport —— */
+  html.student-shell-immersive
+    .practice-session-card--active-drill:not(.practice-session-card--official) {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  html.student-shell-immersive
+    .practice-session-card--active-drill:not(.practice-session-card--official)
+    .practice-session-header--active-drill {
+    flex-shrink: 0;
+    overflow: hidden;
+    background: var(--greyscale-0);
+  }
+
+  html.student-shell-immersive
+    .practice-session-card--active-drill:not(.practice-session-card--official)
+    .practice-session-body,
+  html.student-shell-immersive
+    .practice-session-card--active-drill:not(.practice-session-card--official)
+    .practice-session-body--mobile-stack-scroll {
+    flex: 1 1 0% !important;
+    min-height: 0 !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  html.student-shell-immersive
+    .practice-session-card--active-drill:not(.practice-session-card--official)
+    .practice-session-body
+    > div {
+    display: flex !important;
+    flex-direction: column !important;
+    flex: none !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    grid-template-rows: none !important;
+  }
+
+  html.student-shell-immersive
+    .practice-session-card--active-drill:not(.practice-session-card--official)
+    .practice-session-pane {
+    flex: none !important;
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+
+  html.student-shell-immersive
+    .practice-session-card--active-drill:not(.practice-session-card--official)
+    .practice-session-pane--mobile-question-stack {
+    min-height: 0;
+    padding-bottom: 1.5rem;
+  }
+
+  html.student-shell-immersive
+    .practice-session-card--active-drill:not(.practice-session-card--official)
+    .practice-session-footer {
+    flex-shrink: 0;
   }
 }
 
@@ -5814,7 +5913,8 @@ html.student-shell-immersive .practice-session-card--active-drill {
   max-width: calc(var(--exam-normal-w) * 1px);
   margin-inline: auto;
   height: 100%;
-  max-height: calc(var(--app-svh) - 32px);
+  /* Phones are edge-to-edge (no immersive frame pad); md+ uses the inset rule below. */
+  max-height: 100%;
   flex: 1 1 auto;
   min-height: 0;
   overflow: hidden;

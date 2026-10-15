@@ -61,7 +61,8 @@ describe("GuestDiagnosticExamLayout exit warning", () => {
 
     renderExam(<GuestDiagnosticExamLayout config={config} interactive />)
 
-    await user.click(screen.getByRole("button", { name: "More options" }))
+    // Official / active-drill chrome mounts mobile + desktop more triggers.
+    await user.click(screen.getAllByRole("button", { name: "More options" })[0]!)
     await user.click(screen.getByRole("button", { name: "Save and exit" }))
 
     expect(screen.getByRole("dialog", { name: "Leave Diagnostic" })).toBeInTheDocument()
@@ -77,7 +78,7 @@ describe("GuestDiagnosticExamLayout exit warning", () => {
 
     renderExam(<GuestDiagnosticExamLayout config={config} interactive />)
 
-    await user.click(screen.getByRole("button", { name: "More options" }))
+    await user.click(screen.getAllByRole("button", { name: "More options" })[0]!)
     await user.click(screen.getByRole("button", { name: "Exit without saving" }))
 
     expect(screen.getByRole("dialog", { name: "Exit Without Saving" })).toBeInTheDocument()

@@ -4,6 +4,7 @@ import { Play } from "lucide-react"
 
 import { Input } from "@/components/ui/input"
 import {
+  ACTIVE_DRILL_DESKTOP_HEADER_BLOCK_CLASS,
   ACTIVE_DRILL_FIND_TEXT_INPUT_CLASS,
   ACTIVE_DRILL_HEADER_CLOSE_BUTTON_CLASS,
   ACTIVE_DRILL_HEADER_ICON_BUTTON_CLASS,
@@ -18,6 +19,17 @@ import {
   ACTIVE_DRILL_HEADER_SHELL_CLASS,
   ACTIVE_DRILL_HEADER_STACK_CLASS,
   ACTIVE_DRILL_HEADER_TITLE_CLASS,
+  ACTIVE_DRILL_MOBILE_FIND_INPUT_CLASS,
+  ACTIVE_DRILL_MOBILE_HEADER_CLASS,
+  ACTIVE_DRILL_MOBILE_HEADER_TITLE_BUTTON_CLASS,
+  ACTIVE_DRILL_MOBILE_HEADER_TITLE_CLASS,
+  ACTIVE_DRILL_MOBILE_META_RIGHT_CLASS,
+  ACTIVE_DRILL_MOBILE_META_ROW_CLASS,
+  ACTIVE_DRILL_MOBILE_PANE_TAB_ACTIVE_CLASS,
+  ACTIVE_DRILL_MOBILE_PANE_TAB_CLASS,
+  ACTIVE_DRILL_MOBILE_PANE_TAB_INACTIVE_CLASS,
+  ACTIVE_DRILL_MOBILE_PANE_TABS_CLASS,
+  ACTIVE_DRILL_MOBILE_TOOLS_BUTTON_CLASS,
 } from "@/features/student/practice-session/practice-session-active-drill-styles"
 import {
   OFFICIAL_DESKTOP_HEADER_BLOCK_CLASS,
@@ -454,57 +466,81 @@ function PracticeSessionHeader({
   }
 
   if (isActiveDrill) {
+    const canToggleMobilePaneMenu = Boolean(showMobilePaneTabs && onMobilePaneChange)
+
     return (
       <header className={ACTIVE_DRILL_HEADER_SHELL_CLASS}>
         <div className={ACTIVE_DRILL_HEADER_STACK_CLASS}>
-          <div className={ACTIVE_DRILL_HEADER_ROW_CLASS}>
-            <div className={ACTIVE_DRILL_HEADER_LEFT_CLASS}>
-              {onClose ? (
-                <button
-                  type="button"
-                  className={ACTIVE_DRILL_HEADER_CLOSE_BUTTON_CLASS}
-                  aria-label="Close exam"
-                  onClick={onClose}
-                >
-                  <ExamHeaderCloseIcon />
-                </button>
-              ) : null}
-              <p className={cn(ACTIVE_DRILL_HEADER_TITLE_CLASS, titleClassName)} title={title}>
-                {title}
-              </p>
+          {/* Mobile compact chrome — same Passage/Question dropdown as official */}
+          <div className={ACTIVE_DRILL_MOBILE_HEADER_CLASS}>
+            {onClose ? (
               <button
                 type="button"
-                className={cn(
-                  ACTIVE_DRILL_HEADER_PILL_BUTTON_CLASS,
-                  passageOnlyView && ACTIVE_DRILL_HEADER_PILL_BUTTON_PRESSED_CLASS,
-                )}
-                aria-pressed={passageOnlyView}
-                onClick={() => onPassageOnlyViewChange?.(!passageOnlyView)}
+                className={ACTIVE_DRILL_HEADER_CLOSE_BUTTON_CLASS}
+                aria-label="Close exam"
+                onClick={onClose}
               >
-                Passage Only View
+                <ExamHeaderCloseIcon />
               </button>
-              <input
-                type="search"
-                placeholder="Find Text, Type Here"
-                value={findQuery}
-                onChange={(e) => onFindQueryChange(e.target.value)}
-                className={ACTIVE_DRILL_FIND_TEXT_INPUT_CLASS}
-              />
-            </div>
-            <div className={ACTIVE_DRILL_HEADER_RIGHT_CLASS}>
-              {questionProgressLabel ? (
-                <span className={ACTIVE_DRILL_HEADER_PROGRESS_CLASS}>{questionProgressLabel}</span>
-              ) : null}
+            ) : (
+              <span aria-hidden />
+            )}
+            {canToggleMobilePaneMenu ? (
+              <button
+                type="button"
+                className={ACTIVE_DRILL_MOBILE_HEADER_TITLE_BUTTON_CLASS}
+                aria-label={`${title} menu`}
+                aria-expanded={mobilePaneMenuOpen}
+                aria-haspopup="listbox"
+                onClick={() => setMobilePaneMenuOpen((open) => !open)}
+              >
+                <span className={cn(ACTIVE_DRILL_MOBILE_HEADER_TITLE_CLASS, titleClassName)} title={title}>
+                  {title}
+                </span>
+                <span className={cn("inline-flex transition-transform", mobilePaneMenuOpen && "rotate-180")}>
+                  <OfficialMobileTitleChevronIcon />
+                </span>
+              </button>
+            ) : (
+              <div className={ACTIVE_DRILL_MOBILE_HEADER_TITLE_BUTTON_CLASS}>
+                <span className={cn(ACTIVE_DRILL_MOBILE_HEADER_TITLE_CLASS, titleClassName)} title={title}>
+                  {title}
+                </span>
+              </div>
+            )}
+            {onOpenToolsMenu ? (
+              <button
+                type="button"
+                className={ACTIVE_DRILL_MOBILE_TOOLS_BUTTON_CLASS}
+                aria-label={toolsMenuOpen ? "Collapse tools menu" : "Open tools menu"}
+                aria-expanded={toolsMenuOpen}
+                aria-pressed={toolsMenuOpen}
+                onClick={onOpenToolsMenu}
+              >
+                <OfficialMobileFullscreenIcon />
+              </button>
+            ) : (
+              <span aria-hidden />
+            )}
+          </div>
+
+          <div className={ACTIVE_DRILL_MOBILE_META_ROW_CLASS}>
+            {questionProgressLabel ? (
+              <span className={ACTIVE_DRILL_HEADER_PROGRESS_CLASS}>{questionProgressLabel}</span>
+            ) : (
+              <span aria-hidden />
+            )}
+            <div className={ACTIVE_DRILL_MOBILE_META_RIGHT_CLASS}>
               {showTimer ? (
                 <PracticeSessionTimer
                   layout="inline"
-                  label={timerLabel}
+                  label=""
                   displaySeconds={timerDisplaySeconds}
                   paused={timerPaused}
                   onPauseRequest={onTimerPauseRequest}
                   onReset={onResetTimer}
                   progress={timerProgress}
-                  displayClassName={timerDisplayClassName}
+                  displayClassName={cn("!mr-0 text-[12px]", timerDisplayClassName)}
                 />
               ) : null}
               {showTimer ? (
@@ -515,7 +551,7 @@ function PracticeSessionHeader({
                   onClick={onTimerPauseRequest}
                 >
                   {timerPaused ? (
-                    <Play className="size-6 text-[var(--color-student-heading)]" strokeWidth={1.5} aria-hidden />
+                    <Play className="size-5 text-[var(--color-student-heading)]" strokeWidth={1.5} aria-hidden />
                   ) : (
                     <ExamHeaderPauseIcon />
                   )}
@@ -524,6 +560,126 @@ function PracticeSessionHeader({
               {finishButton}
             </div>
           </div>
+
+          <input
+            type="search"
+            placeholder="Find Text, Type Here"
+            value={findQuery}
+            onChange={(e) => onFindQueryChange(e.target.value)}
+            className={ACTIVE_DRILL_MOBILE_FIND_INPUT_CLASS}
+            aria-label="Find text"
+          />
+
+          {canToggleMobilePaneMenu && mobilePaneMenuOpen ? (
+            <div className={ACTIVE_DRILL_MOBILE_PANE_TABS_CLASS} role="listbox" aria-label="Reading view">
+              <button
+                type="button"
+                role="option"
+                aria-selected={mobilePane === "passage"}
+                className={cn(
+                  ACTIVE_DRILL_MOBILE_PANE_TAB_CLASS,
+                  mobilePane === "passage"
+                    ? ACTIVE_DRILL_MOBILE_PANE_TAB_ACTIVE_CLASS
+                    : ACTIVE_DRILL_MOBILE_PANE_TAB_INACTIVE_CLASS,
+                )}
+                onClick={() => {
+                  onMobilePaneChange?.(mobilePane === "passage" ? null : "passage")
+                  setMobilePaneMenuOpen(false)
+                }}
+              >
+                <OfficialMobilePassageTabIcon active={mobilePane === "passage"} />
+                Passage
+              </button>
+              <button
+                type="button"
+                role="option"
+                aria-selected={mobilePane === "question"}
+                className={cn(
+                  ACTIVE_DRILL_MOBILE_PANE_TAB_CLASS,
+                  mobilePane === "question"
+                    ? ACTIVE_DRILL_MOBILE_PANE_TAB_ACTIVE_CLASS
+                    : ACTIVE_DRILL_MOBILE_PANE_TAB_INACTIVE_CLASS,
+                )}
+                onClick={() => {
+                  onMobilePaneChange?.(mobilePane === "question" ? null : "question")
+                  setMobilePaneMenuOpen(false)
+                }}
+              >
+                Question
+              </button>
+            </div>
+          ) : null}
+
+          <div className={ACTIVE_DRILL_DESKTOP_HEADER_BLOCK_CLASS}>
+            <div className={ACTIVE_DRILL_HEADER_ROW_CLASS}>
+              <div className={ACTIVE_DRILL_HEADER_LEFT_CLASS}>
+                {onClose ? (
+                  <button
+                    type="button"
+                    className={ACTIVE_DRILL_HEADER_CLOSE_BUTTON_CLASS}
+                    aria-label="Close exam"
+                    onClick={onClose}
+                  >
+                    <ExamHeaderCloseIcon />
+                  </button>
+                ) : null}
+                <p className={cn(ACTIVE_DRILL_HEADER_TITLE_CLASS, titleClassName)} title={title}>
+                  {title}
+                </p>
+                <button
+                  type="button"
+                  className={cn(
+                    ACTIVE_DRILL_HEADER_PILL_BUTTON_CLASS,
+                    passageOnlyView && ACTIVE_DRILL_HEADER_PILL_BUTTON_PRESSED_CLASS,
+                  )}
+                  aria-pressed={passageOnlyView}
+                  onClick={() => onPassageOnlyViewChange?.(!passageOnlyView)}
+                >
+                  Passage Only View
+                </button>
+                <input
+                  type="search"
+                  placeholder="Find Text, Type Here"
+                  value={findQuery}
+                  onChange={(e) => onFindQueryChange(e.target.value)}
+                  className={ACTIVE_DRILL_FIND_TEXT_INPUT_CLASS}
+                />
+              </div>
+              <div className={ACTIVE_DRILL_HEADER_RIGHT_CLASS}>
+                {questionProgressLabel ? (
+                  <span className={ACTIVE_DRILL_HEADER_PROGRESS_CLASS}>{questionProgressLabel}</span>
+                ) : null}
+                {showTimer ? (
+                  <PracticeSessionTimer
+                    layout="inline"
+                    label={timerLabel}
+                    displaySeconds={timerDisplaySeconds}
+                    paused={timerPaused}
+                    onPauseRequest={onTimerPauseRequest}
+                    onReset={onResetTimer}
+                    progress={timerProgress}
+                    displayClassName={timerDisplayClassName}
+                  />
+                ) : null}
+                {showTimer ? (
+                  <button
+                    type="button"
+                    className={ACTIVE_DRILL_HEADER_ICON_BUTTON_CLASS}
+                    aria-label={timerPaused ? "Section paused" : "Pause section timer"}
+                    onClick={onTimerPauseRequest}
+                  >
+                    {timerPaused ? (
+                      <Play className="size-6 text-[var(--color-student-heading)]" strokeWidth={1.5} aria-hidden />
+                    ) : (
+                      <ExamHeaderPauseIcon />
+                    )}
+                  </button>
+                ) : null}
+                {finishButton}
+              </div>
+            </div>
+          </div>
+
           <div
             className={ACTIVE_DRILL_HEADER_PROGRESS_TRACK_CLASS}
             role="progressbar"

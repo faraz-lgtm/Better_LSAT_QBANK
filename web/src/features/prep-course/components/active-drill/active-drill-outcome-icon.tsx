@@ -51,21 +51,25 @@ function ActiveDrillOutcomeIcon({
 
   return (
     <span
-      className={cn("flex size-12 shrink-0 items-center justify-center rounded-full px-2.5", fill, className)}
+      className={cn(
+        "inline-flex size-12 shrink-0 items-center justify-center rounded-full",
+        fill,
+        className,
+      )}
       role="img"
       aria-label={label}
     >
       {unanswered ? (
-        <Minus className="size-7 text-white" strokeWidth={2.5} aria-hidden />
+        <Minus className="size-6 shrink-0 text-white sm:size-7" strokeWidth={2.5} aria-hidden />
       ) : correct ? (
-        <Check className="size-7 text-white" strokeWidth={2.5} aria-hidden />
+        <Check className="size-6 shrink-0 text-white sm:size-7" strokeWidth={2.5} aria-hidden />
       ) : (
         <img
           src="/figma/active-drill/score-incorrect.svg"
           alt=""
           width={28}
           height={28}
-          className="size-7"
+          className="size-6 shrink-0 object-contain sm:size-7"
         />
       )}
     </span>

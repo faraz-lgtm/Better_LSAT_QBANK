@@ -19,12 +19,16 @@ import { GuestDiagnosticSubmitModal } from "@/features/guest/diagnostic/guest-di
 import type { GuestDiagnosticTestConfig } from "@/features/guest/diagnostic/guest-diagnostic-test-config"
 import {
   ACTIVE_DRILL_BODY_GRID_CLASS,
+  ACTIVE_DRILL_BODY_GRID_MOBILE_STACKED_CLASS,
   ACTIVE_DRILL_FINISH_BUTTON_CLASS,
   ACTIVE_DRILL_FOOTER_CLASS,
+  ACTIVE_DRILL_PANE_MOBILE_SOLO_CLASS,
   ACTIVE_DRILL_PASSAGE_PANE_CLASS,
+  ACTIVE_DRILL_PASSAGE_PANE_MOBILE_STACKED_CLASS,
   ACTIVE_DRILL_PASSAGE_PANE_ONLY_CLASS,
   ACTIVE_DRILL_PASSAGE_TEXT_CLASS,
   ACTIVE_DRILL_QUESTION_PANE_CLASS,
+  ACTIVE_DRILL_QUESTION_PANE_MOBILE_STACKED_CLASS,
 } from "@/features/student/practice-session/practice-session-active-drill-styles"
 import {
   EXAM_CARD_FULL_WIDTH_CLASS,
@@ -748,7 +752,7 @@ function GuestDiagnosticExamLayout({
         }}
         toolsMenuOpen={toolsMenuOpen}
         sectionLabel="Reading"
-        showMobilePaneTabs={officialChrome}
+        showMobilePaneTabs
         mobilePane={mobilePane}
         onMobilePaneChange={(pane) => {
           setMobilePane(pane)
@@ -758,13 +762,16 @@ function GuestDiagnosticExamLayout({
 
       <div
         className={cn(
-          "practice-session-body relative flex min-h-0 flex-1 flex-col overflow-hidden",
-          officialChrome && mobilePane === null && "practice-session-body--mobile-stack-scroll",
+          "practice-session-body relative flex min-h-0 flex-1 flex-col",
+          officialChrome || mobilePane !== null
+            ? "overflow-hidden"
+            : "max-md:overflow-y-auto md:overflow-hidden",
+          mobilePane === null && "practice-session-body--mobile-stack-scroll",
         )}
         data-color-scheme={highlights.accessibilitySettings.colorScheme}
         style={highlights.contentStyle}
       >
-        {officialChrome && toolsMenuOpen && !reviewPanelOpen && current ? (
+        {toolsMenuOpen && !reviewPanelOpen && current ? (
           <PracticeSessionMobileToolsOverlay
             questionId={current.id}
             flagged={isFlagged(current.id)}
@@ -797,23 +804,29 @@ function GuestDiagnosticExamLayout({
                   OFFICIAL_BODY_GRID_CLASS,
                   passageOnlyView && "lg:grid-cols-1 lg:pr-0",
                 )
-              : cn("grid overflow-hidden", ACTIVE_DRILL_BODY_GRID_CLASS, passageOnlyView && "lg:grid-cols-1"),
+              : cn(
+                  mobilePane === null ? ACTIVE_DRILL_BODY_GRID_MOBILE_STACKED_CLASS : "grid overflow-hidden",
+                  ACTIVE_DRILL_BODY_GRID_CLASS,
+                  passageOnlyView && "lg:grid-cols-1",
+                ),
           )}
         >
           <div
             ref={passagePaneRef}
             className={cn(
               "practice-session-pane",
-              !officialChrome && "min-h-0 overflow-y-auto",
+              !officialChrome && "min-h-0 md:overflow-y-auto",
               officialChrome && lineFocus && "practice-session-pane--line-focus",
-              officialChrome && mobilePane === "question" && "max-md:hidden",
+              mobilePane === "question" && "max-md:hidden",
               officialChrome
                 ? OFFICIAL_PASSAGE_PANE_CLASS
-                : passageOnlyView
+                : passageOnlyView || mobilePane === "passage"
                   ? ACTIVE_DRILL_PASSAGE_PANE_ONLY_CLASS
                   : ACTIVE_DRILL_PASSAGE_PANE_CLASS,
               officialChrome && mobilePane === null && OFFICIAL_PASSAGE_PANE_MOBILE_STACKED_CLASS,
+              !officialChrome && mobilePane === null && ACTIVE_DRILL_PASSAGE_PANE_MOBILE_STACKED_CLASS,
               officialChrome && mobilePane === "passage" && OFFICIAL_PANE_MOBILE_SOLO_CLASS,
+              !officialChrome && mobilePane === "passage" && ACTIVE_DRILL_PANE_MOBILE_SOLO_CLASS,
             )}
           >
             <PracticeAnnotatedContent
@@ -830,14 +843,16 @@ function GuestDiagnosticExamLayout({
             ref={questionPaneRef}
             className={cn(
               "practice-session-pane",
-              !officialChrome && "min-h-0 overflow-y-auto",
+              !officialChrome && "min-h-0 md:overflow-y-auto",
               officialChrome
                 ? cn(mobilePane === "passage" && "max-md:hidden", passageOnlyView && "md:hidden")
-                : passageOnlyView && "hidden",
+                : cn(mobilePane === "passage" && "max-md:hidden", passageOnlyView && "hidden"),
               questionRevealed && stimulusAnalysisHtml ? "practice-session-pane--scroll-visible" : null,
               officialChrome ? OFFICIAL_QUESTION_PANE_CLASS : ACTIVE_DRILL_QUESTION_PANE_CLASS,
               officialChrome && mobilePane === null && OFFICIAL_QUESTION_PANE_MOBILE_STACKED_CLASS,
+              !officialChrome && mobilePane === null && ACTIVE_DRILL_QUESTION_PANE_MOBILE_STACKED_CLASS,
               officialChrome && mobilePane === "question" && OFFICIAL_PANE_MOBILE_SOLO_CLASS,
+              !officialChrome && mobilePane === "question" && ACTIVE_DRILL_PANE_MOBILE_SOLO_CLASS,
             )}
           >
             <PracticeDrillQuestionPanel

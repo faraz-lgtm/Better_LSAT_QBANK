@@ -18,9 +18,7 @@ type ExplanationAnalyticsTabPanelProps = {
 }
 
 const cardSurface =
-  "rounded-[24px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-7 shadow-[0px_1px_1px_rgba(6,35,87,0.04),0px_12px_16px_rgba(6,35,87,0.22)]"
-
-const BAR_TRACK_HEIGHT = 200
+  "min-w-0 max-w-full rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-4 shadow-[0px_1px_1px_rgba(6,35,87,0.04),0px_12px_16px_rgba(6,35,87,0.22)] sm:rounded-[24px] sm:p-7"
 
 function difficultyToneStyles(tone: "green" | "teal" | "red"): {
   pillBg: string
@@ -55,7 +53,7 @@ function ComplexityStat({
   const colors = difficultyToneStyles(tone)
 
   return (
-    <div className="rounded-2xl border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-5">
+    <div className="min-w-0 rounded-2xl border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-4 sm:p-5">
       <div className="flex items-center justify-between gap-3">
         <p className="m-0 text-[13px] font-semibold uppercase tracking-[0.03em] text-[var(--greyscale-500)]">{label}</p>
         <span className={cn("rounded-full px-2.5 py-1 text-xs font-semibold", colors.pillBg, colors.pillText)}>
@@ -93,21 +91,25 @@ function ScoreBandCard({
 
   return (
     <div
-      className="rounded-2xl border border-[rgba(13,71,161,0.15)] p-5"
+      className="min-w-0 rounded-2xl border border-[rgba(13,71,161,0.15)] p-4 sm:p-5"
       style={{
         backgroundImage:
           "linear-gradient(169.42deg, rgb(13, 71, 161) 0%, rgb(12, 68, 155) 7.14%, rgb(6, 35, 87) 100%)",
       }}
     >
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex min-w-0 items-center gap-3">
-          <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-white/10">
-            <Users className="size-5 text-white" aria-hidden />
+      <div className="flex items-start justify-between gap-3 sm:gap-4">
+        <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-white/10 sm:size-11">
+            <Users className="size-4 text-white sm:size-5" aria-hidden />
           </div>
-          <p className="m-0 max-w-[240px] text-[13px] leading-[17.875px] text-white/75">{resolved.caption}</p>
+          <p className="m-0 min-w-0 flex-1 text-[12px] leading-[16px] text-white/75 sm:max-w-[240px] sm:text-[13px] sm:leading-[17.875px]">
+            {resolved.caption}
+          </p>
         </div>
-        <div className="text-right">
-          <p className="m-0 text-[34px] font-bold leading-[34px] text-white">{resolved.headline}</p>
+        <div className="shrink-0 text-right">
+          <p className="m-0 text-[28px] font-bold leading-[28px] text-white sm:text-[34px] sm:leading-[34px]">
+            {resolved.headline}
+          </p>
           <p className="m-0 pt-1 text-[11px] font-medium leading-[16.5px] text-[var(--primary-900)]">{resolved.range}</p>
         </div>
       </div>
@@ -144,29 +146,29 @@ function TopAnswerBar({
   pct: number
   highlight?: boolean
 }) {
-  const barHeight = pct > 0 ? Math.max(4, Math.round((pct / 100) * BAR_TRACK_HEIGHT)) : 0
+  const barPct = pct > 0 ? Math.max(4, pct) : 0
 
   return (
     <div className="flex min-w-0 flex-1 flex-col items-center">
       <p
         className={cn(
-          "m-0 pb-2 text-base font-bold leading-6 tabular-nums",
+          "m-0 pb-2 text-sm font-bold leading-5 tabular-nums sm:text-base sm:leading-6",
           highlight ? "text-[var(--primary)]" : "text-[var(--greyscale-500)]",
         )}
       >
         {pct}%
       </p>
-      <div className="relative flex h-[200px] w-16 max-w-[64px] items-end justify-center overflow-hidden rounded-2xl border border-[var(--greyscale-100)] bg-[rgba(243,247,255,0.6)]">
-        {barHeight > 0 ? (
+      <div className="relative flex h-[140px] w-full max-w-[64px] items-end justify-center overflow-hidden rounded-xl border border-[var(--greyscale-100)] bg-[rgba(243,247,255,0.6)] sm:h-[200px] sm:rounded-2xl">
+        {barPct > 0 ? (
           <div
             className={cn(
-              "relative w-[62px] rounded-t-[10px]",
+              "relative w-[calc(100%-2px)] max-w-[62px] rounded-t-[10px]",
               highlight && "bg-gradient-to-t from-[var(--primary-600)] to-[var(--primary)] shadow-[0px_-6px_18px_0px_rgba(11,188,201,0.6)]",
             )}
             style={
               highlight
-                ? { height: `${barHeight}px` }
-                : { height: `${barHeight}px`, backgroundImage: BAR_GRAY_GRADIENT }
+                ? { height: `${barPct}%` }
+                : { height: `${barPct}%`, backgroundImage: BAR_GRAY_GRADIENT }
             }
           />
         ) : null}
@@ -178,7 +180,7 @@ function TopAnswerBar({
       </div>
       <span
         className={cn(
-          "mt-3 flex size-9 items-center justify-center rounded-xl text-sm font-semibold leading-[21px]",
+          "mt-2 flex size-8 items-center justify-center rounded-lg text-xs font-semibold leading-[18px] sm:mt-3 sm:size-9 sm:rounded-xl sm:text-sm sm:leading-[21px]",
           highlight
             ? "border border-[var(--primary)] bg-[var(--primary)] text-white shadow-[0px_4px_3px_rgba(11,188,201,0.3),0px_2px_2px_rgba(11,188,201,0.3)]"
             : "border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] text-[var(--greyscale-500)]",
@@ -259,7 +261,7 @@ function TimingStat({
   yourTimeNote: string
 }) {
   return (
-    <div className="rounded-2xl border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-5">
+    <div className="min-w-0 rounded-2xl border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-4 sm:p-5">
       <p className="m-0 text-[13px] font-semibold uppercase tracking-[0.03em] text-[var(--greyscale-500)]">
         Timing
       </p>
@@ -294,9 +296,9 @@ function ExplanationAnalyticsTabPanel({ analytics, correctChoiceLetter }: Explan
   const { yourTime, yourTimeNote } = formatYourTimeAgainstTarget(targetSec, analytics.yourTimeSeconds)
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="grid gap-6 xl:grid-cols-2">
-        <section className={cn(cardSurface, "flex flex-col gap-6")}>
+    <div className="flex min-w-0 w-full max-w-full flex-col gap-4 sm:gap-6">
+      <div className="grid min-w-0 gap-4 sm:gap-6 xl:grid-cols-2">
+        <section className={cn(cardSurface, "flex flex-col gap-4 sm:gap-6")}>
           <div>
             <h3 className="m-0 text-lg font-semibold leading-[1.4] tracking-[0.02em] text-[var(--color-student-heading)]">Complexity</h3>
             <p className="m-0 mt-1 text-xs leading-normal tracking-[0.02em] text-[var(--greyscale-500)]">
@@ -305,7 +307,7 @@ function ExplanationAnalyticsTabPanel({ analytics, correctChoiceLetter }: Explan
           </div>
           <div
             className={cn(
-              "grid gap-4",
+              "grid min-w-0 gap-3 sm:gap-4",
               analytics.passageDifficulty ? "md:grid-cols-2" : "md:grid-cols-1",
             )}
           >
@@ -337,8 +339,8 @@ function ExplanationAnalyticsTabPanel({ analytics, correctChoiceLetter }: Explan
         </section>
 
         <section className={cn(cardSurface, "flex flex-col")}>
-          <div className="flex items-start justify-between gap-4">
-            <div>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+            <div className="min-w-0">
               <h3 className="m-0 text-base font-semibold leading-normal tracking-[0.02em] text-[var(--color-student-heading)]">
               Answer Choice Distribution
               </h3>
@@ -347,13 +349,13 @@ function ExplanationAnalyticsTabPanel({ analytics, correctChoiceLetter }: Explan
               </p>
             </div>
             {correctChoiceLetter ? (
-              <span className="inline-flex items-center gap-1.5 rounded-[10px] bg-[var(--primary-25)] px-3 py-1 text-xs font-semibold leading-[18px] text-[var(--primary)]">
+              <span className="inline-flex w-fit shrink-0 items-center gap-1.5 rounded-[10px] bg-[var(--primary-25)] px-3 py-1 text-xs font-semibold leading-[18px] text-[var(--primary)]">
                 <Check className="size-3.5" aria-hidden />
                 {correctChoiceLetter} is correct
               </span>
             ) : null}
           </div>
-          <div className="flex items-start gap-5 pt-6">
+          <div className="flex min-w-0 items-start gap-1.5 pt-4 sm:gap-5 sm:pt-6">
             {popularityRows.map((row) => (
               <TopAnswerBar
                 key={row.letter}
@@ -366,7 +368,7 @@ function ExplanationAnalyticsTabPanel({ analytics, correctChoiceLetter }: Explan
         </section>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-2">
+      <div className="grid min-w-0 gap-4 sm:gap-6 xl:grid-cols-2">
         <section className={cn(cardSurface, "flex flex-col")}>
           <div className="flex items-center justify-between gap-3">
             <h3 className="m-0 text-lg font-semibold leading-[1.4] tracking-[0.02em] text-[var(--color-student-heading)]">
