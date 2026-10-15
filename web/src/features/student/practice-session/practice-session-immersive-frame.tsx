@@ -42,12 +42,14 @@ function PracticeSessionImmersiveFrame({
     <div
       data-practice-session-immersive-frame
       className={cn(
-        "fixed inset-0 z-40 flex items-center justify-center overflow-hidden",
+        // Stretch on phones so the exam card fills the viewport height; center on md+.
+        "fixed inset-0 z-40 flex items-stretch justify-center overflow-hidden md:items-center",
         fullBleed
           ? OFFICIAL_IMMERSIVE_FRAME_CLASS
           : fullWidth
-            ? cn(OFFICIAL_IMMERSIVE_FRAME_CLASS, "p-4 md:p-8")
-            : "p-4 md:p-8",
+            ? // Edge-to-edge on phones so the exam card fills the viewport; pad from md up.
+              cn(OFFICIAL_IMMERSIVE_FRAME_CLASS, "p-0 md:p-8")
+            : "p-0 md:p-4 lg:p-8",
         className,
       )}
     >

@@ -113,7 +113,9 @@ function ScoreBandCard({
           <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-white/10">
             <Users className="size-5 text-white" aria-hidden />
           </div>
-          <p className="m-0 max-w-[240px] text-[13px] leading-[17.875px] text-white/75">{resolved.caption}</p>
+          <p className="m-0 min-w-0 flex-1 text-[12px] leading-[16px] text-white/75 sm:max-w-[240px] sm:text-[13px] sm:leading-[17.875px]">
+            {resolved.caption}
+          </p>
         </div>
         <div className="text-right">
           <p className="m-0 text-[34px] font-bold leading-[34px] text-white">{resolved.headline}</p>
@@ -153,13 +155,13 @@ function TopAnswerBar({
   pct: number
   highlight?: boolean
 }) {
-  const barHeight = pct > 0 ? Math.max(4, Math.round((pct / 100) * BAR_TRACK_HEIGHT)) : 0
+  const barPct = pct > 0 ? Math.max(4, pct) : 0
 
   return (
     <div className="flex min-w-0 flex-1 flex-col items-center">
       <p
         className={cn(
-          "m-0 pb-2 text-base font-bold leading-6 tabular-nums",
+          "m-0 pb-2 text-sm font-bold leading-5 tabular-nums sm:text-base sm:leading-6",
           highlight ? "text-[var(--primary)]" : "text-[var(--greyscale-500)]",
         )}
       >
@@ -185,7 +187,7 @@ function TopAnswerBar({
       </div>
       <span
         className={cn(
-          "mt-3 flex size-9 items-center justify-center rounded-xl text-sm font-semibold leading-[21px]",
+          "mt-2 flex size-8 items-center justify-center rounded-lg text-xs font-semibold leading-[18px] sm:mt-3 sm:size-9 sm:rounded-xl sm:text-sm sm:leading-[21px]",
           highlight
             ? "border border-[var(--primary)] bg-[var(--primary)] text-white shadow-[0px_4px_3px_rgba(11,188,201,0.3),0px_2px_2px_rgba(11,188,201,0.3)]"
             : "border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] text-[var(--greyscale-500)] dark:bg-[var(--greyscale-25)]",
@@ -303,9 +305,9 @@ function ExplanationAnalyticsTabPanel({ analytics, correctChoiceLetter }: Explan
   const { yourTime, yourTimeNote } = formatYourTimeAgainstTarget(targetSec, analytics.yourTimeSeconds)
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="grid gap-6 xl:grid-cols-2">
-        <section className={cn(cardSurface, "flex flex-col gap-6")}>
+    <div className="flex min-w-0 w-full max-w-full flex-col gap-4 sm:gap-6">
+      <div className="grid min-w-0 gap-4 sm:gap-6 xl:grid-cols-2">
+        <section className={cn(cardSurface, "flex flex-col gap-4 sm:gap-6")}>
           <div>
             <h3 className="m-0 text-lg font-semibold leading-[1.4] tracking-[0.02em] text-[var(--color-student-heading)]">Complexity</h3>
             <p className="m-0 mt-1 text-xs leading-normal tracking-[0.02em] text-[var(--greyscale-500)]">
@@ -314,7 +316,7 @@ function ExplanationAnalyticsTabPanel({ analytics, correctChoiceLetter }: Explan
           </div>
           <div
             className={cn(
-              "grid gap-4",
+              "grid min-w-0 gap-3 sm:gap-4",
               analytics.passageDifficulty ? "md:grid-cols-2" : "md:grid-cols-1",
             )}
           >
@@ -346,8 +348,8 @@ function ExplanationAnalyticsTabPanel({ analytics, correctChoiceLetter }: Explan
         </section>
 
         <section className={cn(cardSurface, "flex flex-col")}>
-          <div className="flex items-start justify-between gap-4">
-            <div>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+            <div className="min-w-0">
               <h3 className="m-0 text-base font-semibold leading-normal tracking-[0.02em] text-[var(--color-student-heading)]">
               Answer Choice Distribution
               </h3>
@@ -362,7 +364,7 @@ function ExplanationAnalyticsTabPanel({ analytics, correctChoiceLetter }: Explan
               </span>
             ) : null}
           </div>
-          <div className="flex items-start gap-5 pt-6">
+          <div className="flex min-w-0 items-start gap-1.5 pt-4 sm:gap-5 sm:pt-6">
             {popularityRows.map((row) => (
               <TopAnswerBar
                 key={row.letter}
@@ -375,7 +377,7 @@ function ExplanationAnalyticsTabPanel({ analytics, correctChoiceLetter }: Explan
         </section>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-2">
+      <div className="grid min-w-0 gap-4 sm:gap-6 xl:grid-cols-2">
         <section className={cn(cardSurface, "flex flex-col")}>
           <div className="flex items-center justify-between gap-3">
             <h3 className="m-0 text-lg font-semibold leading-[1.4] tracking-[0.02em] text-[var(--color-student-heading)]">

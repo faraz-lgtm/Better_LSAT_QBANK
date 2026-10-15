@@ -66,11 +66,50 @@ const EXAM_MORE_PANEL_TOGGLE_ROW_CLASS =
 const EXAM_MORE_PANEL_TOGGLE_LABEL_CLASS =
   "text-[18px] font-medium leading-[1.4] tracking-[0.36px] text-[var(--color-student-heading)]"
 
-/** Figma `20268:105580` — exam header chrome */
+/** Figma `20268:105580` — exam header chrome (compact on phone, desktop sizing from md) */
 const ACTIVE_DRILL_HEADER_SHELL_CLASS =
-  "practice-session-header practice-session-header--active-drill box-border flex h-[120px] shrink-0 flex-col overflow-visible rounded-none bg-[var(--greyscale-0)] px-10 py-6"
+  "practice-session-header practice-session-header--active-drill box-border flex h-auto min-h-0 shrink-0 flex-col overflow-hidden rounded-none border-b border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-3 py-2 md:h-[120px] md:overflow-visible md:border-b-0 md:px-10 md:py-6"
 
-const ACTIVE_DRILL_HEADER_STACK_CLASS = "flex w-full flex-col justify-center gap-4"
+const ACTIVE_DRILL_HEADER_STACK_CLASS = "flex w-full flex-col justify-center gap-2 md:gap-4"
+
+/** Mobile-only compact chrome — mirrors official exam mobile header structure */
+const ACTIVE_DRILL_MOBILE_HEADER_CLASS =
+  "grid w-full min-w-0 grid-cols-[36px_minmax(0,1fr)_36px] items-center gap-1 border-b border-[var(--greyscale-100)] pb-2 md:hidden"
+
+const ACTIVE_DRILL_MOBILE_HEADER_TITLE_BUTTON_CLASS =
+  "inline-flex min-w-0 max-w-full items-center justify-center gap-1 justify-self-center px-1"
+
+const ACTIVE_DRILL_MOBILE_HEADER_TITLE_CLASS =
+  "m-0 min-w-0 truncate text-center text-[15px] font-bold leading-[22px] text-[var(--color-student-heading)]"
+
+const ACTIVE_DRILL_MOBILE_META_ROW_CLASS =
+  "flex w-full min-w-0 items-center justify-between gap-2 md:hidden"
+
+const ACTIVE_DRILL_MOBILE_META_RIGHT_CLASS =
+  "flex min-w-0 items-center gap-1.5 text-[12px] font-medium leading-[18px] text-[var(--greyscale-500)]"
+
+const ACTIVE_DRILL_MOBILE_FIND_INPUT_CLASS =
+  "h-9 w-full min-w-0 rounded-[12px] border border-[var(--greyscale-100)] bg-[var(--greyscale-25)] px-3 text-sm font-normal leading-[1.5] tracking-[0.28px] text-[var(--color-student-heading)] outline-none placeholder:text-[var(--greyscale-400)] md:hidden"
+
+const ACTIVE_DRILL_MOBILE_TOOLS_BUTTON_CLASS =
+  "inline-flex size-9 shrink-0 items-center justify-center justify-self-end rounded-[10px] text-[var(--color-student-heading)] transition hover:bg-[var(--greyscale-25)]"
+
+/** Same Passage / Question dropdown pattern as official mobile header */
+const ACTIVE_DRILL_MOBILE_PANE_TABS_CLASS =
+  "grid w-full min-w-0 grid-cols-2 gap-[5px] border-b border-[var(--greyscale-100)] bg-[var(--greyscale-25)] p-2 md:hidden"
+
+const ACTIVE_DRILL_MOBILE_PANE_TAB_CLASS =
+  "inline-flex min-h-10 items-center justify-center gap-[7px] rounded-[8px] text-[13px] font-semibold leading-[19.5px] tracking-[-0.076px] transition"
+
+const ACTIVE_DRILL_MOBILE_PANE_TAB_ACTIVE_CLASS =
+  "bg-[var(--greyscale-0)] text-[var(--primary)] shadow-[0px_1px_2px_rgba(13,13,18,0.1)]"
+
+const ACTIVE_DRILL_MOBILE_PANE_TAB_INACTIVE_CLASS = "bg-transparent text-[var(--greyscale-500)]"
+
+/** Solo Passage/Question tab — fill remaining height and scroll inside the pane. */
+const ACTIVE_DRILL_PANE_MOBILE_SOLO_CLASS = "max-md:min-h-0 max-md:flex-1 max-md:overflow-y-auto"
+
+const ACTIVE_DRILL_DESKTOP_HEADER_BLOCK_CLASS = "hidden w-full min-w-0 flex-col gap-4 md:flex"
 
 const ACTIVE_DRILL_HEADER_ROW_CLASS =
   "flex h-[52px] w-full min-w-0 items-center justify-between"
@@ -93,9 +132,9 @@ const ACTIVE_DRILL_HEADER_PILL_BUTTON_CLASS =
 const ACTIVE_DRILL_HEADER_PILL_BUTTON_PRESSED_CLASS =
   "border-[var(--primary)] bg-[var(--primary-25)] text-[var(--primary)]"
 
-/** Figma `20268:105580` — timer card 222×52 */
+/** Figma `20268:105580` — timer card 222×52 (desktop); compact pill on phone */
 const ACTIVE_DRILL_HEADER_TIMER_CLASS =
-  "practice-session-timer flex h-[52px] w-[222px] shrink-0 items-center overflow-visible rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-3"
+  "practice-session-timer flex h-8 w-auto max-w-full shrink-0 items-center overflow-visible rounded-[12px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-2 md:h-[52px] md:w-[222px] md:rounded-[16px] md:px-3"
 
 const ACTIVE_DRILL_HEADER_PROGRESS_TRACK_CLASS =
   "relative h-1 w-full overflow-hidden rounded-[5px] bg-[var(--greyscale-50)]"
@@ -113,11 +152,11 @@ const ACTIVE_DRILL_HEADER_UNDERLINE_BUTTON_CLASS =
 
 /** Figma `20268:105580` — question progress label */
 const ACTIVE_DRILL_HEADER_PROGRESS_CLASS =
-  "h-5 shrink-0 whitespace-nowrap text-sm font-medium leading-[1.5] tracking-[0.28px] text-[var(--greyscale-500)]"
+  "h-5 shrink-0 whitespace-nowrap text-xs font-medium leading-[1.5] tracking-[0.28px] text-[var(--greyscale-500)] md:text-sm"
 
-/** Figma `20268:105580` — pause / more 54×52 */
+/** Figma `20268:105580` — pause / more 54×52 (desktop); compact on phone */
 const ACTIVE_DRILL_HEADER_ICON_BUTTON_CLASS =
-  "inline-flex h-[52px] w-[54px] shrink-0 items-center justify-center rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] transition hover:bg-[var(--greyscale-25)]"
+  "inline-flex size-9 shrink-0 items-center justify-center rounded-[10px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] transition hover:bg-[var(--greyscale-25)] md:h-[52px] md:w-[54px] md:rounded-[16px]"
 
 /** Figma `20268:105580` — close 36×36 */
 const ACTIVE_DRILL_HEADER_CLOSE_BUTTON_CLASS =
@@ -141,8 +180,15 @@ const ACTIVE_DRILL_OPTION_LETTER_UNSELECTED_CLASS =
 const ACTIVE_DRILL_ACTION_BUTTON_CLASS =
   "inline-flex size-9 shrink-0 items-center justify-center rounded-[10px] text-[var(--greyscale-500)] transition hover:text-[var(--color-student-heading)]"
 
-/** Figma LSAT default — equal two-column exam body */
-const ACTIVE_DRILL_BODY_GRID_CLASS = "px-6 pt-6 lg:grid-cols-2"
+/** Figma LSAT default — equal two-column exam body (tighter pad on phones) */
+const ACTIVE_DRILL_BODY_GRID_CLASS = "px-3 pt-3 md:px-6 md:pt-6 lg:grid-cols-2"
+
+/**
+ * Mobile stacked (stimulus + question): content grows; the body scrolls.
+ * Desktop keeps the 2-col grid with per-pane scroll.
+ */
+const ACTIVE_DRILL_BODY_GRID_MOBILE_STACKED_CLASS =
+  "max-md:flex max-md:flex-col max-md:h-auto max-md:overflow-visible md:grid md:min-h-0 md:overflow-hidden"
 
 /** Figma LSAT default — passage column with vertical divider */
 const ACTIVE_DRILL_PASSAGE_PANE_CLASS =
@@ -152,8 +198,16 @@ const ACTIVE_DRILL_PASSAGE_PANE_CLASS =
 const ACTIVE_DRILL_PASSAGE_PANE_ONLY_CLASS =
   "border-b border-[var(--greyscale-100)] pb-6 lg:border-b-0 lg:pb-0"
 
+/** Mobile stacked — passage grows with content (not clipped). */
+const ACTIVE_DRILL_PASSAGE_PANE_MOBILE_STACKED_CLASS =
+  "max-md:!h-auto max-md:!min-h-0 max-md:!max-h-none max-md:flex-none max-md:shrink-0 max-md:!overflow-visible"
+
 /** Figma LSAT default — question + answers column */
 const ACTIVE_DRILL_QUESTION_PANE_CLASS = "pt-6 lg:pt-0 lg:pl-6"
+
+/** Mobile stacked — question/options grow; parent body scrolls to the footer. */
+const ACTIVE_DRILL_QUESTION_PANE_MOBILE_STACKED_CLASS =
+  "practice-session-pane--mobile-question-stack max-md:!h-auto max-md:!min-h-0 max-md:!max-h-none max-md:flex-none max-md:shrink-0 max-md:!overflow-visible max-md:pb-6"
 
 /** Figma `19641:44925` — stimulus / passage typography */
 const ACTIVE_DRILL_PASSAGE_TEXT_CLASS = "text-[1.125em] leading-[30px] text-[color:inherit]"
@@ -288,8 +342,10 @@ const ACTIVE_DRILL_QUESTION_NAV_BUTTON_DEFAULT_CLASS =
 export {
   ACTIVE_DRILL_ACTION_BUTTON_CLASS,
   ACTIVE_DRILL_BODY_GRID_CLASS,
+  ACTIVE_DRILL_BODY_GRID_MOBILE_STACKED_CLASS,
   ACTIVE_DRILL_CHOICE_ROW_GRID_CLASS,
   ACTIVE_DRILL_CHOICE_ROW_GRID_WITH_ACTION_CLASS,
+  ACTIVE_DRILL_DESKTOP_HEADER_BLOCK_CLASS,
   ACTIVE_DRILL_HEADER_CLOSE_BUTTON_CLASS,
   ACTIVE_DRILL_HEADER_ICON_BUTTON_CLASS,
   ACTIVE_DRILL_HEADER_LEFT_CLASS,
@@ -308,6 +364,18 @@ export {
   ACTIVE_DRILL_HEADER_TOOL_GROUP_CLASS,
   ACTIVE_DRILL_HEADER_UNDERLINE_BUTTON_CLASS,
   ACTIVE_DRILL_FIND_TEXT_INPUT_CLASS,
+  ACTIVE_DRILL_MOBILE_FIND_INPUT_CLASS,
+  ACTIVE_DRILL_MOBILE_HEADER_CLASS,
+  ACTIVE_DRILL_MOBILE_HEADER_TITLE_BUTTON_CLASS,
+  ACTIVE_DRILL_MOBILE_HEADER_TITLE_CLASS,
+  ACTIVE_DRILL_MOBILE_META_RIGHT_CLASS,
+  ACTIVE_DRILL_MOBILE_META_ROW_CLASS,
+  ACTIVE_DRILL_MOBILE_PANE_TAB_ACTIVE_CLASS,
+  ACTIVE_DRILL_MOBILE_PANE_TAB_CLASS,
+  ACTIVE_DRILL_MOBILE_PANE_TAB_INACTIVE_CLASS,
+  ACTIVE_DRILL_MOBILE_PANE_TABS_CLASS,
+  ACTIVE_DRILL_MOBILE_TOOLS_BUTTON_CLASS,
+  ACTIVE_DRILL_PANE_MOBILE_SOLO_CLASS,
   ACTIVE_DRILL_FINISH_BUTTON_CLASS,
   ACTIVE_DRILL_FOOTER_CLASS,
   ACTIVE_DRILL_FOOTER_NAV_ARROW_BUTTON_CLASS,
@@ -327,11 +395,13 @@ export {
   ACTIVE_DRILL_OPTION_EYE_BUTTON_CLASS,
   ACTIVE_DRILL_OPTIONS_LIST_CLASS,
   ACTIVE_DRILL_PASSAGE_PANE_CLASS,
+  ACTIVE_DRILL_PASSAGE_PANE_MOBILE_STACKED_CLASS,
   ACTIVE_DRILL_PASSAGE_PANE_ONLY_CLASS,
   ACTIVE_DRILL_PASSAGE_TEXT_CLASS,
   ACTIVE_DRILL_QUESTION_PANEL_MAIN_CLASS,
   ACTIVE_DRILL_QUESTION_PANEL_WITH_WIDGET_CLASS,
   ACTIVE_DRILL_QUESTION_PANE_CLASS,
+  ACTIVE_DRILL_QUESTION_PANE_MOBILE_STACKED_CLASS,
   ACTIVE_DRILL_SIDE_WIDGET_COLLAPSED_CLASS,
   ACTIVE_DRILL_SIDE_WIDGET_EXPANDED_CLASS,
   ACTIVE_DRILL_SIDE_WIDGET_ITEM_CLASS,
