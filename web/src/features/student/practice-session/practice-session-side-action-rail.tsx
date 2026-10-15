@@ -294,7 +294,8 @@ function PracticeSessionSideWidget({
           officialChrome
             ? officialAsideClass
             : cn(
-                "practice-session-side-widget sticky top-6 z-20 flex shrink-0 flex-col overflow-visible",
+                // Desktop rail only — phones use the header tools overlay instead.
+                "practice-session-side-widget sticky top-6 z-20 hidden shrink-0 flex-col overflow-visible md:flex",
                 expanded ? ACTIVE_DRILL_SIDE_WIDGET_EXPANDED_CLASS : ACTIVE_DRILL_SIDE_WIDGET_COLLAPSED_CLASS,
               ),
         )}
