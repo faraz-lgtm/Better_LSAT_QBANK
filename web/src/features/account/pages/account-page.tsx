@@ -21,6 +21,7 @@ import { PasswordInput } from "@/components/ui/password-input"
 import { Select } from "@/components/ui/select"
 import northAmericanTimezones from "@/features/account/data/north-american-timezones.json"
 import {
+  checkoutPlanFromInvoiceTitle,
   formatCardExpiry,
   formatInvoiceAmount,
   formatInvoiceMeta,
@@ -88,9 +89,9 @@ const TIMEZONE_OPTIONS = northAmericanTimezones as AccountTimezone[]
 
 const PAYMENT_PLAN_OPTIONS: FigmaDropdownOption[] = [
   { value: "monthly", label: "Monthly — $69/mo" },
-  { value: "three_month", label: "Quarterly — $192" },
-  { value: "six_month", label: "Semiannual — $354" },
-  { value: "yearly", label: "Yearly — $624" },
+  { value: "three_month", label: "3 Months — $192" },
+  { value: "six_month", label: "6 Months — $354" },
+  { value: "yearly", label: "12 Months — $624" },
 ]
 
 const PLAN_LABELS: Record<CheckoutPlanId, string> = {
@@ -856,13 +857,24 @@ function AccountPage() {
     setCameraStarting(false)
     setCapturingCameraPhoto(false)
   }
+  const resolvedCheckoutPlan = useMemo(() => {
+    if (billingStatus?.checkoutPlan) return billingStatus.checkoutPlan
+    if (billingStatus?.subscription?.checkoutPlan) return billingStatus.subscription.checkoutPlan
+    // Match Current Plan to billing history when status interval is still unknown.
+    for (const invoice of billingInvoices) {
+      const fromTitle = checkoutPlanFromInvoiceTitle(invoice.title)
+      if (fromTitle) return fromTitle
+    }
+    return null
+  }, [billingInvoices, billingStatus?.checkoutPlan, billingStatus?.subscription?.checkoutPlan])
+
   const currentPlan = useMemo(
     () =>
       resolveCurrentPricingPlan({
         hasActiveCore: hasProPlan,
-        checkoutPlan: billingStatus?.checkoutPlan ?? null,
+        checkoutPlan: resolvedCheckoutPlan,
       }),
-    [billingStatus?.checkoutPlan, hasProPlan],
+    [hasProPlan, resolvedCheckoutPlan],
   )
   const planName = currentPlan.name
   const currentPlanFeatures = currentPlan.features
@@ -930,7 +942,7 @@ function AccountPage() {
   }
 
   function openPlanChangeDialog() {
-    const currentPlan = billingStatus?.checkoutPlan
+    const currentPlan = resolvedCheckoutPlan
     const nextPlan =
       billingStatus?.pendingChange?.plan ??
       PAYMENT_PLAN_OPTIONS.find((option) => option.value !== currentPlan)?.value ??
@@ -1560,7 +1572,7 @@ function AccountPage() {
                     {feature}
                   </CheckListItem>
                 ))}
-                {isPaidPricingPlan(currentPlan) ? (
+                {isPaidPricingPlan(currentPlan) && currentPlan.renewalNote ? (
                   <CheckListItem muted>{currentPlan.renewalNote}</CheckListItem>
                 ) : null}
               </ul>
@@ -1638,7 +1650,7 @@ function AccountPage() {
           <DialogHeader>
             <DialogTitle>Change your plan</DialogTitle>
             <DialogDescription>
-              Your current {billingStatus?.checkoutPlan ? PLAN_LABELS[billingStatus.checkoutPlan] : "plan"} remains
+              Your current {resolvedCheckoutPlan ? PLAN_LABELS[resolvedCheckoutPlan] : "plan"} remains
               active until {formatPlanChangeDate(billingStatus?.subscription?.currentPeriodEnd)}. You will not be
               charged today.
             </DialogDescription>
@@ -1654,7 +1666,7 @@ function AccountPage() {
               id="change-plan"
               value={selectedPlan}
               disabled={changingPlan}
-              options={PAYMENT_PLAN_OPTIONS.filter((option) => option.value !== billingStatus?.checkoutPlan)}
+              options={PAYMENT_PLAN_OPTIONS.filter((option) => option.value !== resolvedCheckoutPlan)}
               placeholder="Select a plan"
               onOpenChange={setPlanChangeMenuOpen}
               onChange={(value) => setSelectedPlan(value as CheckoutPlanId)}
@@ -1675,7 +1687,7 @@ function AccountPage() {
             </Button>
             <Button
               type="button"
-              disabled={changingPlan || selectedPlan === billingStatus?.checkoutPlan}
+              disabled={changingPlan || selectedPlan === resolvedCheckoutPlan}
               onClick={() => void confirmPlanChange()}
             >
               {changingPlan ? "Scheduling…" : "Confirm Plan Change"}

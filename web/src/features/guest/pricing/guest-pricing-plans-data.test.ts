@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 import {
   FREE_PRICING_PLAN,
   getPricingPlanById,
+  isPaidPricingPlan,
   resolveCurrentPricingPlan,
 } from "@/features/guest/pricing/guest-pricing-plans-data"
 
@@ -24,9 +25,10 @@ describe("resolveCurrentPricingPlan", () => {
     expect(plan.features).toEqual(getPricingPlanById("six_month").features)
   })
 
-  it("falls back to Monthly when paid but checkout plan is unknown", () => {
+  it("falls back to Full Access without a monthly renewal claim when checkout plan is unknown", () => {
     const plan = resolveCurrentPricingPlan({ hasActiveCore: true, checkoutPlan: null })
-    expect(plan.id).toBe("monthly")
-    expect(plan.name).toBe("Monthly")
+    expect(plan.name).toBe("Full Access")
+    expect(isPaidPricingPlan(plan) ? plan.renewalNote : "x").toBe("")
+    expect(plan.name).not.toBe("Monthly")
   })
 })

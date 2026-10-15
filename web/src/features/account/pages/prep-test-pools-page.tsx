@@ -23,6 +23,7 @@ import { StudentPageLoader } from "@/features/student/components/student-page-lo
 import { AppToast } from "@/components/ui/app-toast"
 import { Button } from "@/components/ui/button"
 import { useAppToast } from "@/hooks/use-app-toast"
+import { createBillingApi, type CheckoutPlanId } from "@/lib/api/billing"
 import { createPracticeApi } from "@/lib/api/practice"
 import {
   PREP_TEST_POOL_DRILL_ONLY_MAX,
@@ -357,9 +358,37 @@ function SettingsPlanSidebar() {
   const { openPricingModal } = useGuestPricingModal()
   const { entitlement } = useStudentEntitlement()
   const hasProPlan = Boolean(entitlement?.hasActiveCore || entitlement?.accessState === "FULL_ACCESS")
+  const [checkoutPlan, setCheckoutPlan] = useState<CheckoutPlanId | null>(null)
+
+  useEffect(() => {
+    if (!hasProPlan) {
+      setCheckoutPlan(null)
+      return
+    }
+    let alive = true
+    async function loadCheckoutPlan() {
+      try {
+        const status = await createBillingApi(getSupabaseBrowserClient()).getStatus()
+        if (!alive) return
+        setCheckoutPlan(status.checkoutPlan ?? status.subscription?.checkoutPlan ?? null)
+      } catch {
+        if (!alive) return
+        setCheckoutPlan(null)
+      }
+    }
+    void loadCheckoutPlan()
+    return () => {
+      alive = false
+    }
+  }, [hasProPlan])
+
   const currentPlan = useMemo(
-    () => resolveCurrentPricingPlan({ hasActiveCore: hasProPlan }),
-    [hasProPlan],
+    () =>
+      resolveCurrentPricingPlan({
+        hasActiveCore: hasProPlan,
+        checkoutPlan,
+      }),
+    [checkoutPlan, hasProPlan],
   )
 
   return (
@@ -376,7 +405,7 @@ function SettingsPlanSidebar() {
               {feature}
             </CheckListItem>
           ))}
-          {isPaidPricingPlan(currentPlan) ? (
+          {isPaidPricingPlan(currentPlan) && currentPlan.renewalNote ? (
             <CheckListItem muted>{currentPlan.renewalNote}</CheckListItem>
           ) : null}
         </ul>

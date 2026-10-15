@@ -65,6 +65,18 @@ Deno.test('resolveInvoiceTitle prefers catalog plan names over LawHub-first comb
     'Monthly + LawHub',
   )
   assertEquals(
+    resolveInvoiceTitle(['LawHub Advantage'], 'core', 'six_month'),
+    '6 Months + LawHub',
+  )
+  assertEquals(
+    resolveInvoiceTitle(['1 x Better LSAT Core (at $70.00 / month)'], 'core', 'three_month'),
+    '3 Months',
+  )
+  assertEquals(
+    resolveInvoiceTitle(['Better LSAT Core'], 'core', 'yearly'),
+    '12 Months',
+  )
+  assertEquals(
     resolveInvoiceTitle(['1 x Better LSAT Core (at $70.00 / month)'], 'core'),
     'Monthly',
   )
@@ -78,7 +90,7 @@ Deno.test('resolveInvoiceTitle prefers catalog plan names over LawHub-first comb
   )
   assertEquals(
     resolveInvoiceTitle(['LawHub Advantage', 'Better LSAT Yearly'], null, 'yearly'),
-    'Yearly + LawHub',
+    '12 Months + LawHub',
   )
   assertEquals(resolveInvoiceTitle([], 'live'), 'Live')
   assertEquals(resolveInvoiceTitle([], null), 'Monthly')
