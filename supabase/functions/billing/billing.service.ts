@@ -41,9 +41,85 @@ export type BillingServiceDeps = {
   onCheckoutCompleted?: (ctx: CheckoutCompletedContext) => Promise<void>
 }
 
+/** Query param used when returning from a Replace payment-method portal flow. */
+export const REPLACE_PAYMENT_METHOD_QUERY = 'replace_pm'
+
 function unixToIso(seconds: number | null | undefined): string | null {
   if (seconds == null) return null
   return new Date(seconds * 1000).toISOString()
+}
+
+function assertStripePaymentMethodId(paymentMethodId: string): void {
+  if (!/^pm_[A-Za-z0-9]+$/.test(paymentMethodId)) {
+    throw new Error('Invalid payment method id')
+  }
+}
+
+async function assertPaymentMethodOwnedByCustomer(
+  stripe: Stripe,
+  paymentMethodId: string,
+  customerId: string,
+): Promise<void> {
+  const pm = await stripe.paymentMethods.retrieve(paymentMethodId)
+  const pmCustomer = typeof pm.customer === 'string' ? pm.customer : pm.customer?.id ?? null
+  if (pmCustomer !== customerId) {
+    throw new Error('Payment method not found for this account.')
+  }
+}
+
+function buildAccountReturnUrl(baseUrl: string, replacePaymentMethodId: string | null): string {
+  const accountUrl = `${baseUrl}/app/account`
+  if (!replacePaymentMethodId) return accountUrl
+  const url = new URL(accountUrl)
+  url.searchParams.set(REPLACE_PAYMENT_METHOD_QUERY, replacePaymentMethodId)
+  return url.toString()
+}
+
+function isStripeResourceMissing(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error != null &&
+    'code' in error &&
+    (error as { code?: unknown }).code === 'resource_missing'
+  )
+}
+
+/**
+ * After a Replace portal flow: detach the previous card only if Stripe already
+ * switched the customer default to a different payment method. If they cancelled,
+ * the default is unchanged and we keep the card.
+ */
+async function maybeDetachReplacedPaymentMethod(
+  stripe: Stripe,
+  customerId: string,
+  paymentMethodId: string,
+): Promise<void> {
+  const trimmedId = paymentMethodId.trim()
+  assertStripePaymentMethodId(trimmedId)
+
+  try {
+    await assertPaymentMethodOwnedByCustomer(stripe, trimmedId, customerId)
+  } catch (error) {
+    if (isStripeResourceMissing(error)) return
+    throw error
+  }
+
+  const customer = await stripe.customers.retrieve(customerId)
+  if (customer.deleted) return
+
+  const defaultPm =
+    typeof customer.invoice_settings?.default_payment_method === 'string'
+      ? customer.invoice_settings.default_payment_method
+      : customer.invoice_settings?.default_payment_method?.id ?? null
+
+  if (defaultPm == null || defaultPm === trimmedId) return
+
+  try {
+    await stripe.paymentMethods.detach(trimmedId)
+  } catch (error) {
+    if (isStripeResourceMissing(error)) return
+    throw error
+  }
 }
 
 function subscriptionItemPriceId(item: Stripe.SubscriptionItem): string {
@@ -468,10 +544,18 @@ export function createBillingService(deps: BillingServiceDeps) {
       return { pendingChange: null }
     },
 
-    async getPaymentMethods(userId: string): Promise<{ paymentMethods: BillingPaymentMethodDto[] }> {
+    async getPaymentMethods(
+      userId: string,
+      options: { replacePaymentMethodId?: string } = {},
+    ): Promise<{ paymentMethods: BillingPaymentMethodDto[] }> {
       const profile = await deps.repository.getProfileBillingFields(userId)
       const customerId = profile?.stripe_customer_id?.trim() ?? ''
       if (!customerId) return { paymentMethods: [] }
+
+      const replacePaymentMethodId = options.replacePaymentMethodId?.trim() || null
+      if (replacePaymentMethodId) {
+        await maybeDetachReplacedPaymentMethod(deps.stripe, customerId, replacePaymentMethodId)
+      }
 
       const customer = await deps.stripe.customers.retrieve(customerId)
       if (customer.deleted) return { paymentMethods: [] }
@@ -509,8 +593,12 @@ export function createBillingService(deps: BillingServiceDeps) {
       const customerId = profile?.stripe_customer_id?.trim() ?? ''
       if (!customerId) return { invoices: [] }
 
+      const env = deps.getEnv()
       const subscription = await deps.repository.getLatestSubscriptionByUserId(userId)
       const planTierFallback = subscription?.plan_tier ?? null
+      const subscriptionCheckoutPlan = subscription?.stripe_price_id
+        ? resolveCheckoutPlanFromPriceId(env.priceIds, subscription.stripe_price_id)
+        : null
 
       const listed = await deps.stripe.invoices.list({
         customer: customerId,
@@ -519,7 +607,8 @@ export function createBillingService(deps: BillingServiceDeps) {
       })
 
       const invoices = listed.data.map((invoice) => {
-        const lineDescriptions = (invoice.lines?.data ?? []).map((line) => {
+        const lines = invoice.lines?.data ?? []
+        const lineDescriptions = lines.map((line) => {
           if (line.description?.trim()) return line.description.trim()
           const price = line.price
           if (price && typeof price === 'object' && price.product) {
@@ -530,6 +619,16 @@ export function createBillingService(deps: BillingServiceDeps) {
           }
           return ''
         })
+
+        let checkoutPlanHint: CheckoutPlanId | null = null
+        for (const line of lines) {
+          const price = line.price
+          const priceId = typeof price === 'string' ? price : price?.id
+          if (!priceId) continue
+          checkoutPlanHint = resolveCheckoutPlanFromPriceId(env.priceIds, priceId)
+          if (checkoutPlanHint) break
+        }
+        if (!checkoutPlanHint) checkoutPlanHint = subscriptionCheckoutPlan
 
         return mapStripeInvoice({
           id: invoice.id,
@@ -542,6 +641,7 @@ export function createBillingService(deps: BillingServiceDeps) {
           hostedInvoiceUrl: invoice.hosted_invoice_url ?? null,
           lineDescriptions,
           planTierFallback,
+          checkoutPlanHint,
         })
       })
 
@@ -551,16 +651,33 @@ export function createBillingService(deps: BillingServiceDeps) {
     /**
      * Opens Stripe Customer Portal in payment-method-update flow only.
      * Intentionally avoids the portal home (cancel subscription / plan changes).
+     *
+     * Stripe's portal adds a new default card rather than removing the old one.
+     * When `replacePaymentMethodId` is set, the return URL carries that id so
+     * `getPaymentMethods` can detach the old card on return.
      */
-    async createBillingPortalSession(userId: string): Promise<{ url: string }> {
+    async createBillingPortalSession(
+      userId: string,
+      options: { replacePaymentMethodId?: string } = {},
+    ): Promise<{ url: string }> {
       const profile = await deps.repository.getProfileBillingFields(userId)
       const customerId = profile?.stripe_customer_id?.trim() ?? ''
       if (!customerId) {
         throw new Error('No Stripe customer on file. Add a payment method via checkout first.')
       }
 
+      const replacePaymentMethodId = options.replacePaymentMethodId?.trim() || null
+      if (replacePaymentMethodId) {
+        assertStripePaymentMethodId(replacePaymentMethodId)
+        await assertPaymentMethodOwnedByCustomer(
+          deps.stripe,
+          replacePaymentMethodId,
+          customerId,
+        )
+      }
+
       const baseUrl = deps.getAppBaseUrl().replace(/\/$/, '')
-      const returnUrl = `${baseUrl}/app/account`
+      const returnUrl = buildAccountReturnUrl(baseUrl, replacePaymentMethodId)
       const session = await deps.stripe.billingPortal.sessions.create({
         customer: customerId,
         return_url: returnUrl,

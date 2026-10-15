@@ -194,15 +194,30 @@ export async function handleBillingGetPaymentMethods(req: Request): Promise<Resp
   const auth = await requireAuthUser(req, cors)
   if (!auth.ok) return auth.response
 
+  let replacePaymentMethodId: string | undefined
+  try {
+    const body = (await req.clone().json().catch(() => ({}))) as Record<string, unknown>
+    if (typeof body.replacePaymentMethodId === 'string' && body.replacePaymentMethodId.trim()) {
+      replacePaymentMethodId = body.replacePaymentMethodId.trim()
+    }
+  } catch (error) {
+    const message = formatUnknownError(error)
+    return json({ error: message }, { status: 400 }, cors)
+  }
+
   const service = buildBillingService(() => resolveAppBaseUrlFromEnv() ?? 'http://localhost:5173')
   if (!service) return stripeDisabled()
 
   try {
-    const result = await service.getPaymentMethods(auth.user.id)
+    const result = await service.getPaymentMethods(auth.user.id, { replacePaymentMethodId })
     return json(result, {}, cors)
   } catch (error) {
     const message = formatUnknownError(error)
-    return json({ error: message }, { status: 500 }, cors)
+    const status =
+      message.includes('Invalid payment method') || message.includes('not found for this account')
+        ? 400
+        : 500
+    return json({ error: message }, { status }, cors)
   }
 }
 
@@ -237,9 +252,13 @@ export async function handleBillingCreatePortalSession(req: Request): Promise<Re
   if (!auth.ok) return auth.response
 
   let appBaseUrl: string
+  let replacePaymentMethodId: string | undefined
   try {
     const body = (await req.clone().json().catch(() => ({}))) as Record<string, unknown>
     appBaseUrl = resolveAppBaseUrlForCheckout(req, body.appBaseUrl)
+    if (typeof body.replacePaymentMethodId === 'string' && body.replacePaymentMethodId.trim()) {
+      replacePaymentMethodId = body.replacePaymentMethodId.trim()
+    }
   } catch (error) {
     const message = formatUnknownError(error)
     return json({ error: message }, { status: 500 }, cors)
@@ -249,11 +268,18 @@ export async function handleBillingCreatePortalSession(req: Request): Promise<Re
   if (!service) return stripeDisabled()
 
   try {
-    const result = await service.createBillingPortalSession(auth.user.id)
+    const result = await service.createBillingPortalSession(auth.user.id, {
+      replacePaymentMethodId,
+    })
     return json(result, {}, cors)
   } catch (error) {
     const message = formatUnknownError(error)
-    const status = message.includes('No Stripe customer') ? 400 : 500
+    const status =
+      message.includes('No Stripe customer') ||
+        message.includes('Invalid payment method') ||
+        message.includes('not found for this account')
+        ? 400
+        : 500
     return json({ error: message }, { status }, cors)
   }
 }

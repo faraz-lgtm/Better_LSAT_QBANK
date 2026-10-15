@@ -668,7 +668,12 @@ Deno.test('getBillingHistory maps paid invoices', async () => {
               created: 1_724_500_000,
               invoice_pdf: 'https://stripe.test/pdf',
               hosted_invoice_url: null,
-              lines: { data: [{ description: 'Better LSAT Core' }] },
+              lines: {
+                data: [{
+                  description: 'Better LSAT Monthly',
+                  price: { id: 'price_core_test' },
+                }],
+              },
             },
           ],
         }),
@@ -680,7 +685,7 @@ Deno.test('getBillingHistory maps paid invoices', async () => {
   assertEquals(out.invoices.length, 1)
   assertEquals(out.invoices[0]?.number, 'INV-2026-008')
   assertEquals(out.invoices[0]?.amountPaidCents, 3900)
-  assertEquals(out.invoices[0]?.title, 'Core Monthly')
+  assertEquals(out.invoices[0]?.title, 'Monthly')
 })
 
 Deno.test('createBillingPortalSession returns portal url', async () => {
@@ -725,6 +730,174 @@ Deno.test('createBillingPortalSession returns portal url', async () => {
 
   const out = await service.createBillingPortalSession('u-1')
   assertEquals(out.url, 'https://billing.stripe.test/session')
+})
+
+Deno.test('createBillingPortalSession replace flow encodes old pm on return url', async () => {
+  const service = createBillingService({
+    getEnv: () => env,
+    getAppBaseUrl: () => 'http://localhost:5173',
+    repository: makeRepo({
+      async getProfileBillingFields() {
+        return {
+          id: 'u-1',
+          email: 'a@b.com',
+          full_name: 'Ada Lovelace',
+          first_name: 'Ada',
+          last_name: 'Lovelace',
+          stripe_customer_id: 'cus_1',
+          prep_plus_source: 'vendor_subscription',
+        }
+      },
+    }),
+    stripe: {
+      paymentMethods: {
+        retrieve: async (id: string) => {
+          assertEquals(id, 'pm_old')
+          return { id: 'pm_old', customer: 'cus_1' }
+        },
+      },
+      billingPortal: {
+        sessions: {
+          create: async (params: Record<string, unknown>) => {
+            assertEquals(
+              params.return_url,
+              'http://localhost:5173/app/account?replace_pm=pm_old',
+            )
+            const flowData = params.flow_data as {
+              after_completion: { redirect: { return_url: string } }
+            }
+            assertEquals(
+              flowData.after_completion.redirect.return_url,
+              'http://localhost:5173/app/account?replace_pm=pm_old',
+            )
+            return { url: 'https://billing.stripe.test/session' }
+          },
+        },
+      },
+    } as unknown as import('npm:stripe@17.7.0').default,
+  })
+
+  const out = await service.createBillingPortalSession('u-1', {
+    replacePaymentMethodId: 'pm_old',
+  })
+  assertEquals(out.url, 'https://billing.stripe.test/session')
+})
+
+Deno.test('getPaymentMethods replace flow detaches old card when default changed', async () => {
+  const detached: string[] = []
+  let customerRetrieveCount = 0
+  const service = createBillingService({
+    getEnv: () => env,
+    getAppBaseUrl: () => 'http://localhost:5173',
+    repository: makeRepo({
+      async getProfileBillingFields() {
+        return {
+          id: 'u-1',
+          email: 'a@b.com',
+          full_name: 'Ada Lovelace',
+          first_name: 'Ada',
+          last_name: 'Lovelace',
+          stripe_customer_id: 'cus_1',
+          prep_plus_source: 'vendor_subscription',
+        }
+      },
+    }),
+    stripe: {
+      customers: {
+        retrieve: async () => {
+          customerRetrieveCount += 1
+          return {
+            id: 'cus_1',
+            deleted: undefined,
+            invoice_settings: { default_payment_method: 'pm_new' },
+          }
+        },
+      },
+      paymentMethods: {
+        retrieve: async (id: string) => ({ id, customer: 'cus_1' }),
+        detach: async (id: string) => {
+          detached.push(id)
+          return { id }
+        },
+        list: async () => ({
+          data: [
+            {
+              id: 'pm_new',
+              card: {
+                brand: 'visa',
+                last4: '4242',
+                exp_month: 12,
+                exp_year: 2030,
+                funding: 'credit',
+              },
+            },
+          ],
+        }),
+      },
+    } as unknown as import('npm:stripe@17.7.0').default,
+  })
+
+  const out = await service.getPaymentMethods('u-1', { replacePaymentMethodId: 'pm_old' })
+  assertEquals(detached, ['pm_old'])
+  assertEquals(out.paymentMethods.length, 1)
+  assertEquals(out.paymentMethods[0]?.id, 'pm_new')
+  assertEquals(customerRetrieveCount >= 1, true)
+})
+
+Deno.test('getPaymentMethods replace flow keeps card when default unchanged', async () => {
+  const detached: string[] = []
+  const service = createBillingService({
+    getEnv: () => env,
+    getAppBaseUrl: () => 'http://localhost:5173',
+    repository: makeRepo({
+      async getProfileBillingFields() {
+        return {
+          id: 'u-1',
+          email: 'a@b.com',
+          full_name: 'Ada Lovelace',
+          first_name: 'Ada',
+          last_name: 'Lovelace',
+          stripe_customer_id: 'cus_1',
+          prep_plus_source: 'vendor_subscription',
+        }
+      },
+    }),
+    stripe: {
+      customers: {
+        retrieve: async () => ({
+          id: 'cus_1',
+          deleted: undefined,
+          invoice_settings: { default_payment_method: 'pm_old' },
+        }),
+      },
+      paymentMethods: {
+        retrieve: async (id: string) => ({ id, customer: 'cus_1' }),
+        detach: async (id: string) => {
+          detached.push(id)
+          return { id }
+        },
+        list: async () => ({
+          data: [
+            {
+              id: 'pm_old',
+              card: {
+                brand: 'visa',
+                last4: '4242',
+                exp_month: 12,
+                exp_year: 2030,
+                funding: 'credit',
+              },
+            },
+          ],
+        }),
+      },
+    } as unknown as import('npm:stripe@17.7.0').default,
+  })
+
+  const out = await service.getPaymentMethods('u-1', { replacePaymentMethodId: 'pm_old' })
+  assertEquals(detached, [])
+  assertEquals(out.paymentMethods.length, 1)
+  assertEquals(out.paymentMethods[0]?.id, 'pm_old')
 })
 
 function activeSubscription(
