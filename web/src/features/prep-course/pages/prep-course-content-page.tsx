@@ -423,6 +423,7 @@ function PrepCourseContentPage() {
                 bookmarkedLessonSlugs={bookmarkedLessonSlugs}
                 onToggleLessonBookmark={setLessonBookmarked}
                 onToggleModuleBookmark={(next) => handleToggleModuleBookmark(selectedModule.id, next)}
+                onToggleShowBookmarksOnly={setShowBookmarksOnly}
                 moduleLocked={lockedModuleIds.has(selectedModule.id)}
                 onLockedLessonClick={handleLockedContentClick}
               />

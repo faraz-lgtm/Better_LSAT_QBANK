@@ -16,7 +16,7 @@ describe("PracticeSessionImmersiveFrame", () => {
     const inner = exam.parentElement
     const frame = inner?.parentElement
     expect(frame).toHaveAttribute("data-practice-session-immersive-frame")
-    expect(frame).toHaveClass("p-4")
+    expect(frame).toHaveClass("p-0", "md:p-4", "lg:p-8")
     expect(inner).toHaveClass("max-w-[1920px]")
   })
 
@@ -34,7 +34,7 @@ describe("PracticeSessionImmersiveFrame", () => {
     expect(inner).toHaveClass("max-w-none")
   })
 
-  it("keeps official exam chrome full-width up to the Figma 1920px canvas", () => {
+  it("keeps official exam chrome edge-to-edge on phones and padded from md up", () => {
     render(
       <PracticeSessionImmersiveFrame fullWidth>
         <p>Exam chrome</p>
@@ -44,8 +44,7 @@ describe("PracticeSessionImmersiveFrame", () => {
     const exam = screen.getByText("Exam chrome")
     const inner = exam.parentElement
     const frame = inner?.parentElement
-    expect(frame).toHaveClass("p-4", "md:p-8", "bg-[var(--background)]")
-    expect(frame).not.toHaveClass("p-0")
+    expect(frame).toHaveClass("p-0", "md:p-8", "bg-[var(--background)]")
     expect(inner).toHaveClass("max-w-[1920px]")
     expect(inner).not.toHaveClass("max-w-none")
   })

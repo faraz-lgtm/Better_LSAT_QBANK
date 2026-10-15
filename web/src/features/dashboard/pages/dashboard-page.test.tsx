@@ -2,7 +2,7 @@ import { configureStore } from "@reduxjs/toolkit"
 import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { Provider } from "react-redux"
-import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom"
+import { MemoryRouter, Route, Routes } from "react-router-dom"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { DashboardPage } from "@/features/dashboard/pages/dashboard-page"
@@ -65,7 +65,6 @@ const mocks = vi.hoisted(() => ({
   getSessions: vi.fn(),
   getPriorities: vi.fn(),
   getPageBundle: vi.fn(),
-  startDrill: vi.fn(),
 }))
 
 vi.mock("@/lib/supabase/client", () => ({
@@ -74,7 +73,6 @@ vi.mock("@/lib/supabase/client", () => ({
 
 vi.mock("@/features/app-shell/student-entitlement-context", () => ({
   useStudentEntitlement: () => mocks.entitlement,
-  useStudentEntitlementOptional: () => mocks.entitlement,
 }))
 
 vi.mock("@/lib/api/users", () => ({
@@ -97,17 +95,10 @@ vi.mock("@/lib/api/analytics", () => ({
 }))
 
 vi.mock("@/lib/api/practice", () => ({
-  createPracticeApi: () => ({
-    startDrill: mocks.startDrill,
-  }),
+  createPracticeApi: () => null,
 }))
 
-function PathProbe() {
-  const { pathname } = useLocation()
-  return <div data-testid="path">{pathname}</div>
-}
-
-function renderDashboard(initialPath = "/app") {
+function renderDashboard(initialPath = "/") {
   const store = configureStore({
     reducer: { studentSession: studentSessionReducer },
   })
@@ -116,21 +107,26 @@ function renderDashboard(initialPath = "/app") {
       <MemoryRouter initialEntries={[initialPath]}>
         <GuestPricingModalProvider>
           <Routes>
-            <Route
-              path="/app"
-              element={
-                <>
-                  <DashboardPage />
-                  <PathProbe />
-                </>
-              }
-            />
-            <Route path="/app/lsac-link-step" element={<PathProbe />} />
+            <Route path="/" element={<DashboardPage />} />
+            <Route path="/app" element={<DashboardPage />} />
+            <Route path="/app/lsac-link-step" element={<div>LSAC link step</div>} />
+            <Route path="/app/practice/drills" element={<div>Practice drills page</div>} />
           </Routes>
         </GuestPricingModalProvider>
       </MemoryRouter>
     </Provider>,
   )
+}
+
+function setLsacSetupRequiredEntitlement() {
+  mocks.entitlement.isPaymentRequired = false
+  mocks.entitlement.canAccessLsacContent = false
+  mocks.entitlement.isLsacSetupRequired = true
+  mocks.entitlement.entitlement = {
+    ...paymentRequiredEntitlement(),
+    accessState: "LSAC_REQUIRED",
+    hasActiveCore: true,
+  }
 }
 
 describe("DashboardPage", () => {
@@ -143,7 +139,6 @@ describe("DashboardPage", () => {
     mocks.getMyProfile.mockReset()
     mocks.getStudyContext.mockReset()
     mocks.getPageBundle.mockReset()
-    mocks.startDrill.mockReset()
     mocks.getMyProfile.mockResolvedValue({
       id: "u1",
       email: "a@b.com",
@@ -207,14 +202,7 @@ describe("DashboardPage", () => {
   })
 
   it("renders the paid dashboard when payment is settled but LSAC content is still locked", async () => {
-    mocks.entitlement.isPaymentRequired = false
-    mocks.entitlement.canAccessLsacContent = false
-    mocks.entitlement.isLsacSetupRequired = true
-    mocks.entitlement.entitlement = {
-      ...paymentRequiredEntitlement(),
-      accessState: "LSAC_REQUIRED",
-      hasActiveCore: true,
-    }
+    setLsacSetupRequiredEntitlement()
 
     renderDashboard()
 
@@ -226,16 +214,43 @@ describe("DashboardPage", () => {
     expect(mocks.getPageBundle).not.toHaveBeenCalled()
   })
 
-  it("sends Start Smart Drill to the LSAC link step when Core is paid but LawHub is not linked", async () => {
+  it("opens an LSAC link prompt when Start Smart Drill is clicked while setup is required", async () => {
     const user = userEvent.setup()
-    mocks.entitlement.isPaymentRequired = false
-    mocks.entitlement.canAccessLsacContent = false
-    mocks.entitlement.isLsacSetupRequired = true
-    mocks.entitlement.entitlement = {
-      ...paymentRequiredEntitlement(),
-      accessState: "LSAC_REQUIRED",
-      hasActiveCore: true,
-    }
+    setLsacSetupRequiredEntitlement()
+
+    renderDashboard()
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Start Smart Drill" })).toBeEnabled()
+    })
+
+    await user.click(screen.getByRole("button", { name: "Start Smart Drill" }))
+
+    expect(screen.getByRole("dialog")).toBeInTheDocument()
+    expect(screen.getByText("Link your LSAC account first")).toBeInTheDocument()
+    expect(screen.queryByText("Practice drills page")).not.toBeInTheDocument()
+  })
+
+  it("opens an LSAC link prompt when Practice → Drills is clicked while setup is required", async () => {
+    const user = userEvent.setup()
+    setLsacSetupRequiredEntitlement()
+
+    renderDashboard()
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Practice → Drills" })).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByRole("button", { name: "Practice → Drills" }))
+
+    expect(screen.getByRole("dialog")).toBeInTheDocument()
+    expect(screen.getByText("Link your LSAC account first")).toBeInTheDocument()
+    expect(screen.queryByText("Practice drills page")).not.toBeInTheDocument()
+  })
+
+  it("navigates to the LSAC link step from the dashboard prompt CTA", async () => {
+    const user = userEvent.setup()
+    setLsacSetupRequiredEntitlement()
 
     renderDashboard()
 
@@ -243,9 +258,9 @@ describe("DashboardPage", () => {
       expect(screen.getByRole("button", { name: "Start Smart Drill" })).toBeEnabled()
     })
     await user.click(screen.getByRole("button", { name: "Start Smart Drill" }))
+    await user.click(screen.getByRole("button", { name: "Link LSAC" }))
 
-    expect(mocks.startDrill).not.toHaveBeenCalled()
-    expect(screen.getByTestId("path")).toHaveTextContent("/app/lsac-link-step")
+    expect(screen.getByText("LSAC link step")).toBeInTheDocument()
   })
 
   it("paints the shell while analytics is still loading (no full-page loader)", async () => {

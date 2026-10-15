@@ -273,10 +273,14 @@ html.student-shell-active #root {
   }
 }
 
-/* Intent picker on a phone: lay out at the real device width.
-   The 840px cap still matches iPhone 6 while the 0.75 app zoom is active (375 / 0.75 = 500). */
+/* Phones / small tablets: lay out at the real device width.
+   Desktop keeps 0.75 app zoom to match Figma density; on narrow viewports that
+   zoom leaves a empty right gutter and crushes Insights / shell chrome. */
 @media (max-width: 840px) {
-  html.intent-mobile-layout {
+  html,
+  html.intent-mobile-layout,
+  html.student-shell-active,
+  html.student-shell-immersive {
     --app-zoom: 1;
     --app-svh: 100svh;
     zoom: 1;
@@ -285,11 +289,20 @@ html.student-shell-active #root {
 
 @supports not (zoom: 1) {
   @media (max-width: 840px) {
-    html.intent-mobile-layout #root {
+    html #root,
+    html.intent-mobile-layout #root,
+    html.student-shell-active #root,
+    html.student-shell-immersive #root {
       transform: none;
       width: 100%;
       height: auto;
       min-height: 100svh;
+    }
+
+    html.student-shell-active #root,
+    html.student-shell-immersive #root {
+      height: 100svh;
+      min-height: 0;
     }
   }
 }
@@ -1338,7 +1351,8 @@ html.student-shell-active #root {
   padding-top: 16px;
 }
 
-@media (min-width: 640px) {
+/* Keep a single column on phones; 2-up from tablet. */
+@media (min-width: 768px) {
   .pricing-page__plans {
     gap: 14px;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1360,7 +1374,7 @@ html.student-shell-active #root {
   padding-top: 16px;
 }
 
-@media (min-width: 640px) {
+@media (min-width: 768px) {
   .pricing-page__grid {
     gap: 14px;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1388,12 +1402,136 @@ html.student-shell-active #root {
 .pricing-modal .pricing-page__header {
   flex-shrink: 0;
   /* Keep title clear of the absolute close button. */
-  padding-inline: 1.75rem;
+  padding-inline: 2.25rem;
 }
 
 @media (min-width: 640px) {
   .pricing-modal .pricing-page__header {
     padding-inline: 2.5rem;
+  }
+}
+
+/* Phone: readable stacked cards, full-bleed sheet, no cramped multi-col. */
+@media (max-width: 767px) {
+  .pricing-modal .pricing-page__title {
+    font-size: 15px;
+    line-height: 1.35;
+    padding-inline: 0.25rem;
+  }
+
+  .pricing-modal .pricing-page__subtitle {
+    margin-top: 6px;
+    font-size: 12px;
+    line-height: 1.45;
+  }
+
+  .pricing-modal .pricing-page__stack {
+    gap: 12px;
+    padding-top: 14px;
+  }
+
+  .pricing-modal .pricing-page__plans {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .pricing-modal .pricing-card {
+    padding: 14px 12px 12px;
+    border-radius: 16px;
+  }
+
+  .pricing-modal .pricing-card--highlighted,
+  .pricing-modal .pricing-card--featured {
+    padding: 18px 12px 14px;
+  }
+
+  .pricing-modal .pricing-card__badge {
+    top: -10px;
+    padding: 3px 10px;
+    font-size: 10px;
+  }
+
+  .pricing-modal .pricing-card__featured-body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .pricing-modal .pricing-card__featured-cta {
+    max-width: none;
+    width: 100%;
+  }
+
+  .pricing-modal .pricing-card__name {
+    font-size: 14px;
+    padding-bottom: 4px;
+  }
+
+  .pricing-modal .pricing-card__headline {
+    font-size: 13px;
+    padding-bottom: 4px;
+  }
+
+  .pricing-modal .pricing-card__tagline {
+    font-size: 12px;
+  }
+
+  .pricing-modal .pricing-card__price {
+    font-size: 28px;
+    letter-spacing: -0.5px;
+  }
+
+  .pricing-modal .pricing-card__features {
+    gap: 8px;
+    padding: 8px 0 12px;
+  }
+
+  .pricing-modal .pricing-card__features li {
+    font-size: 13px;
+    line-height: 1.4;
+  }
+
+  .pricing-modal .pricing-card__callout {
+    margin-bottom: 10px;
+    padding: 10px 12px;
+  }
+
+  .pricing-modal .pricing-card__callout-title {
+    font-size: 12px;
+  }
+
+  .pricing-modal .pricing-card__callout-body {
+    font-size: 12px;
+    line-height: 1.4;
+  }
+
+  .pricing-modal .pricing-card__cta {
+    min-height: 44px;
+    width: 100%;
+    padding: 10px 14px;
+    font-size: 14px;
+  }
+
+  .pricing-modal .pricing-card__note,
+  .pricing-modal .pricing-card__meta,
+  .pricing-modal .pricing-card__due-today {
+    font-size: 11px;
+  }
+
+  .pricing-modal .pricing-page__footnote {
+    margin-top: 12px;
+    font-size: 11px;
+    line-height: 1.4;
+  }
+
+  .pricing-modal .pricing-page__alt-link {
+    margin-top: 10px;
+  }
+
+  .pricing-modal .pricing-page__alt-link button {
+    font-size: 13px;
+    line-height: 1.4;
+    text-wrap: pretty;
   }
 }
 
@@ -1638,12 +1776,12 @@ html.student-shell-active #root {
 
 .pricing-modal__close {
   position: absolute;
-  right: 16px;
-  top: 12px;
+  right: max(8px, env(safe-area-inset-right));
+  top: max(8px, env(safe-area-inset-top));
   z-index: 10;
   display: inline-flex;
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   align-items: center;
   justify-content: center;
   border: 0;
@@ -1657,6 +1795,8 @@ html.student-shell-active #root {
   .pricing-modal__close {
     right: 24px;
     top: 16px;
+    width: 36px;
+    height: 36px;
   }
 }
 
@@ -1746,8 +1886,8 @@ html.student-shell-active #root {
   margin-top: auto;
 }
 
-/* Tablet: price + features on top row, CTA full-width below. */
-@media (min-width: 640px) and (max-width: 1099px) {
+/* Tablet: price + features on top row, CTA full-width below. Phones stay stacked. */
+@media (min-width: 768px) and (max-width: 1099px) {
   .pricing-card--featured .pricing-card__featured-body {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -5266,6 +5406,28 @@ section[data-lesson-section][data-variant="empty"] {
   background: var(--greyscale-25);
 }
 
+/* Rep-work editable boxes inject the same editor HTML without a .lesson-html-content wrapper. */
+.dark .rep-work-question-input {
+  color: var(--color-student-heading);
+}
+
+.dark .rep-work-question-input * {
+  color: inherit !important;
+}
+
+.dark .rep-work-question-input a {
+  color: var(--primary-700) !important;
+}
+
+.dark .rep-work-question-input a * {
+  color: inherit !important;
+}
+
+.dark .rep-work-question-input mark,
+.dark .rep-work-question-input mark * {
+  color: #121a26 !important;
+}
+
 .lsat-html-content .ss-line-number {
   color: var(--muted-foreground);
 }
@@ -5357,6 +5519,13 @@ section[data-lesson-section][data-variant="empty"] {
   gap: 12px;
 }
 
+/* Side rail is md+ only — drop the reserved gap beside choices on phones. */
+@media (max-width: 767px) {
+  .practice-session-card--active-drill:not(.practice-session-card--official) .practice-session-question-panel-with-widget {
+    gap: 0;
+  }
+}
+
 /* Keep vertical scroll working; clip only the x-axis so side-widget labels can still paint. */
 .practice-session-card--active-drill .practice-session-pane:has(.practice-session-side-widget) {
   overflow-x: clip;
@@ -5408,7 +5577,14 @@ section[data-lesson-section][data-variant="empty"] {
 
 .practice-session-card--official .practice-session-question-panel-with-widget {
   overflow: visible;
-  padding-right: 50px;
+  /* Side rail is md+ only — do not reserve 50px on mobile (empty gap beside choices). */
+  padding-right: 0;
+}
+
+@media (min-width: 768px) {
+  .practice-session-card--official .practice-session-question-panel-with-widget {
+    padding-right: 50px;
+  }
 }
 
 .practice-session-card--official .practice-session-pane:has(.practice-session-side-widget) {
@@ -5538,10 +5714,22 @@ html.practice-exam-more-open .practice-session-question-panel-with-widget {
 }
 
 /**
- * Official mobile stacked view — one full-column scroll (stimulus + question).
- * Overrides pane max-height/overflow and body>div overflow:hidden above.
+ * Mobile stacked view — one full-column scroll (stimulus + question).
+ * Official: inner grid scrolls. BetterLSAT (non-official): body scrolls
+ * so passage + answers are not clipped by grid-template-rows / overflow:hidden.
  */
 @media (max-width: 767px) {
+  html.student-shell-immersive .practice-session-card,
+  html.student-shell-immersive .practice-session-card--active-drill {
+    height: 100%;
+    max-height: 100%;
+  }
+
+  /* —— Official: scroll the inner column —— */
+  .practice-session-card--official .practice-session-body--mobile-stack-scroll {
+    overflow: hidden;
+  }
+
   .practice-session-card--official .practice-session-body--mobile-stack-scroll > div {
     display: flex;
     flex-direction: column;
@@ -5563,8 +5751,75 @@ html.practice-exam-more-open .practice-session-question-panel-with-widget {
   .practice-session-card--official
     .practice-session-body--mobile-stack-scroll
     .practice-session-pane--mobile-question-stack {
-    min-height: 72vh;
+    min-height: 60vh;
     padding-bottom: 1.5rem;
+  }
+
+  /* —— BetterLSAT (Official Interface OFF): body is the scrollport —— */
+  html.student-shell-immersive
+    .practice-session-card--active-drill:not(.practice-session-card--official) {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  html.student-shell-immersive
+    .practice-session-card--active-drill:not(.practice-session-card--official)
+    .practice-session-header--active-drill {
+    flex-shrink: 0;
+    overflow: hidden;
+    background: var(--greyscale-0);
+  }
+
+  html.student-shell-immersive
+    .practice-session-card--active-drill:not(.practice-session-card--official)
+    .practice-session-body,
+  html.student-shell-immersive
+    .practice-session-card--active-drill:not(.practice-session-card--official)
+    .practice-session-body--mobile-stack-scroll {
+    flex: 1 1 0% !important;
+    min-height: 0 !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  html.student-shell-immersive
+    .practice-session-card--active-drill:not(.practice-session-card--official)
+    .practice-session-body
+    > div {
+    display: flex !important;
+    flex-direction: column !important;
+    flex: none !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    grid-template-rows: none !important;
+  }
+
+  html.student-shell-immersive
+    .practice-session-card--active-drill:not(.practice-session-card--official)
+    .practice-session-pane {
+    flex: none !important;
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+
+  html.student-shell-immersive
+    .practice-session-card--active-drill:not(.practice-session-card--official)
+    .practice-session-pane--mobile-question-stack {
+    min-height: 0;
+    padding-bottom: 1.5rem;
+  }
+
+  html.student-shell-immersive
+    .practice-session-card--active-drill:not(.practice-session-card--official)
+    .practice-session-footer {
+    flex-shrink: 0;
   }
 }
 
@@ -5581,13 +5836,24 @@ html.practice-exam-more-open .practice-session-question-panel-with-widget {
   max-width: 100%;
 }
 
-.prep-course-lesson-shell .practice-session-body--with-sidebar > :first-child {
-  min-width: 0;
-  flex: 1 1 0;
+/* Desktop only — mobile uses a full-width All Lessons sheet (see lesson page classes). */
+@media (min-width: 768px) {
+  .prep-course-lesson-shell .practice-session-body--with-sidebar > :first-child {
+    min-width: 0;
+    flex: 1 1 0;
+  }
+
+  .prep-course-lesson-shell .practice-session-body--with-sidebar > :last-child {
+    min-height: 0;
+  }
 }
 
-.prep-course-lesson-shell .practice-session-body--with-sidebar > :last-child {
-  min-height: 0;
+@media (max-width: 767px) {
+  /* Keep body height:auto — do not flex-collapse children to 0 (blank All Lessons sheet). */
+  .prep-course-lesson-shell .practice-session-body--with-sidebar .prep-course-lesson-sidebar-shell {
+    width: 100%;
+    max-width: 100%;
+  }
 }
 
 .prep-course-rep-work-pair {
@@ -5669,7 +5935,8 @@ html.student-shell-immersive .practice-session-card--active-drill {
   max-width: calc(var(--exam-normal-w) * 1px);
   margin-inline: auto;
   height: 100%;
-  max-height: calc(var(--app-svh) - 32px);
+  /* Phones are edge-to-edge (no immersive frame pad); md+ uses the inset rule below. */
+  max-height: 100%;
   flex: 1 1 auto;
   min-height: 0;
   overflow: hidden;
@@ -5694,6 +5961,28 @@ html.student-shell-immersive .practice-session-card--official {
 /* Figma full-width exam canvas — 1920px. Applied when Full Screen / full-width view is on. */
 html.student-shell-immersive .practice-session-card.practice-session-card--full-width {
   max-width: calc(var(--figma-base-w) * 1px);
+}
+
+/*
+  CSS Full Screen fallback (iOS / phone DevTools) when Element.requestFullscreen is unavailable.
+  Toggled via html.exam-session-fullscreen from useExamFullscreen.
+*/
+html.exam-session-fullscreen [data-practice-session-immersive-frame] {
+  padding: 0 !important;
+}
+
+html.exam-session-fullscreen.student-shell-immersive .practice-session-card,
+html.exam-session-fullscreen.student-shell-immersive .practice-session-card--active-drill,
+html.exam-session-fullscreen.student-shell-immersive .practice-session-card--official,
+html.exam-session-fullscreen.student-shell-immersive .practice-session-card.practice-session-card--full-width {
+  max-width: none;
+  width: 100%;
+  max-height: 100%;
+  height: 100%;
+  margin-inline: 0;
+  border-radius: 0;
+  border-left-width: 0;
+  border-right-width: 0;
 }
 
 html.student-shell-immersive .practice-session-card--active-drill .practice-session-body {
@@ -6204,9 +6493,12 @@ html.student-shell-immersive .practice-session-card--blind-review {
 /*
  * Figma `20645:49778` dark theme — default accessibility scheme is black-on-white
  * (inline CSS vars). Remap so passage/choices stay light on Neutral-0 chrome.
+ * Non-default Accessibility color schemes must keep their own tokens — do not
+ * force heading/greyscale ink over white-on-black, yellow-on-navy, etc.
  */
 .dark .practice-session-card--blind-review .practice-session-body[data-color-scheme="black-on-white"],
-.dark .practice-session-card--blind-review .practice-session-body:not([data-color-scheme]) {
+.dark .practice-session-card--blind-review .practice-session-body:not([data-color-scheme]),
+.dark .practice-session-card--blind-review .practice-session-body[data-color-scheme="grey-on-light-grey"] {
   --practice-accessibility-bg: var(--greyscale-0) !important;
   --practice-accessibility-fg: var(--color-student-heading) !important;
   --practice-choice-selected-bg: var(--primary-25) !important;
@@ -6226,12 +6518,39 @@ html.student-shell-immersive .practice-session-card--blind-review {
   color: var(--color-student-heading) !important;
 }
 
-.dark .practice-session-card--blind-review .practice-session-body .lsat-html-content,
-.dark .practice-session-card--blind-review .practice-session-body .practice-session-content {
+.dark .practice-session-card--blind-review .practice-session-body:is(
+  [data-color-scheme="black-on-white"],
+  [data-color-scheme="grey-on-light-grey"],
+  :not([data-color-scheme])
+) .lsat-html-content,
+.dark .practice-session-card--blind-review .practice-session-body:is(
+  [data-color-scheme="black-on-white"],
+  [data-color-scheme="grey-on-light-grey"],
+  :not([data-color-scheme])
+) .practice-session-content {
   color: var(--color-student-heading) !important;
 }
 
-.dark .practice-session-card--blind-review .practice-session-br-option {
+.dark .practice-session-card--blind-review .practice-session-body:is(
+  [data-color-scheme="purple-on-light-green"],
+  [data-color-scheme="black-on-violet"],
+  [data-color-scheme="yellow-on-navy"],
+  [data-color-scheme="white-on-black"]
+) .lsat-html-content,
+.dark .practice-session-card--blind-review .practice-session-body:is(
+  [data-color-scheme="purple-on-light-green"],
+  [data-color-scheme="black-on-violet"],
+  [data-color-scheme="yellow-on-navy"],
+  [data-color-scheme="white-on-black"]
+) .practice-session-content {
+  color: var(--practice-accessibility-fg) !important;
+}
+
+.dark .practice-session-card--blind-review .practice-session-body:is(
+  [data-color-scheme="black-on-white"],
+  [data-color-scheme="grey-on-light-grey"],
+  :not([data-color-scheme])
+) .practice-session-br-option {
   color: var(--color-student-heading);
 }
 
@@ -6240,7 +6559,11 @@ html.student-shell-immersive .practice-session-card--blind-review {
   color: inherit !important;
 }
 
-.dark .practice-session-card--blind-review .practice-session-reset-response {
+.dark .practice-session-card--blind-review .practice-session-body:is(
+  [data-color-scheme="black-on-white"],
+  [data-color-scheme="grey-on-light-grey"],
+  :not([data-color-scheme])
+) .practice-session-reset-response {
   background-color: var(--greyscale-25) !important;
   color: var(--greyscale-500) !important;
 }
@@ -6271,12 +6594,39 @@ html.student-shell-immersive .practice-session-card--blind-review {
   color: var(--color-student-heading) !important;
 }
 
-.dark .practice-session-card--active-drill .practice-session-body .lsat-html-content,
-.dark .practice-session-card--active-drill .practice-session-body .practice-session-content {
+.dark .practice-session-card--active-drill .practice-session-body:is(
+  [data-color-scheme="black-on-white"],
+  [data-color-scheme="grey-on-light-grey"],
+  :not([data-color-scheme])
+) .lsat-html-content,
+.dark .practice-session-card--active-drill .practice-session-body:is(
+  [data-color-scheme="black-on-white"],
+  [data-color-scheme="grey-on-light-grey"],
+  :not([data-color-scheme])
+) .practice-session-content {
   color: var(--color-student-heading) !important;
 }
 
-.dark .practice-session-card--active-drill .practice-session-reset-response {
+.dark .practice-session-card--active-drill .practice-session-body:is(
+  [data-color-scheme="purple-on-light-green"],
+  [data-color-scheme="black-on-violet"],
+  [data-color-scheme="yellow-on-navy"],
+  [data-color-scheme="white-on-black"]
+) .lsat-html-content,
+.dark .practice-session-card--active-drill .practice-session-body:is(
+  [data-color-scheme="purple-on-light-green"],
+  [data-color-scheme="black-on-violet"],
+  [data-color-scheme="yellow-on-navy"],
+  [data-color-scheme="white-on-black"]
+) .practice-session-content {
+  color: var(--practice-accessibility-fg) !important;
+}
+
+.dark .practice-session-card--active-drill .practice-session-body:is(
+  [data-color-scheme="black-on-white"],
+  [data-color-scheme="grey-on-light-grey"],
+  :not([data-color-scheme])
+) .practice-session-reset-response {
   background-color: var(--greyscale-25) !important;
   color: var(--greyscale-500) !important;
 }
@@ -6307,12 +6657,39 @@ html.student-shell-immersive .practice-session-card--blind-review {
   color: var(--color-student-heading) !important;
 }
 
-.dark .practice-session-card--review .practice-session-body .lsat-html-content,
-.dark .practice-session-card--review .practice-session-body .practice-session-content {
+.dark .practice-session-card--review .practice-session-body:is(
+  [data-color-scheme="black-on-white"],
+  [data-color-scheme="grey-on-light-grey"],
+  :not([data-color-scheme])
+) .lsat-html-content,
+.dark .practice-session-card--review .practice-session-body:is(
+  [data-color-scheme="black-on-white"],
+  [data-color-scheme="grey-on-light-grey"],
+  :not([data-color-scheme])
+) .practice-session-content {
   color: var(--color-student-heading) !important;
 }
 
-.dark .practice-session-card--review .practice-session-br-option {
+.dark .practice-session-card--review .practice-session-body:is(
+  [data-color-scheme="purple-on-light-green"],
+  [data-color-scheme="black-on-violet"],
+  [data-color-scheme="yellow-on-navy"],
+  [data-color-scheme="white-on-black"]
+) .lsat-html-content,
+.dark .practice-session-card--review .practice-session-body:is(
+  [data-color-scheme="purple-on-light-green"],
+  [data-color-scheme="black-on-violet"],
+  [data-color-scheme="yellow-on-navy"],
+  [data-color-scheme="white-on-black"]
+) .practice-session-content {
+  color: var(--practice-accessibility-fg) !important;
+}
+
+.dark .practice-session-card--review .practice-session-body:is(
+  [data-color-scheme="black-on-white"],
+  [data-color-scheme="grey-on-light-grey"],
+  :not([data-color-scheme])
+) .practice-session-br-option {
   color: var(--color-student-heading);
 }
 
@@ -6356,11 +6733,17 @@ html.student-shell-immersive .practice-session-card--blind-review {
   filter: brightness(0) invert(1);
 }
 
+/* Mobile footer prev/list icons are dark SVGs; skip next (already white on primary). */
+.dark .practice-session-card--official .practice-session-footer img[src*="mobile-footer-prev"],
+.dark .practice-session-card--official .practice-session-footer img[src*="mobile-footer-list"] {
+  filter: brightness(0) invert(1);
+}
+
 .dark .practice-session-header svg {
   color: #ffffff;
 }
 
-/* Official rail SVGs use currentColor; item classes hardcode navy (#2c3143). */
+/* Official rail SVGs use currentColor; keep icons/labels white on dark chrome. */
 .dark .practice-session-side-widget button {
   color: #ffffff;
 }
@@ -6381,63 +6764,284 @@ html.student-shell-immersive .practice-session-card--blind-review {
   filter: none;
 }
 
-.dark .practice-session-card--official .practice-session-body {
+/* Default schemes only — custom Accessibility schemes keep their body tokens. */
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="black-on-white"],
+  [data-color-scheme="grey-on-light-grey"],
+  :not([data-color-scheme])
+) {
   background-color: var(--greyscale-0) !important;
   color: var(--color-student-heading) !important;
 }
 
-.dark .practice-session-card--official .practice-session-pane {
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="purple-on-light-green"],
+  [data-color-scheme="black-on-violet"],
+  [data-color-scheme="yellow-on-navy"],
+  [data-color-scheme="white-on-black"]
+) {
+  background-color: var(--practice-accessibility-bg) !important;
+  color: var(--practice-accessibility-fg) !important;
+}
+
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="black-on-white"],
+  [data-color-scheme="grey-on-light-grey"],
+  :not([data-color-scheme])
+) .practice-session-pane {
   background-color: transparent;
   color: var(--color-student-heading);
 }
 
-.dark .practice-session-card--official .practice-session-body .lsat-html-content,
-.dark .practice-session-card--official .practice-session-body .practice-session-content {
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="purple-on-light-green"],
+  [data-color-scheme="black-on-violet"],
+  [data-color-scheme="yellow-on-navy"],
+  [data-color-scheme="white-on-black"]
+) .practice-session-pane {
+  background-color: transparent;
+  color: var(--practice-accessibility-fg);
+}
+
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="black-on-white"],
+  [data-color-scheme="grey-on-light-grey"],
+  :not([data-color-scheme])
+) .lsat-html-content,
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="black-on-white"],
+  [data-color-scheme="grey-on-light-grey"],
+  :not([data-color-scheme])
+) .practice-session-content {
   color: var(--color-student-heading) !important;
 }
 
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="purple-on-light-green"],
+  [data-color-scheme="black-on-violet"],
+  [data-color-scheme="yellow-on-navy"],
+  [data-color-scheme="white-on-black"]
+) .lsat-html-content,
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="purple-on-light-green"],
+  [data-color-scheme="black-on-violet"],
+  [data-color-scheme="yellow-on-navy"],
+  [data-color-scheme="white-on-black"]
+) .practice-session-content {
+  color: var(--practice-accessibility-fg) !important;
+}
+
 /*
- * Dark official choices: Neutral-25 rows + white copy. Selected
+ * Dark official choices (default schemes): Neutral-25 rows + white copy. Selected
  * (#fdfac4) keeps navy ink so the gold state still contrasts.
  */
-.dark .practice-session-card--official .practice-session-official-choice:not(.practice-session-official-choice--selected) {
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="black-on-white"],
+  [data-color-scheme="grey-on-light-grey"],
+  :not([data-color-scheme])
+) .practice-session-official-choice:not(.practice-session-official-choice--selected) {
   background-color: #35373c !important;
   color: #ffffff !important;
 }
 
-.dark .practice-session-card--official .practice-session-official-choice:not(.practice-session-official-choice--selected) > span {
-  background-color: #35373c !important;
-  border-color: #35373c !important;
-  color: #ffffff !important;
-}
-
-.dark .practice-session-card--official .practice-session-official-choice:not(.practice-session-official-choice--selected) .lsat-html-content,
-.dark .practice-session-card--official .practice-session-official-choice:not(.practice-session-official-choice--selected) .practice-session-content,
-.dark .practice-session-card--official .practice-session-official-choice:not(.practice-session-official-choice--selected) .lsat-html-content *,
-.dark .practice-session-card--official .practice-session-official-choice:not(.practice-session-official-choice--selected) .practice-session-content * {
-  color: #ffffff !important;
-}
-
-.dark .practice-session-card--official .practice-session-official-choice--selected,
-.dark .practice-session-card--official .practice-session-official-choice--selected .lsat-html-content,
-.dark .practice-session-card--official .practice-session-official-choice--selected .practice-session-content,
-.dark .practice-session-card--official .practice-session-official-choice--selected .lsat-html-content *,
-.dark .practice-session-card--official .practice-session-official-choice--selected .practice-session-content * {
-  color: #041a44 !important;
-}
-
-.dark .practice-session-card--official .practice-session-official-choice-letter--selected {
-  color: #041a44 !important;
-}
-
-.dark .practice-session-card--official .practice-session-official-reset {
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="black-on-white"],
+  [data-color-scheme="grey-on-light-grey"],
+  :not([data-color-scheme])
+) .practice-session-official-choice:not(.practice-session-official-choice--selected) > span {
   background-color: #35373c !important;
   border-color: #35373c !important;
   color: #ffffff !important;
 }
 
-.dark .practice-session-card--official .practice-session-official-reset:hover {
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="black-on-white"],
+  [data-color-scheme="grey-on-light-grey"],
+  :not([data-color-scheme])
+) .practice-session-official-choice:not(.practice-session-official-choice--selected) .lsat-html-content,
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="black-on-white"],
+  [data-color-scheme="grey-on-light-grey"],
+  :not([data-color-scheme])
+) .practice-session-official-choice:not(.practice-session-official-choice--selected) .practice-session-content,
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="black-on-white"],
+  [data-color-scheme="grey-on-light-grey"],
+  :not([data-color-scheme])
+) .practice-session-official-choice:not(.practice-session-official-choice--selected) .lsat-html-content *,
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="black-on-white"],
+  [data-color-scheme="grey-on-light-grey"],
+  :not([data-color-scheme])
+) .practice-session-official-choice:not(.practice-session-official-choice--selected) .practice-session-content * {
+  color: #ffffff !important;
+}
+
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="black-on-white"],
+  [data-color-scheme="grey-on-light-grey"],
+  :not([data-color-scheme])
+) .practice-session-official-choice--selected,
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="black-on-white"],
+  [data-color-scheme="grey-on-light-grey"],
+  :not([data-color-scheme])
+) .practice-session-official-choice--selected .lsat-html-content,
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="black-on-white"],
+  [data-color-scheme="grey-on-light-grey"],
+  :not([data-color-scheme])
+) .practice-session-official-choice--selected .practice-session-content,
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="black-on-white"],
+  [data-color-scheme="grey-on-light-grey"],
+  :not([data-color-scheme])
+) .practice-session-official-choice--selected .lsat-html-content *,
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="black-on-white"],
+  [data-color-scheme="grey-on-light-grey"],
+  :not([data-color-scheme])
+) .practice-session-official-choice--selected .practice-session-content * {
+  color: #041a44 !important;
+}
+
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="black-on-white"],
+  [data-color-scheme="grey-on-light-grey"],
+  :not([data-color-scheme])
+) .practice-session-official-choice-letter--selected {
+  color: #041a44 !important;
+}
+
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="black-on-white"],
+  [data-color-scheme="grey-on-light-grey"],
+  :not([data-color-scheme])
+) .practice-session-official-reset {
+  background-color: #35373c !important;
+  border-color: #35373c !important;
+  color: #ffffff !important;
+}
+
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="black-on-white"],
+  [data-color-scheme="grey-on-light-grey"],
+  :not([data-color-scheme])
+) .practice-session-official-reset:hover {
   background-color: #3f4247 !important;
+}
+
+/*
+ * Custom Accessibility schemes on dark official exam: honor scheme tokens for
+ * answer rows so white-on-black / yellow-on-navy / etc. actually paint.
+ */
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="purple-on-light-green"],
+  [data-color-scheme="black-on-violet"],
+  [data-color-scheme="yellow-on-navy"],
+  [data-color-scheme="white-on-black"]
+) .practice-session-official-choice:not(.practice-session-official-choice--selected) {
+  background-color: var(--practice-choice-unselected-bg) !important;
+  border-color: var(--practice-choice-unselected-border) !important;
+  color: var(--practice-accessibility-fg) !important;
+}
+
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="purple-on-light-green"],
+  [data-color-scheme="black-on-violet"],
+  [data-color-scheme="yellow-on-navy"],
+  [data-color-scheme="white-on-black"]
+) .practice-session-official-choice:not(.practice-session-official-choice--selected) > span {
+  background-color: var(--practice-choice-unselected-letter-bg) !important;
+  border-color: var(--practice-choice-unselected-letter-border) !important;
+  color: var(--practice-choice-unselected-letter-fg) !important;
+}
+
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="purple-on-light-green"],
+  [data-color-scheme="black-on-violet"],
+  [data-color-scheme="yellow-on-navy"],
+  [data-color-scheme="white-on-black"]
+) .practice-session-official-choice:not(.practice-session-official-choice--selected) .lsat-html-content,
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="purple-on-light-green"],
+  [data-color-scheme="black-on-violet"],
+  [data-color-scheme="yellow-on-navy"],
+  [data-color-scheme="white-on-black"]
+) .practice-session-official-choice:not(.practice-session-official-choice--selected) .practice-session-content,
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="purple-on-light-green"],
+  [data-color-scheme="black-on-violet"],
+  [data-color-scheme="yellow-on-navy"],
+  [data-color-scheme="white-on-black"]
+) .practice-session-official-choice:not(.practice-session-official-choice--selected) .lsat-html-content *,
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="purple-on-light-green"],
+  [data-color-scheme="black-on-violet"],
+  [data-color-scheme="yellow-on-navy"],
+  [data-color-scheme="white-on-black"]
+) .practice-session-official-choice:not(.practice-session-official-choice--selected) .practice-session-content * {
+  color: var(--practice-accessibility-fg) !important;
+}
+
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="purple-on-light-green"],
+  [data-color-scheme="black-on-violet"],
+  [data-color-scheme="yellow-on-navy"],
+  [data-color-scheme="white-on-black"]
+) .practice-session-official-choice--selected {
+  background-color: var(--practice-choice-selected-bg) !important;
+  border-color: var(--practice-choice-selected-border) !important;
+  color: var(--practice-accessibility-fg) !important;
+}
+
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="purple-on-light-green"],
+  [data-color-scheme="black-on-violet"],
+  [data-color-scheme="yellow-on-navy"],
+  [data-color-scheme="white-on-black"]
+) .practice-session-official-choice--selected .lsat-html-content,
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="purple-on-light-green"],
+  [data-color-scheme="black-on-violet"],
+  [data-color-scheme="yellow-on-navy"],
+  [data-color-scheme="white-on-black"]
+) .practice-session-official-choice--selected .practice-session-content,
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="purple-on-light-green"],
+  [data-color-scheme="black-on-violet"],
+  [data-color-scheme="yellow-on-navy"],
+  [data-color-scheme="white-on-black"]
+) .practice-session-official-choice--selected .lsat-html-content *,
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="purple-on-light-green"],
+  [data-color-scheme="black-on-violet"],
+  [data-color-scheme="yellow-on-navy"],
+  [data-color-scheme="white-on-black"]
+) .practice-session-official-choice--selected .practice-session-content * {
+  color: var(--practice-accessibility-fg) !important;
+}
+
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="purple-on-light-green"],
+  [data-color-scheme="black-on-violet"],
+  [data-color-scheme="yellow-on-navy"],
+  [data-color-scheme="white-on-black"]
+) .practice-session-official-choice-letter--selected {
+  background-color: var(--practice-choice-selected-letter-bg) !important;
+  border-color: var(--practice-choice-selected-letter-border) !important;
+  color: var(--practice-choice-selected-letter-fg) !important;
+}
+
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="purple-on-light-green"],
+  [data-color-scheme="black-on-violet"],
+  [data-color-scheme="yellow-on-navy"],
+  [data-color-scheme="white-on-black"]
+) .practice-session-official-reset {
+  background-color: var(--practice-panel-bg) !important;
+  border-color: var(--practice-panel-border) !important;
+  color: var(--practice-panel-muted-fg) !important;
 }
 
 .dark .practice-session-card--official .practice-session-footer {

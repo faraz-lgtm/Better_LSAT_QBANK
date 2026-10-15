@@ -118,7 +118,7 @@ function PrepCourseLessonSidebar({
 }: PrepCourseLessonSidebarProps) {
   return (
     <aside
-      className="flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden rounded-t-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)]"
+      className="flex h-full min-h-0 w-full max-w-full flex-1 flex-col overflow-hidden rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] md:rounded-t-[16px]"
       aria-label="Course lessons"
     >
       <div className="shrink-0 rounded-t-[16px] border-b border-[var(--greyscale-100)] bg-[var(--primary-25)] p-6">

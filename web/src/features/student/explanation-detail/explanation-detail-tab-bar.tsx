@@ -30,7 +30,7 @@ const TABS: { id: ExplanationDetailTabId; label: string }[] = [
 
 function tabButtonClass(active: boolean): string {
   return cn(
-    "inline-flex h-10 items-center justify-center rounded-[14px] px-4 text-sm font-semibold tracking-[0.02em] transition-colors",
+    "inline-flex h-9 shrink-0 items-center justify-center rounded-[12px] px-2.5 text-xs font-semibold tracking-[0.02em] transition-colors sm:h-10 sm:rounded-[14px] sm:px-4 sm:text-sm",
     active
       ? "border border-[var(--primary)] bg-[var(--primary)] text-white shadow-[0_1px_1px_rgba(13,13,18,0.06)]"
       : "bg-[var(--primary-25)] text-[var(--primary)] hover:bg-[var(--primary-25)]",
@@ -248,8 +248,8 @@ function ExplanationDetailTabBar({
   )
 
   return (
-    <header className="flex shrink-0 flex-col gap-6 rounded-2xl bg-[var(--primary-25)] p-6 lg:flex-row lg:items-start lg:justify-between">
-      <div className="flex min-w-0 flex-wrap items-center gap-4">
+    <header className="flex min-w-0 shrink-0 flex-col gap-4 rounded-2xl bg-[var(--primary-25)] p-4 sm:gap-6 sm:p-6 lg:flex-row lg:items-start lg:justify-between">
+      <div className="flex min-w-0 flex-wrap items-center gap-3 sm:gap-4">
         <div className="min-w-0">
           <h1 className="student-page-heading">{headingCode}</h1>
           <p className="m-0 mt-0 text-xs font-normal leading-normal tracking-[0.02em] text-[var(--greyscale-500)]">
@@ -269,7 +269,7 @@ function ExplanationDetailTabBar({
       </div>
 
       <div
-        className="inline-flex items-center gap-2 self-start rounded-2xl bg-[var(--greyscale-0)] p-2"
+        className="flex max-w-full items-center gap-1.5 self-stretch overflow-x-auto rounded-2xl bg-[var(--greyscale-0)] p-1.5 sm:inline-flex sm:gap-2 sm:self-start sm:p-2"
         role="tablist"
         aria-label="Question detail"
       >

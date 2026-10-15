@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom"
 
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { useStudentEntitlement } from "@/features/app-shell/student-entitlement-context"
+import { DashboardLsacLinkRequiredDialog } from "@/features/dashboard/components/dashboard-lsac-link-required-dialog"
 import { DashboardQuickStats } from "@/features/dashboard/components/dashboard-quick-stats"
 import { FreePlanDashboard } from "@/features/dashboard/components/free-plan-dashboard"
 import { PerformanceOverviewCard } from "@/features/dashboard/components/performance-overview-card"
@@ -80,8 +81,8 @@ function DashboardPage() {
   const dispatch = useAppDispatch()
   const {
     canAccessLsacContent,
-    isPaymentRequired,
     isLsacSetupRequired,
+    isPaymentRequired,
     loading: entitlementLoading,
   } = useStudentEntitlement()
   const analyticsApi = useAnalyticsApi()
@@ -113,6 +114,7 @@ function DashboardPage() {
 
   const [startingAdaptiveDrill, setStartingAdaptiveDrill] = useState(false)
   const [savingTestDate, setSavingTestDate] = useState(false)
+  const [lsacLinkPromptOpen, setLsacLinkPromptOpen] = useState(false)
 
   useEffect(() => {
     void dispatch(loadProfile())
@@ -194,13 +196,19 @@ function DashboardPage() {
     [activeFilter, continueDrills, suggestedDrills],
   )
 
+  const requireLsacOrRun = useCallback(
+    (action: () => void) => {
+      if (isLsacSetupRequired) {
+        setLsacLinkPromptOpen(true)
+        return
+      }
+      action()
+    },
+    [isLsacSetupRequired],
+  )
+
   const handleStartAdaptiveDrill = useCallback(async () => {
-    if (startingAdaptiveDrill) return
-    if (isLsacSetupRequired) {
-      navigate("/app/lsac-link-step")
-      return
-    }
-    if (!practiceApi) return
+    if (!practiceApi || startingAdaptiveDrill) return
     setStartingAdaptiveDrill(true)
     setError(null)
     try {
@@ -221,7 +229,15 @@ function DashboardPage() {
     } finally {
       setStartingAdaptiveDrill(false)
     }
-  }, [activeFilter, isLsacSetupRequired, navigate, practiceApi, startingAdaptiveDrill])
+  }, [activeFilter, navigate, practiceApi, startingAdaptiveDrill])
+
+  const handlePracticeDrillsClick = useCallback(() => {
+    requireLsacOrRun(() => navigate("/app/practice/drills"))
+  }, [navigate, requireLsacOrRun])
+
+  const handleSmartDrillClick = useCallback(() => {
+    requireLsacOrRun(() => void handleStartAdaptiveDrill())
+  }, [handleStartAdaptiveDrill, requireLsacOrRun])
 
   const preferences = studyContext?.preferences ?? null
   const selectedLsacWindow = findLsacTestWindow(
@@ -278,6 +294,11 @@ function DashboardPage() {
     <StudentMain>
       {error ? <p className="mb-4 text-sm text-[#95122b]">{error}</p> : null}
 
+      <DashboardLsacLinkRequiredDialog
+        open={lsacLinkPromptOpen}
+        onOpenChange={setLsacLinkPromptOpen}
+      />
+
       <div className="dashboard-page flex flex-col gap-6">
         <DashboardWelcomeHeading firstName={firstName} />
 
@@ -301,7 +322,7 @@ function DashboardPage() {
             }
             savingTestDate={savingTestDate}
             onTestDateChange={(value) => void handleTestDateChange(value)}
-            onStartAdaptiveDrill={() => void handleStartAdaptiveDrill()}
+            onStartAdaptiveDrill={handleSmartDrillClick}
           />
 
           {analyticsLoading && statCards.length === 0 ? (
@@ -359,7 +380,7 @@ function DashboardPage() {
                 <button
                   type="button"
                   className="font-semibold text-[var(--primary)] hover:underline"
-                  onClick={() => navigate("/app/practice/drills")}
+                  onClick={handlePracticeDrillsClick}
                 >
                   Practice → Drills
                 </button>

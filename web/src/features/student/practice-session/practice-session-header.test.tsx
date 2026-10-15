@@ -39,26 +39,32 @@ describe("PracticeSessionHeader LSAT default view", () => {
         questionNumber={1}
         questionCount={26}
         onClose={() => undefined}
+        onOpenToolsMenu={() => undefined}
         finishButton={<PracticeSessionFinishMenu iconTrigger onSubmitSection={() => undefined} onExit={() => undefined} />}
       />,
     )
 
-    const close = screen.getByRole("button", { name: "Close exam" })
-    const find = screen.getByPlaceholderText("Find Text, Type Here")
-    expect(close.parentElement).toContainElement(find)
-    expect(close.querySelector("img")).toHaveAttribute("src", "/figma/exam-header/block.svg")
-    expect(screen.getByText("LSAT Praxis Assessment")).toHaveClass("text-[24px]")
-    expect(screen.getByText("1 of 26")).toBeInTheDocument()
+    const closes = screen.getAllByRole("button", { name: "Close exam" })
+    const finds = screen.getAllByPlaceholderText("Find Text, Type Here")
+    expect(closes.length).toBeGreaterThanOrEqual(1)
+    expect(finds.length).toBeGreaterThanOrEqual(1)
+    expect(closes[0]?.querySelector("img")).toHaveAttribute("src", "/figma/exam-header/block.svg")
+    // Desktop title keeps 24px; mobile title is also present
+    expect(screen.getAllByText("LSAT Praxis Assessment").some((node) => node.className.includes("text-[24px]"))).toBe(
+      true,
+    )
+    expect(screen.getAllByText("1 of 26").length).toBeGreaterThanOrEqual(1)
     expect(screen.getByText("Time Left")).toBeInTheDocument()
-    expect(screen.getByText("05:02")).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Pause section timer" }).querySelector("img")).toHaveAttribute(
+    expect(screen.getAllByText("05:02").length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByRole("button", { name: "Pause section timer" })[0]?.querySelector("img")).toHaveAttribute(
       "src",
       "/figma/exam-header/pause.svg",
     )
-    expect(screen.getByRole("button", { name: "More options" }).querySelector("img")).toHaveAttribute(
+    expect(screen.getAllByRole("button", { name: "More options" })[0]?.querySelector("img")).toHaveAttribute(
       "src",
       "/figma/exam-header/dots-circle.svg",
     )
+    expect(screen.getByRole("button", { name: "Open tools menu" })).toBeInTheDocument()
     expect(document.querySelector('img[src="/figma/exam-header/timer.svg"]')).toBeInTheDocument()
     expect(screen.queryByText("Tools:")).not.toBeInTheDocument()
 
@@ -112,7 +118,7 @@ describe("PracticeSessionHeader LSAT default view", () => {
       />,
     )
 
-    await user.click(screen.getByRole("button", { name: "Close exam" }))
+    await user.click(screen.getAllByRole("button", { name: "Close exam" })[0]!)
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 
@@ -165,6 +171,40 @@ describe("PracticeSessionHeader LSAT default view", () => {
       "bg-[var(--primary-25)]",
       "text-[var(--primary)]",
     )
+  })
+})
+
+describe("PracticeSessionHeader LSAT default mobile Passage/Question dropdown", () => {
+  it("opens Passage / Question tabs from the title chevron like official", async () => {
+    const user = userEvent.setup()
+    const onMobilePaneChange = vi.fn()
+
+    render(
+      <PracticeSessionHeader
+        variant="active-drill"
+        title="LSAT Praxis Assessment"
+        findQuery=""
+        onFindQueryChange={() => undefined}
+        {...highlightHandlers}
+        timerDisplaySeconds={60}
+        timerPaused={false}
+        onTimerPauseRequest={() => undefined}
+        timerProgress={1}
+        questionProgressLabel="3 of 25"
+        onClose={() => undefined}
+        showMobilePaneTabs
+        mobilePane={null}
+        onMobilePaneChange={onMobilePaneChange}
+        finishButton={null}
+      />,
+    )
+
+    expect(screen.queryByRole("option", { name: "Passage" })).not.toBeInTheDocument()
+    await user.click(screen.getByRole("button", { name: "LSAT Praxis Assessment menu" }))
+    expect(screen.getByRole("option", { name: "Passage" })).toHaveAttribute("aria-selected", "false")
+    expect(screen.getByRole("option", { name: "Question" })).toHaveAttribute("aria-selected", "false")
+    await user.click(screen.getByRole("option", { name: "Question" }))
+    expect(onMobilePaneChange).toHaveBeenCalledWith("question")
   })
 })
 
@@ -250,6 +290,9 @@ describe("PracticeSessionHeader official view", () => {
     // Passage / Question opens from the title chevron; both start unselected
     expect(screen.queryByRole("option", { name: "Passage" })).not.toBeInTheDocument()
     await user.click(screen.getByRole("button", { name: "Test 123 menu" }))
+    const paneTabs = screen.getByRole("listbox", { name: "Reading view" })
+    expect(paneTabs.className).toContain("bg-[var(--greyscale-25)]")
+    expect(paneTabs.className).toContain("border-[var(--greyscale-100)]")
     expect(screen.getByRole("option", { name: "Passage" })).toHaveAttribute("aria-selected", "false")
     expect(screen.getByRole("option", { name: "Question" })).toHaveAttribute("aria-selected", "false")
     await user.click(screen.getByRole("option", { name: "Question" }))

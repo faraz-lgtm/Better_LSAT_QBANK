@@ -26,15 +26,19 @@ import {
 } from "@/features/student/preptests/preptest-hub-navigation"
 import {
   ACTIVE_DRILL_BODY_GRID_CLASS,
+  ACTIVE_DRILL_BODY_GRID_MOBILE_STACKED_CLASS,
   ACTIVE_DRILL_FINISH_BUTTON_CLASS,
   ACTIVE_DRILL_FOOTER_CLASS,
   ACTIVE_DRILL_OPTIONS_LIST_CLASS,
+  ACTIVE_DRILL_PANE_MOBILE_SOLO_CLASS,
   ACTIVE_DRILL_PASSAGE_PANE_CLASS,
+  ACTIVE_DRILL_PASSAGE_PANE_MOBILE_STACKED_CLASS,
   ACTIVE_DRILL_PASSAGE_PANE_ONLY_CLASS,
   ACTIVE_DRILL_PASSAGE_TEXT_CLASS,
   ACTIVE_DRILL_QUESTION_PANEL_MAIN_CLASS,
   ACTIVE_DRILL_QUESTION_PANEL_WITH_WIDGET_CLASS,
   ACTIVE_DRILL_QUESTION_PANE_CLASS,
+  ACTIVE_DRILL_QUESTION_PANE_MOBILE_STACKED_CLASS,
   SESSION_FINISH_BUTTON_CLASS,
 } from "@/features/student/practice-session/practice-session-active-drill-styles"
 import {
@@ -1812,15 +1816,19 @@ function SectionSessionPage() {
               ? REVIEW_BODY_CLASS
               : BLIND_REVIEW_BODY_CLASS
             : cn(
-                "practice-session-body relative flex min-h-0 flex-1 flex-col overflow-hidden bg-[var(--greyscale-0)] text-[var(--color-student-heading)]",
-                officialChrome && mobilePane === null && "practice-session-body--mobile-stack-scroll",
+                "practice-session-body relative flex min-h-0 flex-1 flex-col bg-[var(--greyscale-0)] text-[var(--color-student-heading)]",
+                officialChrome || !useActiveDrillLayout || mobilePane !== null
+                  ? "overflow-hidden"
+                  : "max-md:overflow-y-auto md:overflow-hidden",
+                ((officialChrome || useActiveDrillLayout) && mobilePane === null) &&
+                  "practice-session-body--mobile-stack-scroll",
               ),
           timeUpFlow != null && "practice-session-body--scroll-locked",
         )}
         data-color-scheme={highlights.accessibilitySettings.colorScheme}
         style={highlights.contentStyle}
       >
-        {officialChrome && toolsMenuOpen && !reviewPanelOpen && current ? (
+        {toolsMenuOpen && !reviewPanelOpen && current ? (
           <PracticeSessionMobileToolsOverlay
             questionId={current.id}
             flagged={questionFlags.isFlagged(current.id)}
@@ -1998,7 +2006,11 @@ function SectionSessionPage() {
                         passageOnlyView && "lg:grid-cols-1 lg:pr-0",
                       )
                     : useActiveDrillLayout
-                    ? cn("grid overflow-hidden", ACTIVE_DRILL_BODY_GRID_CLASS, passageOnlyView && "lg:grid-cols-1")
+                    ? cn(
+                        mobilePane === null ? ACTIVE_DRILL_BODY_GRID_MOBILE_STACKED_CLASS : "grid overflow-hidden",
+                        ACTIVE_DRILL_BODY_GRID_CLASS,
+                        passageOnlyView && "lg:grid-cols-1",
+                      )
                     : "grid overflow-hidden lg:grid-cols-2 lg:divide-x divide-[var(--greyscale-100)] dark:divide-[var(--greyscale-600)]",
               ),
             )}
@@ -2009,18 +2021,20 @@ function SectionSessionPage() {
                 "practice-session-pane",
                 !officialChrome && "min-h-0",
                 officialChrome && lineFocus && "practice-session-pane--line-focus",
-                officialChrome && sectionType === "RC" && mobilePane === "question" && "max-md:hidden",
+                sectionType === "RC" && mobilePane === "question" && "max-md:hidden",
                 useBlindReviewLayout
                   ? BLIND_REVIEW_PASSAGE_PANEL_CLASS
                   : officialChrome
                     ? OFFICIAL_PASSAGE_PANE_CLASS
                     : useActiveDrillLayout
-                    ? passageOnlyView
+                    ? passageOnlyView || mobilePane === "passage"
                       ? ACTIVE_DRILL_PASSAGE_PANE_ONLY_CLASS
                       : ACTIVE_DRILL_PASSAGE_PANE_CLASS
                     : "border-b border-[var(--greyscale-100)] p-5 lg:border-b-0",
                 officialChrome && mobilePane === null && OFFICIAL_PASSAGE_PANE_MOBILE_STACKED_CLASS,
+                useActiveDrillLayout && !officialChrome && mobilePane === null && ACTIVE_DRILL_PASSAGE_PANE_MOBILE_STACKED_CLASS,
                 officialChrome && mobilePane === "passage" && OFFICIAL_PANE_MOBILE_SOLO_CLASS,
+                useActiveDrillLayout && !officialChrome && mobilePane === "passage" && ACTIVE_DRILL_PANE_MOBILE_SOLO_CLASS,
               )}
             >
               {renderPassagePaneBody(
@@ -2043,7 +2057,11 @@ function SectionSessionPage() {
                       sectionType === "RC" && mobilePane === "passage" && "max-md:hidden",
                       passageOnlyView && "md:hidden",
                     )
-                  : useActiveDrillLayout && passageOnlyView && "hidden",
+                  : useActiveDrillLayout &&
+                    cn(
+                      sectionType === "RC" && mobilePane === "passage" && "max-md:hidden",
+                      passageOnlyView && "hidden",
+                    ),
                 useBlindReviewLayout
                   ? BLIND_REVIEW_QUESTION_PANEL_CLASS
                   : officialChrome
@@ -2052,7 +2070,9 @@ function SectionSessionPage() {
                     ? ACTIVE_DRILL_QUESTION_PANE_CLASS
                     : "gap-4 border-[var(--greyscale-100)] p-5",
                 officialChrome && mobilePane === null && OFFICIAL_QUESTION_PANE_MOBILE_STACKED_CLASS,
+                useActiveDrillLayout && !officialChrome && mobilePane === null && ACTIVE_DRILL_QUESTION_PANE_MOBILE_STACKED_CLASS,
                 officialChrome && mobilePane === "question" && OFFICIAL_PANE_MOBILE_SOLO_CLASS,
+                useActiveDrillLayout && !officialChrome && mobilePane === "question" && ACTIVE_DRILL_PANE_MOBILE_SOLO_CLASS,
               )}
             >
               <SectionQuestionPanel
@@ -2298,7 +2318,7 @@ function SectionSessionPage() {
           }}
           toolsMenuOpen={toolsMenuOpen}
           sectionLabel={sectionType === "RC" ? "Reading" : "Logical Reasoning"}
-          showMobilePaneTabs={officialChrome && sectionType === "RC"}
+          showMobilePaneTabs={sectionType === "RC"}
           mobilePane={mobilePane}
           onMobilePaneChange={(pane) => {
             setMobilePane(pane)

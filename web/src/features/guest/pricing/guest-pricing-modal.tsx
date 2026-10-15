@@ -69,14 +69,14 @@ function GuestPricingModal({
 
   return (
     <div
-      className="fixed inset-0 z-[130] flex items-end justify-center bg-black/30 p-0 backdrop-blur-[3px] sm:items-center sm:p-3 md:p-4"
+      className="fixed inset-0 z-[130] flex items-stretch justify-center bg-black/30 p-0 backdrop-blur-[3px] sm:items-center sm:p-3 md:p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="guest-pricing-modal-title"
       onClick={() => onOpenChange(false)}
     >
       <div
-        className="pricing-modal relative flex max-h-[100dvh] w-full max-w-[1284px] flex-col overflow-hidden rounded-t-[24px] border border-[#dde5f0] bg-[#f7faff] px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 shadow-[0px_24px_48px_rgba(13,13,18,0.16)] sm:max-h-[calc(100dvh-1.5rem)] sm:rounded-[28px] sm:px-8 sm:py-5 md:rounded-[36px] lg:h-[min(100dvh-2rem,920px)] lg:rounded-[42px] lg:px-[52px]"
+        className="pricing-modal relative flex h-[100dvh] max-h-[100dvh] w-full max-w-[1284px] flex-col overflow-hidden rounded-none border-0 border-[#dde5f0] bg-[#f7faff] px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-[max(0.75rem,env(safe-area-inset-top))] shadow-none sm:h-auto sm:max-h-[calc(100dvh-1.5rem)] sm:rounded-[28px] sm:border sm:px-8 sm:py-5 sm:shadow-[0px_24px_48px_rgba(13,13,18,0.16)] md:rounded-[36px] lg:h-[min(100dvh-2rem,920px)] lg:rounded-[42px] lg:px-[52px]"
         onClick={(event) => event.stopPropagation()}
       >
         <button
