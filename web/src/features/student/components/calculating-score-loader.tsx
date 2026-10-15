@@ -81,7 +81,7 @@ function CalculatingScoreLoader({
 
   const value = Math.round(progress ?? autoProgress)
   const ringStyle = {
-    background: `conic-gradient(#0d47a1 ${value * 3.6}deg, #dfe1e7 0deg)`,
+    background: `conic-gradient(var(--primary) ${value * 3.6}deg, var(--greyscale-100) 0deg)`,
   }
 
   return (
@@ -96,28 +96,33 @@ function CalculatingScoreLoader({
     >
       <div className="relative flex size-[120px] items-center justify-center">
         <div
-          className="absolute inset-0 rounded-full shadow-[0_12px_32px_rgba(13,71,161,0.12)] transition-[background] duration-300"
+          className="absolute inset-0 rounded-full shadow-[0_12px_32px_rgba(13,71,161,0.12)] transition-[background] duration-300 dark:shadow-[0_12px_32px_rgba(117,161,232,0.18)]"
           style={ringStyle}
           aria-hidden
         />
-        <div className="absolute inset-[10px] rounded-full bg-white" aria-hidden />
+        <div
+          className="absolute inset-[10px] rounded-full bg-[var(--background)]"
+          aria-hidden
+        />
         <div className="relative flex flex-col items-center">
-          <span className="text-[28px] font-extrabold leading-none tracking-tight text-[#062357]">
+          <span className="text-[28px] font-extrabold leading-none tracking-tight text-[var(--color-student-heading)]">
             {value}%
           </span>
         </div>
       </div>
 
       <div className="flex max-w-sm flex-col items-center gap-2 text-center">
-        <h2 className="!m-0 text-[22px] font-bold leading-[1.3] text-[#062357]">{title}</h2>
-        <p className="min-h-5 text-sm font-medium tracking-[0.02em] text-[#666d80]">
+        <h2 className="!m-0 text-[22px] font-bold leading-[1.3] text-[var(--color-student-heading)]">
+          {title}
+        </h2>
+        <p className="min-h-5 text-sm font-medium tracking-[0.02em] text-[var(--greyscale-500)]">
           {STATUS_LINES[statusIndex]}
         </p>
       </div>
 
-      <div className="h-1.5 w-full max-w-[220px] overflow-hidden rounded-full bg-[#edf3ff]">
+      <div className="h-1.5 w-full max-w-[220px] overflow-hidden rounded-full bg-[var(--primary-25)]">
         <div
-          className="h-full rounded-full bg-[#0d47a1] transition-[width] duration-300 ease-out"
+          className="h-full rounded-full bg-[var(--primary)] transition-[width] duration-300 ease-out"
           style={{ width: `${value}%` }}
         />
       </div>

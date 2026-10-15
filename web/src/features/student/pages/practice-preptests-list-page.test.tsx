@@ -21,6 +21,7 @@ vi.mock("@/lib/api/practice", () => ({
     startPrepTest: vi.fn(),
     startBlindReview: vi.fn(),
     getBlindReviewDetail: vi.fn(),
+    prefetchPrepTestDetail: vi.fn(),
   }),
 }))
 
@@ -130,7 +131,8 @@ describe("PracticePrepTestsListPage sort", () => {
     expect(screen.getByRole("button", { name: "Completed (0)" })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Untimed Review" })).toBeInTheDocument()
     expect(screen.getAllByText("Ready to Take")).toHaveLength(2)
-    expect(screen.getByText("901").closest("[data-pt-badge]")).toHaveStyle({ width: "64px", height: "64px" })
+    expect(screen.getByText("901").closest("[data-pt-badge]")?.className).toMatch(/size-12/)
+    expect(screen.getByText("901").closest("[data-pt-badge]")?.className).toMatch(/md:size-16/)
     expect(screen.getByTestId("preptest-list-row-pt-901").className).toMatch(/bg-\[var\(--greyscale-0\)\]/)
     expect(screen.getByTestId("preptest-list-row-pt-901").className).toMatch(/hover:bg-\[var\(--primary-25\)\]/)
     expect(screen.getByTestId("preptest-list-row-pt-901").className).toMatch(/hover:border-\[var\(--primary\)\]/)
@@ -242,6 +244,35 @@ describe("PracticePrepTestsListPage see more", () => {
     expect(screen.getByTestId("preptest-list-row-pt-155")).toHaveAttribute("data-muted", "true")
     expect(screen.queryByRole("button", { name: "Retake" })).not.toBeInTheDocument()
     expect(screen.queryByRole("button", { name: /^Start$/ })).not.toBeInTheDocument()
+  })
+
+  it("keeps Untimed Review CTA off the title row for in-process blind review cards", async () => {
+    listPrepTestPool.mockResolvedValue({
+      prepTests: [
+        poolItem("pt-152", "152", {
+          status: "in_progress",
+          blindReviewStatus: "in_progress",
+          openPrepTestSessionId: "sess-152",
+        }),
+      ],
+      total: 1,
+      page: 1,
+      pageSize: 5,
+      statusCounts: { all: 1, fresh: 0, in_progress: 1, completed: 0, blind_review: 1 },
+    })
+    renderPage()
+
+    const row = await screen.findByTestId("preptest-list-row-pt-152")
+    expect(row).toHaveTextContent("In Process")
+    expect(row.querySelector("p")?.textContent).toBe("In Process")
+    const cta = Array.from(row.querySelectorAll("button")).find((button) => button.textContent === "Untimed Review")
+    expect(cta).toBeTruthy()
+    expect(cta?.className).toMatch(/whitespace-nowrap/)
+    const actions = row.querySelector("[data-preptest-card-actions]")
+    expect(actions).not.toBeNull()
+    expect(actions).toContainElement(cta as HTMLElement)
+    expect(actions?.className).toMatch(/col-span-2/)
+    expect(actions?.textContent).not.toMatch(/In Process/)
   })
 
   it("renders completed score chrome and retake", async () => {

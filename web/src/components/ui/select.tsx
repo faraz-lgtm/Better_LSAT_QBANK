@@ -19,19 +19,27 @@ function Select({ className, options, placeholder = "Select option", ...props }:
       <select
         data-slot="select"
         className={cn(
-          "h-11 w-full appearance-none rounded-xl border border-input bg-[#F6F8FA] px-3 pr-10 text-sm text-foreground shadow-xs outline-none transition-colors focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/20 disabled:cursor-not-allowed disabled:opacity-50",
+          "h-11 w-full appearance-none rounded-xl border border-input bg-[var(--greyscale-25)] px-3 pr-10 text-sm text-[var(--color-student-heading)] shadow-xs outline-none transition-colors focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/20 disabled:cursor-not-allowed disabled:opacity-50",
           className,
         )}
         {...props}
       >
-        {!props.value ? <option value="">{placeholder}</option> : null}
+        {!props.value ? (
+          <option value="" className="bg-[var(--greyscale-0)] text-[var(--color-student-heading)]">
+            {placeholder}
+          </option>
+        ) : null}
         {options.map((option) => (
-          <option key={option.value} value={option.value}>
+          <option
+            key={option.value}
+            value={option.value}
+            className="bg-[var(--greyscale-0)] text-[var(--color-student-heading)]"
+          >
             {option.label}
           </option>
         ))}
       </select>
-      <ChevronDown className="pointer-events-none absolute top-1/2 right-3 size-5 -translate-y-1/2 text-[#818898]" />
+      <ChevronDown className="pointer-events-none absolute top-1/2 right-3 size-5 -translate-y-1/2 text-[var(--greyscale-300)]" />
     </div>
   )
 }

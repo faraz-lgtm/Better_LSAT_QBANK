@@ -2548,6 +2548,8 @@ html.student-shell-active #root {
   }
 
   .intent-page__back {
+    align-self: flex-end;
+    margin-top: 0.75rem;
     margin-bottom: 0.35rem;
   }
 
@@ -2641,7 +2643,7 @@ html.student-shell-active #root {
     align-items: stretch;
     justify-content: flex-start;
     overflow: visible;
-    padding: 0 1rem 1rem;
+    padding: 0.5rem 1rem 1rem;
   }
 
   .auth-split-page--intent-only .auth-split-footer {
@@ -3183,11 +3185,11 @@ code {
 }
 
 .ds-text-heading {
-  color: #082c6b;
+  color: var(--color-student-heading);
 }
 
 .ds-text-accent {
-  color: #0d47a1;
+  color: var(--color-student-accent);
 }
 
 .ds-text-muted {
@@ -3304,6 +3306,13 @@ code {
 select.ds-input {
   appearance: none;
   cursor: pointer;
+}
+
+/* Native <select> option popup — keep readable in both themes */
+[data-slot="select"] option,
+select.ds-input option {
+  background-color: var(--greyscale-0);
+  color: var(--color-student-heading);
 }
 
 /* Figma primary button — use class `ds-btn` or <Button variant="default" /> */
