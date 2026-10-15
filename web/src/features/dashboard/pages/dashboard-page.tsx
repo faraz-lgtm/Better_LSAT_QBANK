@@ -81,6 +81,7 @@ function DashboardPage() {
   const {
     canAccessLsacContent,
     isPaymentRequired,
+    isLsacSetupRequired,
     loading: entitlementLoading,
   } = useStudentEntitlement()
   const analyticsApi = useAnalyticsApi()
@@ -194,7 +195,12 @@ function DashboardPage() {
   )
 
   const handleStartAdaptiveDrill = useCallback(async () => {
-    if (!practiceApi || startingAdaptiveDrill) return
+    if (startingAdaptiveDrill) return
+    if (isLsacSetupRequired) {
+      navigate("/app/lsac-link-step")
+      return
+    }
+    if (!practiceApi) return
     setStartingAdaptiveDrill(true)
     setError(null)
     try {
@@ -215,7 +221,7 @@ function DashboardPage() {
     } finally {
       setStartingAdaptiveDrill(false)
     }
-  }, [activeFilter, navigate, practiceApi, startingAdaptiveDrill])
+  }, [activeFilter, isLsacSetupRequired, navigate, practiceApi, startingAdaptiveDrill])
 
   const preferences = studyContext?.preferences ?? null
   const selectedLsacWindow = findLsacTestWindow(
@@ -290,7 +296,9 @@ function DashboardPage() {
             )}
             testDateValue={testDateValue}
             adaptiveLoading={startingAdaptiveDrill}
-            adaptiveDisabled={!practiceApi || analyticsLoading}
+            adaptiveDisabled={
+              isLsacSetupRequired ? false : !practiceApi || analyticsLoading
+            }
             savingTestDate={savingTestDate}
             onTestDateChange={(value) => void handleTestDateChange(value)}
             onStartAdaptiveDrill={() => void handleStartAdaptiveDrill()}

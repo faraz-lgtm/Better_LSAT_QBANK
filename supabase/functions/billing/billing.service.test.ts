@@ -89,7 +89,7 @@ Deno.test('billing service createCheckoutSession creates customer and returns ur
             assertEquals(params.mode, 'subscription')
             assertEquals(
               params.success_url,
-              'http://localhost:5173/onboarding?checkout=success&session_id={CHECKOUT_SESSION_ID}',
+              'http://localhost:5173/app/lsac-link-step?checkout=success&session_id={CHECKOUT_SESSION_ID}',
             )
             assertEquals(
               params.cancel_url,
@@ -156,12 +156,13 @@ Deno.test('billing service createCheckoutSession accepts custom successPath', as
 })
 
 Deno.test('parseCheckoutSuccessPath rejects unsafe paths', () => {
-  assertEquals(parseCheckoutSuccessPath(undefined), '/onboarding?checkout=success')
+  assertEquals(parseCheckoutSuccessPath(undefined), '/app/lsac-link-step?checkout=success')
   assertThrows(() => parseCheckoutSuccessPath('https://evil.test/nope'))
   assertThrows(() => parseCheckoutSuccessPath('/app/../admin'))
   assertEquals(parseCheckoutSuccessPath('/app/diagnostic/results?checkout=success'), '/app/diagnostic/results?checkout=success')
   assertEquals(parseCheckoutSuccessPath('/app?checkout=success'), '/app?checkout=success')
   assertEquals(parseCheckoutSuccessPath('/onboarding?checkout=success'), '/onboarding?checkout=success')
+  assertEquals(parseCheckoutSuccessPath('/app/lsac-link-step?checkout=success'), '/app/lsac-link-step?checkout=success')
 })
 
 Deno.test('billing service createCheckoutSession skips LawHub when includeLawHub is false', async () => {

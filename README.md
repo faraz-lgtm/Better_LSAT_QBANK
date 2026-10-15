@@ -122,7 +122,7 @@ Emulator verification checklist:
 
 ## Stripe billing (Core intervals + LawHub Advantage)
 
-After signup and onboarding, students land on **`/app/pricing`**. Free access stays on the app. Paid checkout is one Core product with three recurring prices: **$69/month**, **$192 every 3 months**, and **$354 every 6 months**. Stripe Checkout adds **LawHub Advantage (~$99/year)** as a one-time line item on the first invoice unless the student already has PrepPlus. After payment, they complete LawHub linking on `/lsac-link-step`. Existing Live subscriptions still grant access; Live is not offered for new checkout.
+After signup and onboarding, students land on the free dashboard; paid upgrade opens the in-app pricing modal (same as **Upgrade to LSAT+**). Paid checkout is one Core product with three recurring prices: **$69/month**, **$192 every 3 months**, and **$354 every 6 months**. Stripe Checkout adds **LawHub Advantage (~$99/year)** as a one-time line item on the first invoice unless the student already has PrepPlus. After payment, they complete LawHub linking on `/lsac-link-step`. Existing Live subscriptions still grant access; Live is not offered for new checkout.
 
 | Variable | Purpose |
 |----------|---------|

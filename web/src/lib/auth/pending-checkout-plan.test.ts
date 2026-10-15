@@ -104,7 +104,6 @@ describe("pending checkout plan", () => {
       "/app/diagnostic/results/full/attempt-1?checkout=success",
     )
     expect(resolveCheckoutSuccessPath("/app")).toBe(DEFAULT_CHECKOUT_SUCCESS_PATH)
-    expect(resolveCheckoutSuccessPath("/app/pricing")).toBe(DEFAULT_CHECKOUT_SUCCESS_PATH)
   })
 
   it("parses only allowed in-app checkout success paths", () => {

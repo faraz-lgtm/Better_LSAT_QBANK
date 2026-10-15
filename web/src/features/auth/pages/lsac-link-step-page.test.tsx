@@ -11,6 +11,7 @@ const lawHubConfirmUrl = vi.fn()
 const lawHubRefresh = vi.fn()
 const lawHubLink = vi.fn()
 const lawHubLogLogin = vi.fn()
+const pollEntitlementMock = vi.fn()
 
 vi.mock("@/lib/supabase/client", () => ({
   getSupabaseBrowserClient: () => ({}),
@@ -27,13 +28,47 @@ vi.mock("@/lib/api/users", () => ({
   }),
 }))
 
-function renderPage() {
+vi.mock("@/features/app-shell/poll-entitlement-after-checkout", () => ({
+  pollEntitlementAfterCheckoutSuccess: (...args: unknown[]) => pollEntitlementMock(...args),
+}))
+
+const unpaidEntitlement = {
+  isAuthenticated: true,
+  isLsacLinked: false,
+  isLsacEligible: false,
+  hasActiveCore: false,
+  accessState: "PAYMENT_REQUIRED" as const,
+}
+
+const paidNeedsLsacEntitlement = {
+  isAuthenticated: true,
+  isLsacLinked: false,
+  isLsacEligible: false,
+  hasActiveCore: true,
+  accessState: "LSAC_REQUIRED" as const,
+}
+
+const baseProfile = {
+  id: "u1",
+  email: "a@b.com",
+  full_name: "Ada Lovelace",
+  first_name: "Ada",
+  last_name: "Lovelace",
+  phone: null,
+  avatar_url: null,
+  role: "student" as const,
+  student_coaching_id: null,
+  is_first_time_login: false,
+  created_at: "",
+  updated_at: "",
+}
+
+function renderPage(initialEntry = "/app/lsac-link-step") {
   return render(
-    <MemoryRouter initialEntries={["/app/lsac-link-step"]}>
+    <MemoryRouter initialEntries={[initialEntry]}>
       <Routes>
         <Route path="/app/lsac-link-step" element={<LsacLinkStepPage />} />
         <Route path="/app" element={<div>App home</div>} />
-        <Route path="/app/pricing" element={<div>Pricing</div>} />
         <Route path="/login" element={<div>Login</div>} />
       </Routes>
     </MemoryRouter>,
@@ -48,31 +83,14 @@ describe("LsacLinkStepPage", () => {
     lawHubRefresh.mockReset()
     lawHubLink.mockReset()
     lawHubLogLogin.mockReset()
+    pollEntitlementMock.mockReset()
+    pollEntitlementMock.mockResolvedValue(false)
     vi.stubGlobal("open", vi.fn())
   })
 
   it("shows path instructions and labels on the invite step", async () => {
-    getMyProfile.mockResolvedValue({
-      id: "u1",
-      email: "a@b.com",
-      full_name: "Ada Lovelace",
-      first_name: "Ada",
-      last_name: "Lovelace",
-      phone: null,
-      avatar_url: null,
-      role: "student",
-      student_coaching_id: null,
-      is_first_time_login: false,
-      created_at: "",
-      updated_at: "",
-    })
-    getEntitlementState.mockResolvedValue({
-      isAuthenticated: true,
-      isLsacLinked: false,
-      isLsacEligible: false,
-      hasActiveCore: true,
-      accessState: "FULL_ACCESS",
-    })
+    getMyProfile.mockResolvedValue(baseProfile)
+    getEntitlementState.mockResolvedValue(paidNeedsLsacEntitlement)
 
     renderPage()
 
@@ -87,24 +105,12 @@ describe("LsacLinkStepPage", () => {
 
   it("shows Activate LawHub (not email copy) when coach invite is pending", async () => {
     getMyProfile.mockResolvedValue({
-      id: "u1",
-      email: "a@b.com",
-      full_name: "Ada Lovelace",
-      first_name: "Ada",
-      last_name: "Lovelace",
-      phone: null,
-      avatar_url: null,
-      role: "student",
+      ...baseProfile,
       student_coaching_id: "coach-1",
-      is_first_time_login: false,
-      created_at: "",
-      updated_at: "",
     })
     getEntitlementState.mockResolvedValue({
-      isAuthenticated: true,
+      ...paidNeedsLsacEntitlement,
       isLsacLinked: true,
-      isLsacEligible: false,
-      hasActiveCore: true,
       accessState: "FULL_ACCESS",
     })
     lawHubConfirmUrl.mockResolvedValue(
@@ -128,18 +134,8 @@ describe("LsacLinkStepPage", () => {
 
   it("redirects to app when already LawHub eligible", async () => {
     getMyProfile.mockResolvedValue({
-      id: "u1",
-      email: "a@b.com",
-      full_name: "Ada Lovelace",
-      first_name: "Ada",
-      last_name: "Lovelace",
-      phone: null,
-      avatar_url: null,
-      role: "student",
+      ...baseProfile,
       student_coaching_id: "coach-1",
-      is_first_time_login: false,
-      created_at: "",
-      updated_at: "",
     })
     getEntitlementState.mockResolvedValue({
       isAuthenticated: true,
@@ -154,5 +150,44 @@ describe("LsacLinkStepPage", () => {
     await waitFor(() => {
       expect(screen.getByText("App home")).toBeInTheDocument()
     })
+  })
+
+  it("redirects unpaid users without checkout success to app with upgrade handoff", async () => {
+    getMyProfile.mockResolvedValue(baseProfile)
+    getEntitlementState.mockResolvedValue(unpaidEntitlement)
+
+    renderPage()
+
+    await waitFor(() => {
+      expect(screen.getByText("App home")).toBeInTheDocument()
+    })
+    expect(pollEntitlementMock).not.toHaveBeenCalled()
+  })
+
+  it("waits for webhook after checkout success before showing LawHub setup", async () => {
+    getMyProfile.mockResolvedValue(baseProfile)
+    getEntitlementState
+      .mockResolvedValueOnce(unpaidEntitlement)
+      .mockResolvedValue(paidNeedsLsacEntitlement)
+    pollEntitlementMock.mockResolvedValue(true)
+
+    renderPage("/app/lsac-link-step?checkout=success")
+
+    expect(await screen.findByText(/choose one path/i)).toBeInTheDocument()
+    expect(pollEntitlementMock).toHaveBeenCalled()
+    expect(screen.queryByText("App home")).not.toBeInTheDocument()
+  })
+
+  it("sends checkout success users to app with upgrade handoff only after entitlement poll times out", async () => {
+    getMyProfile.mockResolvedValue(baseProfile)
+    getEntitlementState.mockResolvedValue(unpaidEntitlement)
+    pollEntitlementMock.mockResolvedValue(false)
+
+    renderPage("/app/lsac-link-step?checkout=success")
+
+    await waitFor(() => {
+      expect(screen.getByText("App home")).toBeInTheDocument()
+    })
+    expect(pollEntitlementMock).toHaveBeenCalled()
   })
 })

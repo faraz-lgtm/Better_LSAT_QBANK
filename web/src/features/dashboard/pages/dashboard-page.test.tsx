@@ -1,7 +1,8 @@
 import { configureStore } from "@reduxjs/toolkit"
 import { render, screen, waitFor } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import { Provider } from "react-redux"
-import { MemoryRouter } from "react-router-dom"
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { DashboardPage } from "@/features/dashboard/pages/dashboard-page"
@@ -64,6 +65,7 @@ const mocks = vi.hoisted(() => ({
   getSessions: vi.fn(),
   getPriorities: vi.fn(),
   getPageBundle: vi.fn(),
+  startDrill: vi.fn(),
 }))
 
 vi.mock("@/lib/supabase/client", () => ({
@@ -72,6 +74,7 @@ vi.mock("@/lib/supabase/client", () => ({
 
 vi.mock("@/features/app-shell/student-entitlement-context", () => ({
   useStudentEntitlement: () => mocks.entitlement,
+  useStudentEntitlementOptional: () => mocks.entitlement,
 }))
 
 vi.mock("@/lib/api/users", () => ({
@@ -94,18 +97,36 @@ vi.mock("@/lib/api/analytics", () => ({
 }))
 
 vi.mock("@/lib/api/practice", () => ({
-  createPracticeApi: () => null,
+  createPracticeApi: () => ({
+    startDrill: mocks.startDrill,
+  }),
 }))
 
-function renderDashboard() {
+function PathProbe() {
+  const { pathname } = useLocation()
+  return <div data-testid="path">{pathname}</div>
+}
+
+function renderDashboard(initialPath = "/app") {
   const store = configureStore({
     reducer: { studentSession: studentSessionReducer },
   })
   return render(
     <Provider store={store}>
-      <MemoryRouter>
+      <MemoryRouter initialEntries={[initialPath]}>
         <GuestPricingModalProvider>
-          <DashboardPage />
+          <Routes>
+            <Route
+              path="/app"
+              element={
+                <>
+                  <DashboardPage />
+                  <PathProbe />
+                </>
+              }
+            />
+            <Route path="/app/lsac-link-step" element={<PathProbe />} />
+          </Routes>
         </GuestPricingModalProvider>
       </MemoryRouter>
     </Provider>,
@@ -117,10 +138,12 @@ describe("DashboardPage", () => {
     mocks.entitlement.loading = false
     mocks.entitlement.canAccessLsacContent = false
     mocks.entitlement.isPaymentRequired = true
+    mocks.entitlement.isLsacSetupRequired = false
     mocks.entitlement.entitlement = paymentRequiredEntitlement()
     mocks.getMyProfile.mockReset()
     mocks.getStudyContext.mockReset()
     mocks.getPageBundle.mockReset()
+    mocks.startDrill.mockReset()
     mocks.getMyProfile.mockResolvedValue({
       id: "u1",
       email: "a@b.com",
@@ -201,6 +224,28 @@ describe("DashboardPage", () => {
     expect(screen.queryByText("Unlock full practice and analytics")).not.toBeInTheDocument()
     // LawHub analytics stay gated until eligible; shell + Link LSAC CTA remain reachable.
     expect(mocks.getPageBundle).not.toHaveBeenCalled()
+  })
+
+  it("sends Start Smart Drill to the LSAC link step when Core is paid but LawHub is not linked", async () => {
+    const user = userEvent.setup()
+    mocks.entitlement.isPaymentRequired = false
+    mocks.entitlement.canAccessLsacContent = false
+    mocks.entitlement.isLsacSetupRequired = true
+    mocks.entitlement.entitlement = {
+      ...paymentRequiredEntitlement(),
+      accessState: "LSAC_REQUIRED",
+      hasActiveCore: true,
+    }
+
+    renderDashboard()
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Start Smart Drill" })).toBeEnabled()
+    })
+    await user.click(screen.getByRole("button", { name: "Start Smart Drill" }))
+
+    expect(mocks.startDrill).not.toHaveBeenCalled()
+    expect(screen.getByTestId("path")).toHaveTextContent("/app/lsac-link-step")
   })
 
   it("paints the shell while analytics is still loading (no full-page loader)", async () => {

@@ -1,6 +1,7 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react"
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
 
+import { useStudentEntitlementOptional } from "@/features/app-shell/student-entitlement-context"
 import { GUEST_FREE_PLAN_RESULTS_HREF } from "@/features/guest/diagnostic/guest-free-plan-nav-config"
 import { GuestLockedContentModal } from "@/features/guest/pricing/guest-locked-content-modal"
 import { GuestPricingModal } from "@/features/guest/pricing/guest-pricing-modal"
@@ -13,6 +14,9 @@ import {
   checkoutPathForPlan,
   resolveCheckoutSuccessPath,
 } from "@/lib/auth/pending-checkout-plan"
+
+const LSAC_LINK_HREF = "/app/lsac-link-step"
+const UPGRADE_HANDOFF_HREF = "/app?upgrade=1"
 
 type GuestPricingModalContextValue = {
   openPricingModal: () => void
@@ -34,6 +38,8 @@ function GuestPricingModalProvider({
 }: GuestPricingModalProviderProps) {
   const navigate = useNavigate()
   const location = useLocation()
+  const entitlement = useStudentEntitlementOptional()
+  const isLsacSetupRequired = Boolean(entitlement?.isLsacSetupRequired)
   const [open, setOpen] = useState(false)
   const [lockedContentOpen, setLockedContentOpen] = useState(false)
   const useAuthenticatedCheckout =
@@ -44,13 +50,39 @@ function GuestPricingModalProvider({
     if (useAuthenticatedCheckout) clearGuestPremiumAccount()
     setOpen(true)
   }, [useAuthenticatedCheckout])
-  const openLockedContentModal = useCallback(() => setLockedContentOpen(true), [])
+  const openLockedContentModal = useCallback(() => {
+    if (isLsacSetupRequired) {
+      navigate(LSAC_LINK_HREF)
+      return
+    }
+    setLockedContentOpen(true)
+  }, [isLsacSetupRequired, navigate])
   const closePricingModal = useCallback(() => setOpen(false), [])
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    if (params.get("upgrade") !== "1") return
+    openPricingModal()
+    params.delete("upgrade")
+    const nextSearch = params.toString()
+    navigate(
+      {
+        pathname: location.pathname,
+        search: nextSearch ? `?${nextSearch}` : "",
+        hash: location.hash,
+      },
+      { replace: true },
+    )
+  }, [location.hash, location.pathname, location.search, navigate, openPricingModal])
 
   const handleSubscribeFromLockedContent = useCallback(() => {
     setLockedContentOpen(false)
+    if (isLsacSetupRequired) {
+      navigate(LSAC_LINK_HREF)
+      return
+    }
     setOpen(true)
-  }, [])
+  }, [isLsacSetupRequired, navigate])
 
   const handleSelectPlan = useCallback(
     async (planId: GuestPricingPlanId, options?: { includeLawHub: boolean }) => {
@@ -113,8 +145,8 @@ function useGuestPricingModal(): GuestPricingModalContextValue {
   const navigate = useNavigate()
   const fallback = useMemo(
     () => ({
-      openPricingModal: () => navigate("/app/pricing"),
-      openLockedContentModal: () => navigate("/app/pricing"),
+      openPricingModal: () => navigate(UPGRADE_HANDOFF_HREF),
+      openLockedContentModal: () => navigate(UPGRADE_HANDOFF_HREF),
       closePricingModal: () => undefined,
     }),
     [navigate],

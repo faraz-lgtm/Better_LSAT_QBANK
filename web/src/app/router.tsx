@@ -24,7 +24,6 @@ import { LsacLinkPage } from "@/features/auth/pages/lsac-link-page"
 import { LsacLinkStepPage } from "@/features/auth/pages/lsac-link-step-page"
 import { CheckoutDetailsPage } from "@/features/billing/pages/checkout-details-page"
 import { CheckoutPage } from "@/features/billing/pages/checkout-page"
-import { PricingPage } from "@/features/billing/pages/pricing-page"
 import { OnboardingPage } from "@/features/auth/pages/onboarding-page"
 import { OnboardingDiagnosticPreviewPage } from "@/features/auth/pages/onboarding-diagnostic-preview-page"
 import { OnboardingWelcomePreviewPage } from "@/features/auth/pages/onboarding-welcome-preview-page"
@@ -768,7 +767,6 @@ const router = createBrowserRouter([
       </RequireRole>
     ),
     children: [
-      { path: "pricing", element: <PricingPage /> },
       { path: "lsac-link", element: <LsacLinkPage /> },
       {
         element: <StudentAppShell />,

@@ -3,7 +3,10 @@ import { useNavigate, useSearchParams } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { pollEntitlementAfterCheckoutSuccess } from "@/features/app-shell/poll-entitlement-after-checkout"
+import { useStudentEntitlementOptional } from "@/features/app-shell/student-entitlement-context"
 import { CheckoutPaymentSuccessDialog } from "@/features/billing/components/checkout-payment-success-dialog"
+import { useGuestPricingModal } from "@/features/guest/pricing/guest-pricing-modal-provider"
 import { StudentMain } from "@/features/student/components/student-main"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import { createUsersApi, type UserEntitlement, type UserProfile } from "@/lib/api/users"
@@ -20,6 +23,8 @@ function LsacLinkStepPage() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const checkoutSuccess = searchParams.get("checkout") === "success"
+  const entitlementCtx = useStudentEntitlementOptional()
+  const { openPricingModal } = useGuestPricingModal()
 
   const usersApi = useMemo(() => {
     try {
@@ -68,28 +73,51 @@ function LsacLinkStepPage() {
 
   useEffect(() => {
     let alive = true
+    const abortController = new AbortController()
     async function bootstrap() {
       if (!usersApi) {
         if (alive) setReady(true)
         return
       }
       try {
-        const [nextProfile, nextEntitlement] = await Promise.all([
-          usersApi.getMyProfile(),
-          usersApi.getEntitlementState(),
-        ])
+        const nextProfile = await usersApi.getMyProfile()
         if (!alive) return
         if (!nextProfile) {
           navigate("/login", { replace: true })
           return
         }
+
+        let nextEntitlement = await usersApi.getEntitlementState()
+        if (!alive) return
+
+        if (!nextEntitlement.hasActiveCore && checkoutSuccess) {
+          const synced = await pollEntitlementAfterCheckoutSuccess(
+            new URLSearchParams("checkout=success"),
+            {
+              getEntitlement: () => usersApi.getEntitlementState(),
+              refresh: async () => {
+                if (entitlementCtx) return entitlementCtx.refresh()
+                return usersApi.getEntitlementState()
+              },
+              currentEntitlement: nextEntitlement,
+              signal: abortController.signal,
+            },
+          )
+          if (!alive) return
+          if (synced) {
+            nextEntitlement = await usersApi.getEntitlementState()
+            if (!alive) return
+          }
+        }
+
         if (nextEntitlement.isLsacEligible) {
           const checkoutQuery = checkoutSuccess ? "?checkout=success" : ""
           navigate(`/app${checkoutQuery}`, { replace: true })
           return
         }
         if (!nextEntitlement.hasActiveCore) {
-          navigate("/app/pricing", { replace: true })
+          openPricingModal()
+          navigate("/app", { replace: true })
           return
         }
         setProfile(nextProfile)
@@ -135,8 +163,11 @@ function LsacLinkStepPage() {
     void bootstrap()
     return () => {
       alive = false
+      abortController.abort()
     }
-  }, [checkoutSuccess, navigate, usersApi])
+    // entitlementCtx is read for refresh only; do not re-bootstrap when shell entitlement updates.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional mount/checkout-success bootstrap
+  }, [checkoutSuccess, navigate, openPricingModal, usersApi])
 
   const hasCoachingId = Boolean(profile?.student_coaching_id?.trim())
   const pendingActivation = Boolean(

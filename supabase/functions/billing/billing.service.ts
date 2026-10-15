@@ -120,7 +120,7 @@ function parseCheckoutPlan(value: unknown): CheckoutPlanId {
   throw new Error('plan must be monthly, three_month, six_month, or yearly')
 }
 
-const DEFAULT_CHECKOUT_SUCCESS_PATH = '/onboarding?checkout=success'
+const DEFAULT_CHECKOUT_SUCCESS_PATH = '/app/lsac-link-step?checkout=success'
 
 function parseCheckoutSuccessPath(value: unknown): string {
   if (value == null || value === '') return DEFAULT_CHECKOUT_SUCCESS_PATH
