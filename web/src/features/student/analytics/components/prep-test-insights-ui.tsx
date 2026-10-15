@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from "react"
-import { Bookmark, Check } from "lucide-react"
+import { ArrowUp, Bookmark, Check } from "lucide-react"
 
 import { Switch } from "@/components/ui/switch"
 import {
@@ -26,24 +26,13 @@ import type { PrepTestProgressPoint } from "@/features/student/lib/mock-analytic
 import type { PrepTestSectionAccuracy } from "@/features/student/lib/mock-analytics-preptests"
 import { cn } from "@/lib/utils"
 
-const MOMENTUM_UP_ICON = "/figma/preptest-insights/momentum-up.svg"
-const BOOKMARK_OUTLINE_ICON = "/figma/preptest-insights/bookmark-outline.svg"
-
-/** Figma `21291:49774` log-row tokens */
-const LOG_HEADING = "#0e1b33"
-const LOG_MUTED = "#5a6782"
-const LOG_BORDER = "#edf1f7"
-const SECTION_TRACK = "#eef1f6"
-const SECTION_STRONG = "#0b3d91"
+/** Theme-aware tokens (Figma `21291:49774` light values map via CSS vars). */
 const SECTION_WEAK = "#c2560c"
-const MOMENTUM_POSITIVE_BG = "#dff3e6"
-const MOMENTUM_POSITIVE_FG = "#166534"
-
 const ACCENT_ORANGE = "#c2560c"
 const ACCENT_GREEN = "var(--explanation-answered)"
 const TARGET_GREEN = "#1f7a45"
-const TRAJECTORY_LINE = "#0b3d91"
-const TRAJECTORY_GRID = "#e6ebf3"
+const TRAJECTORY_LINE = "var(--primary)"
+const TRAJECTORY_GRID = "var(--greyscale-100)"
 const TRAJECTORY_AREA_OPACITY = 0.07
 
 export type TrajectoryTab = "scaled" | "raw"
@@ -275,10 +264,7 @@ function ExamTrajectoryChart({
   return (
     <div className="w-full" data-node-id="21291:49704">
       <div className="flex h-[284px] w-full items-stretch gap-3 overflow-visible">
-        <div
-          className="flex h-full flex-col justify-between py-0 pr-2 text-sm font-medium leading-5"
-          style={{ color: LOG_HEADING }}
-        >
+        <div className="flex h-full flex-col justify-between py-0 pr-2 text-sm font-medium leading-5 text-[var(--color-student-heading)]">
           {yAxisLabels.map((label, index) => (
             <span key={`${label}-${index}`}>{label}</span>
           ))}
@@ -349,7 +335,7 @@ function ExamTrajectoryChart({
                   key={point.id}
                   type="button"
                   className={cn(
-                    "absolute z-10 size-[9px] -translate-x-1/2 -translate-y-1/2 rounded-full border-[1.5px] bg-white outline-none transition-transform focus-visible:ring-2 focus-visible:ring-[var(--primary)]/30",
+                    "absolute z-10 size-[9px] -translate-x-1/2 -translate-y-1/2 rounded-full border-[1.5px] bg-[var(--greyscale-0)] outline-none transition-transform focus-visible:ring-2 focus-visible:ring-[var(--primary)]/30",
                     isActive && "scale-125",
                   )}
                   style={{
@@ -468,20 +454,17 @@ function SectionAccuracyBars({ sections }: { sections: PrepTestSectionAccuracy[]
         const pct = section.max > 0 ? Math.max(0, Math.min(100, (section.correct / section.max) * 100)) : 0
         const fillPx = Math.max(4, Math.round((pct / 100) * 28))
         const tone = sectionTone(section, sections)
-        const fill = tone === "weak" ? SECTION_WEAK : SECTION_STRONG
+        const fill = tone === "weak" ? SECTION_WEAK : "var(--primary)"
         return (
           <div
             key={section.number}
             className="flex w-11 shrink-0 flex-col items-center gap-[3px]"
             title={`Section ${section.number}: ${section.correct} of ${section.max}`}
           >
-            <div
-              className="flex size-7 shrink-0 items-end overflow-hidden rounded-[6px]"
-              style={{ background: SECTION_TRACK }}
-            >
+            <div className="flex size-7 shrink-0 items-end overflow-hidden rounded-[6px] bg-[var(--greyscale-50)]">
               <div className="w-7 shrink-0" style={{ height: fillPx, background: fill }} />
             </div>
-            <span className="whitespace-nowrap text-[11px] font-normal leading-none" style={{ color: LOG_MUTED }}>
+            <span className="whitespace-nowrap text-[11px] font-normal leading-none text-[var(--greyscale-500)]">
               S{section.number}
             </span>
           </div>
@@ -494,10 +477,7 @@ function SectionAccuracyBars({ sections }: { sections: PrepTestSectionAccuracy[]
 function MomentumBadge({ value }: { value: number | null }) {
   if (value == null || value === 0) {
     return (
-      <span
-        className="inline-flex items-center rounded-full px-3 py-1.5 text-sm font-semibold leading-[1.5] tracking-[0.28px]"
-        style={{ background: SECTION_TRACK, color: LOG_MUTED }}
-      >
+      <span className="inline-flex items-center rounded-full bg-[var(--greyscale-50)] px-3 py-1.5 text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[var(--greyscale-500)]">
         0.0
       </span>
     )
@@ -507,15 +487,12 @@ function MomentumBadge({ value }: { value: number | null }) {
     <span
       className={cn(
         "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold leading-[1.5] tracking-[0.28px]",
-        !positive && "bg-[var(--blind-review-badge-bg)] text-[var(--blind-review-accent)]",
+        positive
+          ? "bg-[var(--explanation-answered-bg)] text-[var(--explanation-answered)]"
+          : "bg-[var(--blind-review-badge-bg)] text-[var(--blind-review-accent)]",
       )}
-      style={positive ? { background: MOMENTUM_POSITIVE_BG, color: MOMENTUM_POSITIVE_FG } : undefined}
     >
-      {positive ? (
-        <span className="inline-flex size-3 shrink-0 items-center justify-center overflow-hidden" aria-hidden>
-          <img src={MOMENTUM_UP_ICON} alt="" className="size-[8.5px]" width={8.5} height={8.5} />
-        </span>
-      ) : null}
+      {positive ? <ArrowUp className="size-3.5 shrink-0 stroke-[2.5]" aria-hidden /> : null}
       {formatInsightSigned(value, 1)}
     </span>
   )
@@ -532,10 +509,7 @@ function InsightLogRow({
   onToggleBookmark: (id: string) => void
 }) {
   return (
-    <div
-      className="flex items-center gap-4 border-b border-solid px-7 py-[15px] last:border-b-0"
-      style={{ borderColor: LOG_BORDER }}
-    >
+    <div className="flex items-center gap-4 border-b border-solid border-[var(--greyscale-100)] px-7 py-[15px] last:border-b-0">
       <div className="flex h-[38px] w-[210px] shrink-0 flex-col items-start gap-0.5">
         <button
           type="button"
@@ -544,25 +518,16 @@ function InsightLogRow({
         >
           {row.testLabel}
         </button>
-        <p
-          className="m-0 text-xs font-normal leading-[1.5] tracking-[0.24px]"
-          style={{ color: LOG_MUTED }}
-        >
+        <p className="m-0 text-xs font-normal leading-[1.5] tracking-[0.24px] text-[var(--greyscale-500)]">
           {row.dateLabel}
         </p>
       </div>
 
       <div className="flex h-12 w-[134px] shrink-0 flex-col items-start gap-0.5">
-        <p
-          className="m-0 text-xl font-bold leading-[1.35]"
-          style={{ color: LOG_HEADING }}
-        >
+        <p className="m-0 text-xl font-bold leading-[1.35] text-[var(--color-student-heading)]">
           {row.score != null ? row.score : "—"}
         </p>
-        <p
-          className="m-0 text-xs font-normal leading-[1.5] tracking-[0.24px]"
-          style={{ color: LOG_MUTED }}
-        >
+        <p className="m-0 text-xs font-normal leading-[1.5] tracking-[0.24px] text-[var(--greyscale-500)]">
           {row.rawScore} / {row.rawMax} correct
         </p>
       </div>
@@ -574,10 +539,7 @@ function InsightLogRow({
       <SectionAccuracyBars sections={row.sections} />
 
       <div className="flex h-[19px] w-[144px] shrink-0 items-center">
-        <p
-          className="m-0 text-sm font-semibold leading-[1.5] tracking-[0.28px]"
-          style={{ color: LOG_HEADING }}
-        >
+        <p className="m-0 text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[var(--color-student-heading)]">
           {row.untimedDelta == null
             ? "—"
             : `${formatInsightSigned(Math.round(row.untimedDelta), 0)} when untimed`}
@@ -591,13 +553,15 @@ function InsightLogRow({
         onClick={() => onToggleBookmark(row.id)}
         className="inline-flex size-10 shrink-0 items-center justify-center rounded-[10px] hover:bg-[var(--primary-0)]"
       >
-        {row.bookmarked ? (
-          <Bookmark className="size-[18px] fill-[var(--primary)] text-[var(--primary)]" aria-hidden />
-        ) : (
-          <span className="inline-flex size-[18px] items-center justify-center overflow-hidden" aria-hidden>
-            <img src={BOOKMARK_OUTLINE_ICON} alt="" className="h-[15px] w-3" width={12} height={15} />
-          </span>
-        )}
+        <Bookmark
+          className={cn(
+            "size-[18px]",
+            row.bookmarked
+              ? "fill-[var(--primary)] text-[var(--primary)]"
+              : "fill-none text-[var(--greyscale-500)]",
+          )}
+          aria-hidden
+        />
       </button>
     </div>
   )
@@ -678,10 +642,7 @@ export function PrepTestFullTestLog({
           </label>
         </div>
 
-        <div
-          className="hidden items-center gap-4 border-b border-solid px-7 py-3 text-xs font-semibold leading-none md:flex"
-          style={{ borderColor: LOG_BORDER, color: LOG_MUTED }}
-        >
+        <div className="hidden items-center gap-4 border-b border-solid border-[var(--greyscale-100)] px-7 py-3 text-xs font-semibold leading-none text-[var(--greyscale-500)] md:flex">
           <span className="w-[210px] shrink-0">Test</span>
           <span className="w-[134px] shrink-0">Score</span>
           <span className="w-[152px] shrink-0">Momentum</span>

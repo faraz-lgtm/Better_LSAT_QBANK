@@ -152,21 +152,21 @@ function difficultyToneClasses(tone: "green" | "red" | "teal") {
   if (tone === "red") {
     return {
       fill: "bg-[#ef4444]",
-      text: "text-[#ef4444]",
-      badge: "bg-[rgba(239,68,68,0.1)]",
+      text: "text-[#ef4444] dark:text-[#ff6683]",
+      badge: "bg-[rgba(239,68,68,0.1)] dark:bg-[rgba(239,68,68,0.18)]",
     }
   }
   if (tone === "green") {
     return {
       fill: "bg-[#40c4aa]",
-      text: "text-[#0f9d82]",
-      badge: "bg-[rgba(64,196,170,0.12)]",
+      text: "text-[#0f9d82] dark:text-[#40c4aa]",
+      badge: "bg-[rgba(64,196,170,0.12)] dark:bg-[rgba(64,196,170,0.18)]",
     }
   }
   return {
     fill: "bg-[#0bbcc9]",
     text: "text-[#0bbcc9]",
-    badge: "bg-[rgba(11,188,201,0.1)]",
+    badge: "bg-[rgba(11,188,201,0.1)] dark:bg-[rgba(11,188,201,0.18)]",
   }
 }
 
@@ -292,13 +292,13 @@ function TopAnswerBars({
                 className={cn(
                   "w-full rounded-t-[10px]",
                   active
-                    ? "bg-gradient-to-t from-[var(--primary-600)] to-[var(--primary)] shadow-[0px_-6px_18px_rgba(11,188,201,0.45)]"
-                    : "bg-gradient-to-t from-[#9aa3b2] via-[#adb5c3] to-[#c1c8d4]",
+                    ? "bg-gradient-to-t from-[var(--primary-600)] to-[var(--primary)] shadow-[0px_-6px_18px_rgba(11,188,201,0.45)] dark:shadow-[0px_-6px_18px_rgba(117,161,232,0.35)]"
+                    : "bg-gradient-to-t from-[#9aa3b2] via-[#adb5c3] to-[#c1c8d4] dark:from-[#4a4f57] dark:via-[#565b64] dark:to-[#646a74]",
                 )}
                 style={{ height: fillHeight }}
               />
               {active ? (
-                <span className="absolute top-2 flex size-5 items-center justify-center rounded-full bg-[var(--greyscale-0)] shadow-[0px_1px_2px_rgba(0,0,0,0.14)]">
+                <span className="absolute top-2 flex size-5 items-center justify-center rounded-full bg-[var(--greyscale-0)] shadow-[0px_1px_2px_rgba(0,0,0,0.14)] dark:bg-[var(--greyscale-900)]">
                   <Check className="size-3 text-[var(--primary)]" strokeWidth={3} aria-hidden />
                 </span>
               ) : null}
@@ -308,7 +308,7 @@ function TopAnswerBars({
                 "mt-3 flex size-9 items-center justify-center rounded-[12px] border text-sm font-semibold leading-[21px]",
                 active
                   ? "border-[var(--primary)] bg-[var(--primary)] text-white shadow-[0px_4px_3px_rgba(11,188,201,0.3)]"
-                  : "border-[var(--greyscale-100)] bg-[var(--greyscale-0)] text-[var(--greyscale-500)]",
+                  : "border-[var(--greyscale-100)] bg-[var(--greyscale-0)] text-[var(--greyscale-500)] dark:bg-[var(--greyscale-25)]",
               )}
             >
               {row.letter}
@@ -331,12 +331,12 @@ function TagGroup({
 }) {
   const iconClasses =
     tone === "blue"
-      ? "bg-[var(--primary-25)] text-[var(--primary)]"
-      : "bg-[rgba(11,188,201,0.1)] text-[#0a8a94]"
+      ? "bg-[var(--primary-25)] text-[var(--primary)] dark:bg-[var(--secondary-0)]"
+      : "bg-[rgba(11,188,201,0.1)] text-[#0a8a94] dark:bg-[rgba(11,188,201,0.18)] dark:text-[#0bbcc9]"
   const chipClasses =
     tone === "blue"
-      ? "border-[var(--primary)]/15 bg-[var(--primary-25)] text-[var(--primary)]"
-      : "border-[rgba(11,188,201,0.2)] bg-[rgba(11,188,201,0.1)] text-[#0a8a94]"
+      ? "border-[var(--primary)]/20 bg-[var(--primary-25)] text-[var(--primary)] dark:bg-[var(--secondary-0)]"
+      : "border-[rgba(11,188,201,0.2)] bg-[rgba(11,188,201,0.1)] text-[#0a8a94] dark:bg-[rgba(11,188,201,0.18)] dark:text-[#0bbcc9]"
   return (
     <div className="w-full rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--primary-25)]/40 p-4 dark:bg-[var(--greyscale-25)]">
       <div className="flex items-center gap-2.5">
@@ -397,8 +397,8 @@ function QuestionHistory({ history }: { history: AnalyticsView["history"] }) {
                       className={cn(
                         "rounded-full px-2.5 py-0.5 text-[11px] font-semibold leading-[16.5px]",
                         done
-                          ? "bg-[rgba(64,196,170,0.12)] text-[#0f9d82]"
-                          : "bg-[rgba(245,158,11,0.12)] text-[#c07a06]",
+                          ? "bg-[rgba(64,196,170,0.12)] text-[#0f9d82] dark:bg-[rgba(64,196,170,0.18)] dark:text-[#40c4aa]"
+                          : "bg-[rgba(245,158,11,0.12)] text-[#c07a06] dark:bg-[rgba(245,158,11,0.18)] dark:text-[#f59e0b]",
                       )}
                     >
                       {done ? "Completed" : "In progress"}

@@ -5393,6 +5393,28 @@ section[data-lesson-section][data-variant="empty"] {
   background: var(--greyscale-25);
 }
 
+/* Rep-work editable boxes inject the same editor HTML without a .lesson-html-content wrapper. */
+.dark .rep-work-question-input {
+  color: var(--color-student-heading);
+}
+
+.dark .rep-work-question-input * {
+  color: inherit !important;
+}
+
+.dark .rep-work-question-input a {
+  color: var(--primary-700) !important;
+}
+
+.dark .rep-work-question-input a * {
+  color: inherit !important;
+}
+
+.dark .rep-work-question-input mark,
+.dark .rep-work-question-input mark * {
+  color: #121a26 !important;
+}
+
 .lsat-html-content .ss-line-number {
   color: var(--muted-foreground);
 }
@@ -6371,9 +6393,12 @@ html.student-shell-immersive .practice-session-card--blind-review {
 /*
  * Figma `20645:49778` dark theme — default accessibility scheme is black-on-white
  * (inline CSS vars). Remap so passage/choices stay light on Neutral-0 chrome.
+ * Non-default Accessibility color schemes must keep their own tokens — do not
+ * force heading/greyscale ink over white-on-black, yellow-on-navy, etc.
  */
 .dark .practice-session-card--blind-review .practice-session-body[data-color-scheme="black-on-white"],
-.dark .practice-session-card--blind-review .practice-session-body:not([data-color-scheme]) {
+.dark .practice-session-card--blind-review .practice-session-body:not([data-color-scheme]),
+.dark .practice-session-card--blind-review .practice-session-body[data-color-scheme="grey-on-light-grey"] {
   --practice-accessibility-bg: var(--greyscale-0) !important;
   --practice-accessibility-fg: var(--color-student-heading) !important;
   --practice-choice-selected-bg: var(--primary-25) !important;
@@ -6393,12 +6418,39 @@ html.student-shell-immersive .practice-session-card--blind-review {
   color: var(--color-student-heading) !important;
 }
 
-.dark .practice-session-card--blind-review .practice-session-body .lsat-html-content,
-.dark .practice-session-card--blind-review .practice-session-body .practice-session-content {
+.dark .practice-session-card--blind-review .practice-session-body:is(
+  [data-color-scheme="black-on-white"],
+  [data-color-scheme="grey-on-light-grey"],
+  :not([data-color-scheme])
+) .lsat-html-content,
+.dark .practice-session-card--blind-review .practice-session-body:is(
+  [data-color-scheme="black-on-white"],
+  [data-color-scheme="grey-on-light-grey"],
+  :not([data-color-scheme])
+) .practice-session-content {
   color: var(--color-student-heading) !important;
 }
 
-.dark .practice-session-card--blind-review .practice-session-br-option {
+.dark .practice-session-card--blind-review .practice-session-body:is(
+  [data-color-scheme="purple-on-light-green"],
+  [data-color-scheme="black-on-violet"],
+  [data-color-scheme="yellow-on-navy"],
+  [data-color-scheme="white-on-black"]
+) .lsat-html-content,
+.dark .practice-session-card--blind-review .practice-session-body:is(
+  [data-color-scheme="purple-on-light-green"],
+  [data-color-scheme="black-on-violet"],
+  [data-color-scheme="yellow-on-navy"],
+  [data-color-scheme="white-on-black"]
+) .practice-session-content {
+  color: var(--practice-accessibility-fg) !important;
+}
+
+.dark .practice-session-card--blind-review .practice-session-body:is(
+  [data-color-scheme="black-on-white"],
+  [data-color-scheme="grey-on-light-grey"],
+  :not([data-color-scheme])
+) .practice-session-br-option {
   color: var(--color-student-heading);
 }
 
@@ -6407,7 +6459,11 @@ html.student-shell-immersive .practice-session-card--blind-review {
   color: inherit !important;
 }
 
-.dark .practice-session-card--blind-review .practice-session-reset-response {
+.dark .practice-session-card--blind-review .practice-session-body:is(
+  [data-color-scheme="black-on-white"],
+  [data-color-scheme="grey-on-light-grey"],
+  :not([data-color-scheme])
+) .practice-session-reset-response {
   background-color: var(--greyscale-25) !important;
   color: var(--greyscale-500) !important;
 }
@@ -6438,12 +6494,39 @@ html.student-shell-immersive .practice-session-card--blind-review {
   color: var(--color-student-heading) !important;
 }
 
-.dark .practice-session-card--active-drill .practice-session-body .lsat-html-content,
-.dark .practice-session-card--active-drill .practice-session-body .practice-session-content {
+.dark .practice-session-card--active-drill .practice-session-body:is(
+  [data-color-scheme="black-on-white"],
+  [data-color-scheme="grey-on-light-grey"],
+  :not([data-color-scheme])
+) .lsat-html-content,
+.dark .practice-session-card--active-drill .practice-session-body:is(
+  [data-color-scheme="black-on-white"],
+  [data-color-scheme="grey-on-light-grey"],
+  :not([data-color-scheme])
+) .practice-session-content {
   color: var(--color-student-heading) !important;
 }
 
-.dark .practice-session-card--active-drill .practice-session-reset-response {
+.dark .practice-session-card--active-drill .practice-session-body:is(
+  [data-color-scheme="purple-on-light-green"],
+  [data-color-scheme="black-on-violet"],
+  [data-color-scheme="yellow-on-navy"],
+  [data-color-scheme="white-on-black"]
+) .lsat-html-content,
+.dark .practice-session-card--active-drill .practice-session-body:is(
+  [data-color-scheme="purple-on-light-green"],
+  [data-color-scheme="black-on-violet"],
+  [data-color-scheme="yellow-on-navy"],
+  [data-color-scheme="white-on-black"]
+) .practice-session-content {
+  color: var(--practice-accessibility-fg) !important;
+}
+
+.dark .practice-session-card--active-drill .practice-session-body:is(
+  [data-color-scheme="black-on-white"],
+  [data-color-scheme="grey-on-light-grey"],
+  :not([data-color-scheme])
+) .practice-session-reset-response {
   background-color: var(--greyscale-25) !important;
   color: var(--greyscale-500) !important;
 }
@@ -6474,12 +6557,39 @@ html.student-shell-immersive .practice-session-card--blind-review {
   color: var(--color-student-heading) !important;
 }
 
-.dark .practice-session-card--review .practice-session-body .lsat-html-content,
-.dark .practice-session-card--review .practice-session-body .practice-session-content {
+.dark .practice-session-card--review .practice-session-body:is(
+  [data-color-scheme="black-on-white"],
+  [data-color-scheme="grey-on-light-grey"],
+  :not([data-color-scheme])
+) .lsat-html-content,
+.dark .practice-session-card--review .practice-session-body:is(
+  [data-color-scheme="black-on-white"],
+  [data-color-scheme="grey-on-light-grey"],
+  :not([data-color-scheme])
+) .practice-session-content {
   color: var(--color-student-heading) !important;
 }
 
-.dark .practice-session-card--review .practice-session-br-option {
+.dark .practice-session-card--review .practice-session-body:is(
+  [data-color-scheme="purple-on-light-green"],
+  [data-color-scheme="black-on-violet"],
+  [data-color-scheme="yellow-on-navy"],
+  [data-color-scheme="white-on-black"]
+) .lsat-html-content,
+.dark .practice-session-card--review .practice-session-body:is(
+  [data-color-scheme="purple-on-light-green"],
+  [data-color-scheme="black-on-violet"],
+  [data-color-scheme="yellow-on-navy"],
+  [data-color-scheme="white-on-black"]
+) .practice-session-content {
+  color: var(--practice-accessibility-fg) !important;
+}
+
+.dark .practice-session-card--review .practice-session-body:is(
+  [data-color-scheme="black-on-white"],
+  [data-color-scheme="grey-on-light-grey"],
+  :not([data-color-scheme])
+) .practice-session-br-option {
   color: var(--color-student-heading);
 }
 
@@ -6523,11 +6633,17 @@ html.student-shell-immersive .practice-session-card--blind-review {
   filter: brightness(0) invert(1);
 }
 
+/* Mobile footer prev/list icons are dark SVGs; skip next (already white on primary). */
+.dark .practice-session-card--official .practice-session-footer img[src*="mobile-footer-prev"],
+.dark .practice-session-card--official .practice-session-footer img[src*="mobile-footer-list"] {
+  filter: brightness(0) invert(1);
+}
+
 .dark .practice-session-header svg {
   color: #ffffff;
 }
 
-/* Official rail SVGs use currentColor; item classes hardcode navy (#2c3143). */
+/* Official rail SVGs use currentColor; keep icons/labels white on dark chrome. */
 .dark .practice-session-side-widget button {
   color: #ffffff;
 }
@@ -6548,63 +6664,284 @@ html.student-shell-immersive .practice-session-card--blind-review {
   filter: none;
 }
 
-.dark .practice-session-card--official .practice-session-body {
+/* Default schemes only — custom Accessibility schemes keep their body tokens. */
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="black-on-white"],
+  [data-color-scheme="grey-on-light-grey"],
+  :not([data-color-scheme])
+) {
   background-color: var(--greyscale-0) !important;
   color: var(--color-student-heading) !important;
 }
 
-.dark .practice-session-card--official .practice-session-pane {
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="purple-on-light-green"],
+  [data-color-scheme="black-on-violet"],
+  [data-color-scheme="yellow-on-navy"],
+  [data-color-scheme="white-on-black"]
+) {
+  background-color: var(--practice-accessibility-bg) !important;
+  color: var(--practice-accessibility-fg) !important;
+}
+
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="black-on-white"],
+  [data-color-scheme="grey-on-light-grey"],
+  :not([data-color-scheme])
+) .practice-session-pane {
   background-color: transparent;
   color: var(--color-student-heading);
 }
 
-.dark .practice-session-card--official .practice-session-body .lsat-html-content,
-.dark .practice-session-card--official .practice-session-body .practice-session-content {
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="purple-on-light-green"],
+  [data-color-scheme="black-on-violet"],
+  [data-color-scheme="yellow-on-navy"],
+  [data-color-scheme="white-on-black"]
+) .practice-session-pane {
+  background-color: transparent;
+  color: var(--practice-accessibility-fg);
+}
+
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="black-on-white"],
+  [data-color-scheme="grey-on-light-grey"],
+  :not([data-color-scheme])
+) .lsat-html-content,
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="black-on-white"],
+  [data-color-scheme="grey-on-light-grey"],
+  :not([data-color-scheme])
+) .practice-session-content {
   color: var(--color-student-heading) !important;
 }
 
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="purple-on-light-green"],
+  [data-color-scheme="black-on-violet"],
+  [data-color-scheme="yellow-on-navy"],
+  [data-color-scheme="white-on-black"]
+) .lsat-html-content,
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="purple-on-light-green"],
+  [data-color-scheme="black-on-violet"],
+  [data-color-scheme="yellow-on-navy"],
+  [data-color-scheme="white-on-black"]
+) .practice-session-content {
+  color: var(--practice-accessibility-fg) !important;
+}
+
 /*
- * Dark official choices: Neutral-25 rows + white copy. Selected
+ * Dark official choices (default schemes): Neutral-25 rows + white copy. Selected
  * (#fdfac4) keeps navy ink so the gold state still contrasts.
  */
-.dark .practice-session-card--official .practice-session-official-choice:not(.practice-session-official-choice--selected) {
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="black-on-white"],
+  [data-color-scheme="grey-on-light-grey"],
+  :not([data-color-scheme])
+) .practice-session-official-choice:not(.practice-session-official-choice--selected) {
   background-color: #35373c !important;
   color: #ffffff !important;
 }
 
-.dark .practice-session-card--official .practice-session-official-choice:not(.practice-session-official-choice--selected) > span {
-  background-color: #35373c !important;
-  border-color: #35373c !important;
-  color: #ffffff !important;
-}
-
-.dark .practice-session-card--official .practice-session-official-choice:not(.practice-session-official-choice--selected) .lsat-html-content,
-.dark .practice-session-card--official .practice-session-official-choice:not(.practice-session-official-choice--selected) .practice-session-content,
-.dark .practice-session-card--official .practice-session-official-choice:not(.practice-session-official-choice--selected) .lsat-html-content *,
-.dark .practice-session-card--official .practice-session-official-choice:not(.practice-session-official-choice--selected) .practice-session-content * {
-  color: #ffffff !important;
-}
-
-.dark .practice-session-card--official .practice-session-official-choice--selected,
-.dark .practice-session-card--official .practice-session-official-choice--selected .lsat-html-content,
-.dark .practice-session-card--official .practice-session-official-choice--selected .practice-session-content,
-.dark .practice-session-card--official .practice-session-official-choice--selected .lsat-html-content *,
-.dark .practice-session-card--official .practice-session-official-choice--selected .practice-session-content * {
-  color: #041a44 !important;
-}
-
-.dark .practice-session-card--official .practice-session-official-choice-letter--selected {
-  color: #041a44 !important;
-}
-
-.dark .practice-session-card--official .practice-session-official-reset {
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="black-on-white"],
+  [data-color-scheme="grey-on-light-grey"],
+  :not([data-color-scheme])
+) .practice-session-official-choice:not(.practice-session-official-choice--selected) > span {
   background-color: #35373c !important;
   border-color: #35373c !important;
   color: #ffffff !important;
 }
 
-.dark .practice-session-card--official .practice-session-official-reset:hover {
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="black-on-white"],
+  [data-color-scheme="grey-on-light-grey"],
+  :not([data-color-scheme])
+) .practice-session-official-choice:not(.practice-session-official-choice--selected) .lsat-html-content,
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="black-on-white"],
+  [data-color-scheme="grey-on-light-grey"],
+  :not([data-color-scheme])
+) .practice-session-official-choice:not(.practice-session-official-choice--selected) .practice-session-content,
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="black-on-white"],
+  [data-color-scheme="grey-on-light-grey"],
+  :not([data-color-scheme])
+) .practice-session-official-choice:not(.practice-session-official-choice--selected) .lsat-html-content *,
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="black-on-white"],
+  [data-color-scheme="grey-on-light-grey"],
+  :not([data-color-scheme])
+) .practice-session-official-choice:not(.practice-session-official-choice--selected) .practice-session-content * {
+  color: #ffffff !important;
+}
+
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="black-on-white"],
+  [data-color-scheme="grey-on-light-grey"],
+  :not([data-color-scheme])
+) .practice-session-official-choice--selected,
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="black-on-white"],
+  [data-color-scheme="grey-on-light-grey"],
+  :not([data-color-scheme])
+) .practice-session-official-choice--selected .lsat-html-content,
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="black-on-white"],
+  [data-color-scheme="grey-on-light-grey"],
+  :not([data-color-scheme])
+) .practice-session-official-choice--selected .practice-session-content,
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="black-on-white"],
+  [data-color-scheme="grey-on-light-grey"],
+  :not([data-color-scheme])
+) .practice-session-official-choice--selected .lsat-html-content *,
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="black-on-white"],
+  [data-color-scheme="grey-on-light-grey"],
+  :not([data-color-scheme])
+) .practice-session-official-choice--selected .practice-session-content * {
+  color: #041a44 !important;
+}
+
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="black-on-white"],
+  [data-color-scheme="grey-on-light-grey"],
+  :not([data-color-scheme])
+) .practice-session-official-choice-letter--selected {
+  color: #041a44 !important;
+}
+
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="black-on-white"],
+  [data-color-scheme="grey-on-light-grey"],
+  :not([data-color-scheme])
+) .practice-session-official-reset {
+  background-color: #35373c !important;
+  border-color: #35373c !important;
+  color: #ffffff !important;
+}
+
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="black-on-white"],
+  [data-color-scheme="grey-on-light-grey"],
+  :not([data-color-scheme])
+) .practice-session-official-reset:hover {
   background-color: #3f4247 !important;
+}
+
+/*
+ * Custom Accessibility schemes on dark official exam: honor scheme tokens for
+ * answer rows so white-on-black / yellow-on-navy / etc. actually paint.
+ */
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="purple-on-light-green"],
+  [data-color-scheme="black-on-violet"],
+  [data-color-scheme="yellow-on-navy"],
+  [data-color-scheme="white-on-black"]
+) .practice-session-official-choice:not(.practice-session-official-choice--selected) {
+  background-color: var(--practice-choice-unselected-bg) !important;
+  border-color: var(--practice-choice-unselected-border) !important;
+  color: var(--practice-accessibility-fg) !important;
+}
+
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="purple-on-light-green"],
+  [data-color-scheme="black-on-violet"],
+  [data-color-scheme="yellow-on-navy"],
+  [data-color-scheme="white-on-black"]
+) .practice-session-official-choice:not(.practice-session-official-choice--selected) > span {
+  background-color: var(--practice-choice-unselected-letter-bg) !important;
+  border-color: var(--practice-choice-unselected-letter-border) !important;
+  color: var(--practice-choice-unselected-letter-fg) !important;
+}
+
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="purple-on-light-green"],
+  [data-color-scheme="black-on-violet"],
+  [data-color-scheme="yellow-on-navy"],
+  [data-color-scheme="white-on-black"]
+) .practice-session-official-choice:not(.practice-session-official-choice--selected) .lsat-html-content,
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="purple-on-light-green"],
+  [data-color-scheme="black-on-violet"],
+  [data-color-scheme="yellow-on-navy"],
+  [data-color-scheme="white-on-black"]
+) .practice-session-official-choice:not(.practice-session-official-choice--selected) .practice-session-content,
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="purple-on-light-green"],
+  [data-color-scheme="black-on-violet"],
+  [data-color-scheme="yellow-on-navy"],
+  [data-color-scheme="white-on-black"]
+) .practice-session-official-choice:not(.practice-session-official-choice--selected) .lsat-html-content *,
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="purple-on-light-green"],
+  [data-color-scheme="black-on-violet"],
+  [data-color-scheme="yellow-on-navy"],
+  [data-color-scheme="white-on-black"]
+) .practice-session-official-choice:not(.practice-session-official-choice--selected) .practice-session-content * {
+  color: var(--practice-accessibility-fg) !important;
+}
+
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="purple-on-light-green"],
+  [data-color-scheme="black-on-violet"],
+  [data-color-scheme="yellow-on-navy"],
+  [data-color-scheme="white-on-black"]
+) .practice-session-official-choice--selected {
+  background-color: var(--practice-choice-selected-bg) !important;
+  border-color: var(--practice-choice-selected-border) !important;
+  color: var(--practice-accessibility-fg) !important;
+}
+
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="purple-on-light-green"],
+  [data-color-scheme="black-on-violet"],
+  [data-color-scheme="yellow-on-navy"],
+  [data-color-scheme="white-on-black"]
+) .practice-session-official-choice--selected .lsat-html-content,
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="purple-on-light-green"],
+  [data-color-scheme="black-on-violet"],
+  [data-color-scheme="yellow-on-navy"],
+  [data-color-scheme="white-on-black"]
+) .practice-session-official-choice--selected .practice-session-content,
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="purple-on-light-green"],
+  [data-color-scheme="black-on-violet"],
+  [data-color-scheme="yellow-on-navy"],
+  [data-color-scheme="white-on-black"]
+) .practice-session-official-choice--selected .lsat-html-content *,
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="purple-on-light-green"],
+  [data-color-scheme="black-on-violet"],
+  [data-color-scheme="yellow-on-navy"],
+  [data-color-scheme="white-on-black"]
+) .practice-session-official-choice--selected .practice-session-content * {
+  color: var(--practice-accessibility-fg) !important;
+}
+
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="purple-on-light-green"],
+  [data-color-scheme="black-on-violet"],
+  [data-color-scheme="yellow-on-navy"],
+  [data-color-scheme="white-on-black"]
+) .practice-session-official-choice-letter--selected {
+  background-color: var(--practice-choice-selected-letter-bg) !important;
+  border-color: var(--practice-choice-selected-letter-border) !important;
+  color: var(--practice-choice-selected-letter-fg) !important;
+}
+
+.dark .practice-session-card--official .practice-session-body:is(
+  [data-color-scheme="purple-on-light-green"],
+  [data-color-scheme="black-on-violet"],
+  [data-color-scheme="yellow-on-navy"],
+  [data-color-scheme="white-on-black"]
+) .practice-session-official-reset {
+  background-color: var(--practice-panel-bg) !important;
+  border-color: var(--practice-panel-border) !important;
+  color: var(--practice-panel-muted-fg) !important;
 }
 
 .dark .practice-session-card--official .practice-session-footer {

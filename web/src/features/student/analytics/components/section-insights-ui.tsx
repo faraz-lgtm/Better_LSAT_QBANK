@@ -24,11 +24,9 @@ import { SectionInitialBadge } from "@/features/student/drills/section-initial-b
 import { cn } from "@/lib/utils"
 
 const BOOKMARK_OUTLINE_ICON = "/figma/preptest-insights/bookmark-outline.svg"
-const TRAJECTORY_LINE = "#0b3d91"
+const TRAJECTORY_LINE = "var(--primary)"
 const TRAJECTORY_ORANGE = "#c2560c"
-const TRAJECTORY_GRID = "#e6ebf3"
-const MUTED = "#5a6782"
-const HEADING = "#041a44"
+const TRAJECTORY_GRID = "var(--greyscale-100)"
 
 export type SectionTrajectoryTab = "correct" | "scaled"
 export type SectionArchiveSort = "recent" | "gains"
@@ -67,14 +65,11 @@ export function SectionKindSwitcher({
           >
             <div className="flex items-center gap-3">
               <SectionInitialBadge section={card.id} variant="compact" />
-              <span className="text-base font-semibold leading-[1.35]" style={{ color: HEADING }}>
+              <span className="text-base font-semibold leading-[1.35] text-[var(--color-student-heading)]">
                 {card.title}
               </span>
             </div>
-            <p
-              className="m-0 mt-1.5 pl-11 text-sm font-normal leading-[1.5] tracking-[0.28px]"
-              style={{ color: MUTED }}
-            >
+            <p className="m-0 mt-1.5 pl-11 text-sm font-normal leading-[1.5] tracking-[0.28px] text-[var(--greyscale-500)]">
               {card.count} attempt{card.count === 1 ? "" : "s"} in range
             </p>
           </button>
@@ -97,20 +92,14 @@ function InsightStatCard({
 }) {
   return (
     <article className="flex min-w-0 flex-col gap-[5px] rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6">
-      <p
-        className="m-0 text-sm font-semibold leading-[1.5] tracking-[0.28px]"
-        style={{ color: HEADING }}
-      >
+      <p className="m-0 text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[var(--color-student-heading)]">
         {label}
       </p>
       <p className="m-0 text-[32px] font-black leading-[1.25]" style={{ color: valueColor }}>
         {value}
       </p>
       <div className="flex h-[30px] items-center pt-2">
-        <p
-          className="m-0 text-xs font-normal leading-[1.5] tracking-[0.24px]"
-          style={{ color: MUTED }}
-        >
+        <p className="m-0 text-xs font-normal leading-[1.5] tracking-[0.24px] text-[var(--greyscale-500)]">
           {footer}
         </p>
       </div>
@@ -257,10 +246,7 @@ function SectionTrajectoryChart({
   return (
     <div className="w-full">
       <div className="flex h-[284px] w-full items-stretch gap-3 overflow-visible">
-        <div
-          className="flex h-full flex-col justify-between pr-2 text-sm font-medium leading-5"
-          style={{ color: HEADING }}
-        >
+        <div className="flex h-full flex-col justify-between pr-2 text-sm font-medium leading-5 text-[var(--color-student-heading)]">
           {yAxisLabels.map((label, index) => (
             <span key={`${label}-${index}`}>{label}</span>
           ))}
@@ -315,7 +301,7 @@ function SectionTrajectoryChart({
                   key={point.id}
                   type="button"
                   className={cn(
-                    "absolute z-10 size-[9px] -translate-x-1/2 -translate-y-1/2 rounded-full border-[1.5px] bg-white outline-none transition-transform focus-visible:ring-2 focus-visible:ring-[var(--primary)]/30",
+                    "absolute z-10 size-[9px] -translate-x-1/2 -translate-y-1/2 rounded-full border-[1.5px] bg-[var(--greyscale-0)] outline-none transition-transform focus-visible:ring-2 focus-visible:ring-[var(--primary)]/30",
                     isActive && "scale-125",
                   )}
                   style={{ left: `${coords.x}%`, top: `${coords.y}%`, borderColor: TRAJECTORY_LINE }}
@@ -375,10 +361,10 @@ export function SectionTrajectoryPanel({
     <section className="rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6">
       <div className="mb-[18px] flex flex-wrap items-start justify-between gap-3">
         <div className="flex min-w-0 flex-col gap-2">
-          <h2 className="!m-0 !text-base !font-semibold !leading-[1.5] tracking-[0.32px] text-[#0e1b33]">
+          <h2 className="!m-0 !text-base !font-semibold !leading-[1.5] tracking-[0.32px] text-[var(--color-student-heading)]">
             Reasoning Trajectory
           </h2>
-          <div className="flex flex-wrap items-center gap-5 text-xs font-medium tracking-[0.24px]" style={{ color: MUTED }}>
+          <div className="flex flex-wrap items-center gap-5 text-xs font-medium tracking-[0.24px] text-[var(--greyscale-500)]">
             <span className="inline-flex items-center gap-2">
               <span className="inline-block h-[3px] w-[18px] rounded-[2px]" style={{ background: TRAJECTORY_LINE }} aria-hidden />
               Each Attempt
@@ -410,12 +396,12 @@ function AttemptArchiveCard({
   onToggleBookmark: (id: string) => void
 }) {
   return (
-    <article className="flex min-h-[172px] flex-col gap-2.5 rounded-[14px] border border-[#dde4ef] bg-[var(--greyscale-0)] p-4">
+    <article className="flex min-h-[172px] flex-col gap-2.5 rounded-[14px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-4">
       <div className="flex items-center justify-between gap-2">
         <button
           type="button"
           onClick={() => onSelect(attempt.id)}
-          className="m-0 text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[#0b3d91] hover:underline"
+          className="m-0 text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[var(--primary)] hover:underline"
         >
           {attempt.testLabel}
         </button>
@@ -433,13 +419,13 @@ function AttemptArchiveCard({
           )}
         </button>
       </div>
-      <p className="m-0 text-xs font-normal leading-[1.5] tracking-[0.24px]" style={{ color: MUTED }}>
+      <p className="m-0 text-xs font-normal leading-[1.5] tracking-[0.24px] text-[var(--greyscale-500)]">
         {attempt.dateLabel}
       </p>
       <p className="m-0 text-[32px] font-bold leading-[1.25] text-[var(--primary)]">
         {formatSectionMissedSigned(attempt.missed, 0)}
       </p>
-      <p className="m-0 text-xs font-normal leading-[1.5] tracking-[0.24px]" style={{ color: MUTED }}>
+      <p className="m-0 text-xs font-normal leading-[1.5] tracking-[0.24px] text-[var(--greyscale-500)]">
         {attempt.correct} of {attempt.questionCount} correct · {attempt.ptEquivalent} est.
       </p>
       <div className="mt-auto border-t border-[var(--greyscale-100)] pt-2.5">
@@ -459,7 +445,7 @@ function AttemptArchiveCard({
             </span>
           </div>
         ) : (
-          <p className="m-0 text-xs font-medium leading-[1.5]" style={{ color: MUTED }}>
+          <p className="m-0 text-xs font-medium leading-[1.5] text-[var(--greyscale-500)]">
             No untimed review
           </p>
         )}
@@ -489,10 +475,10 @@ export function SectionAttemptArchive({
     <div className="flex flex-col gap-4">
       <div className="flex min-h-[52px] flex-wrap items-end justify-between gap-3">
         <div className="flex flex-col gap-1.5">
-          <h2 className="!m-0 !text-base !font-semibold !leading-[1.5] tracking-[0.32px] text-[#0e1b33]">
+          <h2 className="!m-0 !text-base !font-semibold !leading-[1.5] tracking-[0.32px] text-[var(--color-student-heading)]">
             Attempt Archive
           </h2>
-          <p className="m-0 text-xs font-normal leading-[1.5] tracking-[0.24px]" style={{ color: MUTED }}>
+          <p className="m-0 text-xs font-normal leading-[1.5] tracking-[0.24px] text-[var(--greyscale-500)]">
             Each card compares that attempt to your average over the 5 attempts before it.
           </p>
         </div>

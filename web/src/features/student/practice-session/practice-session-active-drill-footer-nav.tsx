@@ -121,7 +121,7 @@ function PracticeSessionActiveDrillFooterNav({
             <OfficialMobileFooterIcon src="/figma/exam-official/mobile-footer-list.svg" size={17} />
             <span className="min-w-0 truncate">
               Question{" "}
-              <span className="font-bold text-[#18263c]">{currentQuestion}</span>
+              <span className="font-bold text-[var(--color-student-heading)]">{currentQuestion}</span>
               {` of ${questionTotal}`}
             </span>
           </button>

@@ -395,10 +395,13 @@ describe("PracticeSessionActiveDrillFooterNav", () => {
     )
 
     const reviewTrigger = screen.getByRole("button", { name: "Question 1 of 2" })
+    expect(reviewTrigger.className).toContain("text-[var(--greyscale-500)]")
+    expect(reviewTrigger.querySelector(".font-bold")?.className).toContain("text-[var(--color-student-heading)]")
     expect(reviewTrigger.querySelector('img[src="/figma/exam-official/mobile-footer-list.svg"]')).toBeInTheDocument()
-    expect(screen.getAllByRole("button", { name: "Previous question" }).some((button) =>
+    const prev = screen.getAllByRole("button", { name: "Previous question" }).find((button) =>
       Boolean(button.querySelector('img[src="/figma/exam-official/mobile-footer-prev.svg"]')),
-    )).toBe(true)
+    )
+    expect(prev?.className).toContain("bg-[var(--greyscale-25)]")
     expect(screen.getAllByRole("button", { name: "Next question" }).some((button) =>
       Boolean(button.querySelector('img[src="/figma/exam-official/mobile-footer-next.svg"]')),
     )).toBe(true)
