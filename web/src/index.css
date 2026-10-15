@@ -5535,7 +5535,14 @@ section[data-lesson-section][data-variant="empty"] {
 
 .practice-session-card--official .practice-session-question-panel-with-widget {
   overflow: visible;
-  padding-right: 50px;
+  /* Side rail is md+ only — do not reserve 50px on mobile (empty gap beside choices). */
+  padding-right: 0;
+}
+
+@media (min-width: 768px) {
+  .practice-session-card--official .practice-session-question-panel-with-widget {
+    padding-right: 50px;
+  }
 }
 
 .practice-session-card--official .practice-session-pane:has(.practice-session-side-widget) {
