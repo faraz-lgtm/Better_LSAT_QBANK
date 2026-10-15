@@ -150,14 +150,26 @@ describe("StudentAppSidebar", () => {
 
     const sidebar = container.querySelector(".student-sidebar")
     expect(sidebar).toBeTruthy()
+    const brandMark = container.querySelector(".student-sidebar-brand-mark")
+    const brandLogo = screen.getByRole("img", { name: "betterLSAT" })
+
+    expect(brandMark).toHaveAttribute("src", "/betterLSAT_icon.png")
+    expect(brandMark).toHaveClass("hidden")
+    expect(brandMark).not.toHaveClass("lg:block")
+    expect(brandLogo).not.toHaveClass("lg:hidden")
 
     await user.click(screen.getByRole("button", { name: "Collapse sidebar" }))
 
     expect(sidebar).toHaveClass("student-sidebar--collapsed")
     expect(screen.getByRole("button", { name: "Expand sidebar" })).toBeInTheDocument()
     expect(screen.queryByRole("link", { name: "Quick Baseline" })).not.toBeInTheDocument()
+    expect(brandMark).toHaveClass("lg:block")
+    expect(brandLogo).toHaveClass("lg:hidden")
 
     await user.click(screen.getByRole("button", { name: "Expand sidebar" }))
     expect(sidebar).not.toHaveClass("student-sidebar--collapsed")
+    expect(brandMark).toHaveClass("hidden")
+    expect(brandMark).not.toHaveClass("lg:block")
+    expect(brandLogo).not.toHaveClass("lg:hidden")
   })
 })

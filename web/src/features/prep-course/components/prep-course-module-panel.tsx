@@ -103,8 +103,8 @@ function PrepCourseModulePanel({
     : true
 
   const statsBlock = (
-    <div className="flex h-[88px] flex-col items-end justify-center gap-[14px]">
-      <div className="flex flex-col items-end justify-center gap-1.5 text-right text-xs leading-[1.5] tracking-[0.24px]">
+    <div className="flex w-full flex-col items-stretch gap-3 md:h-[88px] md:w-auto md:items-end md:justify-center md:gap-[14px]">
+      <div className="flex min-w-0 flex-col items-start justify-center gap-1.5 text-left text-xs leading-[1.5] tracking-[0.24px] md:items-end md:text-right">
         <p className="text-[color:var(--greyscale-500)]">
           Total Time:{" "}
           <span className="font-semibold text-[color:var(--greyscale-500)]">{formatTotalHoursLabel(totalMinutes)}</span>
@@ -163,9 +163,9 @@ function PrepCourseModulePanel({
 
   return (
     <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-      <div className="shrink-0 border-b border-[var(--greyscale-100)] bg-[var(--primary-0)] p-[24px]">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="flex min-w-0 flex-1 flex-col gap-2">
+      <div className="shrink-0 border-b border-[var(--greyscale-100)] bg-[var(--primary-0)] p-4 sm:p-[24px]">
+        <div className="flex flex-col gap-4 md:flex-row md:flex-wrap md:items-start md:justify-between">
+          <div className="flex min-w-0 w-full flex-col gap-2 md:w-auto md:flex-1">
             {flattenSections && flatSection ? (
               <button
                 type="button"
@@ -180,7 +180,7 @@ function PrepCourseModulePanel({
             )}
             {bookmarkRow}
           </div>
-          <div className="shrink-0">{statsBlock}</div>
+          <div className="min-w-0 w-full md:w-auto md:shrink-0">{statsBlock}</div>
         </div>
       </div>
 

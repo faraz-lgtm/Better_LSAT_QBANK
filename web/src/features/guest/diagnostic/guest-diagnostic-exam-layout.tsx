@@ -66,6 +66,7 @@ import { PracticeSessionQuestionNavStrip } from "@/features/student/practice-ses
 import { resolvePracticeSessionQuestionNavOutcome } from "@/features/student/practice-session/practice-session-question-nav-outcome"
 import { PracticeSessionReviewPanel } from "@/features/student/practice-session/practice-session-review-panel"
 import { PracticeSessionReviewSidePanel } from "@/features/student/practice-session/practice-session-review-side-panel"
+import { PracticeTimeUpModal } from "@/features/student/practice-session/practice-time-up-modal"
 import { ReviewPassageCardHeader } from "@/features/student/practice-session/review-passage-card-header"
 import {
   BLIND_REVIEW_PASSAGE_TEXT_CLASS,
@@ -241,6 +242,7 @@ function GuestDiagnosticExamLayout({
   const passagePaneRef = useRef<HTMLDivElement>(null)
   const questionPaneRef = useRef<HTMLDivElement>(null)
   const timerInitializedRef = useRef(false)
+  const timeUpTriggeredRef = useRef(false)
   const questionStartedAtRef = useRef<number>(Date.now())
   const timeSpentByQuestionRef = useRef<Record<string, number>>({})
   const lastQuestionIdRef = useRef<string | null>(null)
@@ -249,7 +251,6 @@ function GuestDiagnosticExamLayout({
   const isTesterMode = mode === "tester"
   const isPostResultsMode = isReviewMode || isTesterMode
   const canNavigate = interactive || isPostResultsMode
-  const canSelectAnswers = (interactive && mode === "exam") || isTesterMode
 
   const [qIndex, setQIndex] = useState(() => Math.max(1, Math.floor(initialQuestionIndex)))
   const [findQuery, setFindQuery] = useState("")
@@ -261,6 +262,7 @@ function GuestDiagnosticExamLayout({
   const { officialInterface, setOfficialInterface } = useOfficialInterfacePreference()
   const { isFullscreen, toggleExamFullscreen } = useExamFullscreen()
   const [submitModalOpen, setSubmitModalOpen] = useState(false)
+  const [timeUpOpen, setTimeUpOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [exitModalMode, setExitModalMode] = useState<GuestDiagnosticExitMode | null>(null)
   const [revealedByQuestion, setRevealedByQuestion] = useState<Record<string, boolean>>({})
@@ -291,6 +293,9 @@ function GuestDiagnosticExamLayout({
     enabled: interactive && mode === "exam",
   })
   const pauseModal = usePracticeSessionPauseModal(pauseTimer, resumeTimer)
+  const closePauseModal = pauseModal.close
+  const examTimedOut = interactive && mode === "exam" && (timeUpOpen || countdown === 0)
+  const canSelectAnswers = ((interactive && mode === "exam") || isTesterMode) && !examTimedOut
   const timerDisplaySeconds = countdown ?? timerBudgetSeconds
   const timerProgress = computeRemainingTimerProgress(timerDisplaySeconds, timerBudgetSeconds)
 
@@ -362,6 +367,22 @@ function GuestDiagnosticExamLayout({
     setInitialCountdown(timerBudgetSeconds)
     timerInitializedRef.current = true
   }, [interactive, mode, setInitialCountdown, timerBudgetSeconds])
+
+  useEffect(() => {
+    if (
+      timeUpTriggeredRef.current ||
+      !interactive ||
+      mode !== "exam" ||
+      countdown !== 0
+    ) {
+      return
+    }
+    timeUpTriggeredRef.current = true
+    closePauseModal()
+    setSubmitModalOpen(false)
+    setExitModalMode(null)
+    setTimeUpOpen(true)
+  }, [closePauseModal, countdown, interactive, mode])
 
   useEffect(() => {
     if (isPostResultsMode) return
@@ -477,6 +498,7 @@ function GuestDiagnosticExamLayout({
     setSubmitting(true)
     try {
       setSubmitModalOpen(false)
+      setTimeUpOpen(false)
       accrueTimeForQuestion(current?.id ?? null)
       const timeSpent = Object.fromEntries(
         Object.entries(timeSpentByQuestionRef.current).map(([id, seconds]) => [id, Math.round(seconds)]),
@@ -486,6 +508,10 @@ function GuestDiagnosticExamLayout({
     } finally {
       setSubmitting(false)
     }
+  }
+
+  function handleTimeUpNext() {
+    void handleConfirmSubmit()
   }
 
   const questionPanel = (
@@ -733,8 +759,11 @@ function GuestDiagnosticExamLayout({
         timerLabel="Time Left"
         timerDisplaySeconds={timerDisplaySeconds}
         timerPaused={paused}
-        onTimerPauseRequest={interactive && mode === "exam" ? pauseModal.requestPause : () => undefined}
+        onTimerPauseRequest={
+          interactive && mode === "exam" && !examTimedOut ? pauseModal.requestPause : () => undefined
+        }
         timerProgress={timerProgress}
+        timerDisplayClassName={examTimedOut ? "text-[#df1c41]" : undefined}
         showTimer
         questionProgressLabel={`${safeIndex} of ${questions.length}`}
         questionNumber={safeIndex}
@@ -989,14 +1018,19 @@ function GuestDiagnosticExamLayout({
       />
       {mode === "exam" ? (
         <GuestDiagnosticSubmitModal
-          open={submitModalOpen}
+          open={submitModalOpen && !timeUpOpen}
           submitting={submitting}
           onCancel={() => setSubmitModalOpen(false)}
           onConfirm={() => void handleConfirmSubmit()}
         />
       ) : null}
+      <PracticeTimeUpModal
+        open={timeUpOpen}
+        submitting={submitting}
+        onNext={handleTimeUpNext}
+      />
       <GuestDiagnosticExitModal
-        open={exitModalMode != null}
+        open={exitModalMode != null && !timeUpOpen}
         mode={exitModalMode ?? "save"}
         onCancel={() => setExitModalMode(null)}
         onConfirm={handleConfirmExit}
