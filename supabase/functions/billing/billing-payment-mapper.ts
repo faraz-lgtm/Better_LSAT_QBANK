@@ -1,3 +1,7 @@
+import {
+  type CheckoutPlanId,
+  checkoutPlanFromId,
+} from '../_shared/stripe-env.ts'
 
 export type BillingPaymentMethodDto = {
   id: string
@@ -71,6 +75,7 @@ function lineLooksLikeCore(line: string): boolean {
 export function resolveInvoiceTitle(
   lineDescriptions: string[],
   planTierFallback?: 'core' | 'live' | null,
+  checkoutPlan?: CheckoutPlanId | null,
 ): string {
   const lines = lineDescriptions.map((line) => line.trim()).filter(Boolean)
   const hasLawHub = lines.some(lineLooksLikeLawHub)
@@ -79,7 +84,8 @@ export function resolveInvoiceTitle(
 
   let planTitle: string | null = null
   if (hasLive || planTierFallback === 'live') planTitle = 'Live Monthly'
-  else if (hasCore || planTierFallback === 'core') planTitle = 'Core Monthly'
+  else if (checkoutPlan) planTitle = checkoutPlanFromId(checkoutPlan).name
+  else if (hasCore || planTierFallback === 'core') planTitle = 'Monthly'
 
   if (planTitle) {
     return hasLawHub ? `${planTitle} + LawHub` : planTitle
@@ -127,11 +133,12 @@ export function mapStripeInvoice(input: {
   hostedInvoiceUrl: string | null
   lineDescriptions: string[]
   planTierFallback?: 'core' | 'live' | null
+  checkoutPlan?: CheckoutPlanId | null
 }): BillingInvoiceDto {
   return {
     id: input.id,
     number: input.number,
-    title: resolveInvoiceTitle(input.lineDescriptions, input.planTierFallback),
+    title: resolveInvoiceTitle(input.lineDescriptions, input.planTierFallback, input.checkoutPlan),
     amountPaidCents: input.amountPaid,
     currency: input.currency,
     status: input.status ?? 'unknown',
