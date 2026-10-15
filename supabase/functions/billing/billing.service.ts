@@ -50,6 +50,13 @@ function subscriptionItemPriceId(item: Stripe.SubscriptionItem): string {
   return item.price?.id ?? ''
 }
 
+function invoiceLinePriceId(line: Stripe.InvoiceLineItem): string | null {
+  const price = line.price
+  if (!price) return null
+  if (typeof price === 'string') return price
+  return price.id ?? null
+}
+
 function subscriptionScheduleId(subscription: Stripe.Subscription): string | null {
   if (!subscription.schedule) return null
   return typeof subscription.schedule === 'string'
@@ -505,12 +512,16 @@ export function createBillingService(deps: BillingServiceDeps) {
     },
 
     async getBillingHistory(userId: string): Promise<{ invoices: BillingInvoiceDto[] }> {
+      const env = deps.getEnv()
       const profile = await deps.repository.getProfileBillingFields(userId)
       const customerId = profile?.stripe_customer_id?.trim() ?? ''
       if (!customerId) return { invoices: [] }
 
       const subscription = await deps.repository.getLatestSubscriptionByUserId(userId)
       const planTierFallback = subscription?.plan_tier ?? null
+      const subscriptionCheckoutPlan = subscription?.stripe_price_id
+        ? resolveCheckoutPlanFromPriceId(env.priceIds, subscription.stripe_price_id)
+        : null
 
       const listed = await deps.stripe.invoices.list({
         customer: customerId,
@@ -519,7 +530,8 @@ export function createBillingService(deps: BillingServiceDeps) {
       })
 
       const invoices = listed.data.map((invoice) => {
-        const lineDescriptions = (invoice.lines?.data ?? []).map((line) => {
+        const lines = invoice.lines?.data ?? []
+        const lineDescriptions = lines.map((line) => {
           if (line.description?.trim()) return line.description.trim()
           const price = line.price
           if (price && typeof price === 'object' && price.product) {
@@ -530,6 +542,12 @@ export function createBillingService(deps: BillingServiceDeps) {
           }
           return ''
         })
+
+        const checkoutPlanFromLines = lines
+          .map((line) => invoiceLinePriceId(line))
+          .filter((id): id is string => Boolean(id))
+          .map((priceId) => resolveCheckoutPlanFromPriceId(env.priceIds, priceId))
+          .find((plan): plan is CheckoutPlanId => plan != null)
 
         return mapStripeInvoice({
           id: invoice.id,
@@ -542,6 +560,7 @@ export function createBillingService(deps: BillingServiceDeps) {
           hostedInvoiceUrl: invoice.hosted_invoice_url ?? null,
           lineDescriptions,
           planTierFallback,
+          checkoutPlan: checkoutPlanFromLines ?? subscriptionCheckoutPlan,
         })
       })
 

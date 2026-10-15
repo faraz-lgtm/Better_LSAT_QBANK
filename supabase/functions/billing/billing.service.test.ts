@@ -692,6 +692,24 @@ Deno.test('getBillingHistory maps paid invoices', async () => {
               hosted_invoice_url: null,
               lines: { data: [{ description: 'Better LSAT Core' }] },
             },
+            {
+              id: 'in_2',
+              number: 'INV-2026-009',
+              amount_paid: 35400,
+              currency: 'usd',
+              status: 'paid',
+              created: 1_724_600_000,
+              invoice_pdf: null,
+              hosted_invoice_url: null,
+              lines: {
+                data: [
+                  {
+                    description: 'Better LSAT Core',
+                    price: { id: env.priceIds.sixMonth },
+                  },
+                ],
+              },
+            },
           ],
         }),
       },
@@ -699,10 +717,11 @@ Deno.test('getBillingHistory maps paid invoices', async () => {
   })
 
   const out = await service.getBillingHistory('u-1')
-  assertEquals(out.invoices.length, 1)
+  assertEquals(out.invoices.length, 2)
   assertEquals(out.invoices[0]?.number, 'INV-2026-008')
   assertEquals(out.invoices[0]?.amountPaidCents, 3900)
-  assertEquals(out.invoices[0]?.title, 'Core Monthly')
+  assertEquals(out.invoices[0]?.title, 'Monthly')
+  assertEquals(out.invoices[1]?.title, '6 Months')
 })
 
 Deno.test('createBillingPortalSession returns portal url', async () => {
