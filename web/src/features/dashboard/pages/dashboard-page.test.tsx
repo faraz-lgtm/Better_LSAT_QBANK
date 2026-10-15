@@ -1,7 +1,8 @@
 import { configureStore } from "@reduxjs/toolkit"
 import { render, screen, waitFor } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import { Provider } from "react-redux"
-import { MemoryRouter } from "react-router-dom"
+import { MemoryRouter, Route, Routes } from "react-router-dom"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { DashboardPage } from "@/features/dashboard/pages/dashboard-page"
@@ -97,19 +98,35 @@ vi.mock("@/lib/api/practice", () => ({
   createPracticeApi: () => null,
 }))
 
-function renderDashboard() {
+function renderDashboard(initialPath = "/") {
   const store = configureStore({
     reducer: { studentSession: studentSessionReducer },
   })
   return render(
     <Provider store={store}>
-      <MemoryRouter>
+      <MemoryRouter initialEntries={[initialPath]}>
         <GuestPricingModalProvider>
-          <DashboardPage />
+          <Routes>
+            <Route path="/" element={<DashboardPage />} />
+            <Route path="/app" element={<DashboardPage />} />
+            <Route path="/app/lsac-link-step" element={<div>LSAC link step</div>} />
+            <Route path="/app/practice/drills" element={<div>Practice drills page</div>} />
+          </Routes>
         </GuestPricingModalProvider>
       </MemoryRouter>
     </Provider>,
   )
+}
+
+function setLsacSetupRequiredEntitlement() {
+  mocks.entitlement.isPaymentRequired = false
+  mocks.entitlement.canAccessLsacContent = false
+  mocks.entitlement.isLsacSetupRequired = true
+  mocks.entitlement.entitlement = {
+    ...paymentRequiredEntitlement(),
+    accessState: "LSAC_REQUIRED",
+    hasActiveCore: true,
+  }
 }
 
 describe("DashboardPage", () => {
@@ -117,6 +134,7 @@ describe("DashboardPage", () => {
     mocks.entitlement.loading = false
     mocks.entitlement.canAccessLsacContent = false
     mocks.entitlement.isPaymentRequired = true
+    mocks.entitlement.isLsacSetupRequired = false
     mocks.entitlement.entitlement = paymentRequiredEntitlement()
     mocks.getMyProfile.mockReset()
     mocks.getStudyContext.mockReset()
@@ -184,14 +202,7 @@ describe("DashboardPage", () => {
   })
 
   it("renders the paid dashboard when payment is settled but LSAC content is still locked", async () => {
-    mocks.entitlement.isPaymentRequired = false
-    mocks.entitlement.canAccessLsacContent = false
-    mocks.entitlement.isLsacSetupRequired = true
-    mocks.entitlement.entitlement = {
-      ...paymentRequiredEntitlement(),
-      accessState: "LSAC_REQUIRED",
-      hasActiveCore: true,
-    }
+    setLsacSetupRequiredEntitlement()
 
     renderDashboard()
 
@@ -201,6 +212,55 @@ describe("DashboardPage", () => {
     expect(screen.queryByText("Unlock full practice and analytics")).not.toBeInTheDocument()
     // LawHub analytics stay gated until eligible; shell + Link LSAC CTA remain reachable.
     expect(mocks.getPageBundle).not.toHaveBeenCalled()
+  })
+
+  it("opens an LSAC link prompt when Start Smart Drill is clicked while setup is required", async () => {
+    const user = userEvent.setup()
+    setLsacSetupRequiredEntitlement()
+
+    renderDashboard()
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Start Smart Drill" })).toBeEnabled()
+    })
+
+    await user.click(screen.getByRole("button", { name: "Start Smart Drill" }))
+
+    expect(screen.getByRole("dialog")).toBeInTheDocument()
+    expect(screen.getByText("Link your LSAC account first")).toBeInTheDocument()
+    expect(screen.queryByText("Practice drills page")).not.toBeInTheDocument()
+  })
+
+  it("opens an LSAC link prompt when Practice → Drills is clicked while setup is required", async () => {
+    const user = userEvent.setup()
+    setLsacSetupRequiredEntitlement()
+
+    renderDashboard()
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Practice → Drills" })).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByRole("button", { name: "Practice → Drills" }))
+
+    expect(screen.getByRole("dialog")).toBeInTheDocument()
+    expect(screen.getByText("Link your LSAC account first")).toBeInTheDocument()
+    expect(screen.queryByText("Practice drills page")).not.toBeInTheDocument()
+  })
+
+  it("navigates to the LSAC link step from the dashboard prompt CTA", async () => {
+    const user = userEvent.setup()
+    setLsacSetupRequiredEntitlement()
+
+    renderDashboard()
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Start Smart Drill" })).toBeEnabled()
+    })
+    await user.click(screen.getByRole("button", { name: "Start Smart Drill" }))
+    await user.click(screen.getByRole("button", { name: "Link LSAC" }))
+
+    expect(screen.getByText("LSAC link step")).toBeInTheDocument()
   })
 
   it("paints the shell while analytics is still loading (no full-page loader)", async () => {
