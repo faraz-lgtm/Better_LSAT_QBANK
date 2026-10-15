@@ -6,7 +6,6 @@ import { PREP_COURSE_ESSENTIALS_SLUG } from "@/features/prep-course/lib/prep-cou
 
 const GUEST_FREE_PLAN_RESULTS_HREF = "/app/diagnostic/results"
 const GUEST_FREE_PLAN_DASHBOARD_HREF = STUDENT_DASHBOARD_HREF
-const GUEST_FREE_PLAN_PRICING_HREF = "/app/pricing"
 const GUEST_FREE_PLAN_PREP_COURSE_HREF = "/app/prep-course"
 const GUEST_FREE_PLAN_ESSENTIALS_HREF = `${GUEST_FREE_PLAN_PREP_COURSE_HREF}/${PREP_COURSE_ESSENTIALS_SLUG}`
 
@@ -35,7 +34,6 @@ function isGuestFreePlanRoute(pathname: string): boolean {
 
 export {
   GUEST_FREE_PLAN_DASHBOARD_HREF,
-  GUEST_FREE_PLAN_PRICING_HREF,
   GUEST_FREE_PLAN_RESULTS_HREF,
   isFreePlanLockedNavHref,
   isGuestFreePlanRoute,

@@ -2,6 +2,10 @@ import type { ReactNode } from "react"
 import { BookOpen, Check, Clock, FileText, Users } from "lucide-react"
 
 import { useAccommodations } from "@/features/student/accommodations/accommodations-context"
+import {
+  ANSWER_POPULARITY_TRACK_HEIGHT,
+  answerPopularityBarFillHeight,
+} from "@/features/student/explanation-detail/answer-popularity-bar-height"
 import { displayAnswerPopularityRows } from "@/features/student/explanation-detail/answer-popularity-rows"
 import { resolveScoreBand } from "@/features/student/explanation-detail/provisional-score-band"
 import type { ExplanationQuestionDetailView } from "@/features/student/explanation-detail/types"
@@ -19,8 +23,6 @@ type ExplanationAnalyticsTabPanelProps = {
 
 const cardSurface =
   "rounded-[24px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-7 shadow-[0px_1px_1px_rgba(6,35,87,0.04),0px_12px_16px_rgba(6,35,87,0.22)] dark:shadow-[0px_1px_1px_rgba(0,0,0,0.2),0px_12px_16px_rgba(0,0,0,0.35)]"
-
-const BAR_TRACK_HEIGHT = 200
 
 function difficultyToneStyles(tone: "green" | "teal" | "red"): {
   pillBg: string
@@ -155,7 +157,7 @@ function TopAnswerBar({
   pct: number
   highlight?: boolean
 }) {
-  const barPct = pct > 0 ? Math.max(4, pct) : 0
+  const barHeight = answerPopularityBarFillHeight(pct, ANSWER_POPULARITY_TRACK_HEIGHT)
 
   return (
     <div className="flex min-w-0 flex-1 flex-col items-center">
@@ -167,7 +169,10 @@ function TopAnswerBar({
       >
         {pct}%
       </p>
-      <div className="relative flex h-[200px] w-16 max-w-[64px] items-end justify-center overflow-hidden rounded-2xl border border-[var(--greyscale-100)] bg-[rgba(243,247,255,0.6)] dark:bg-[var(--primary-25)]">
+      <div
+        className="relative flex w-16 max-w-[64px] items-end justify-center overflow-hidden rounded-2xl border border-[var(--greyscale-100)] bg-[rgba(243,247,255,0.6)] dark:bg-[var(--primary-25)]"
+        style={{ height: `${ANSWER_POPULARITY_TRACK_HEIGHT}px` }}
+      >
         {barHeight > 0 ? (
           <div
             className={cn(

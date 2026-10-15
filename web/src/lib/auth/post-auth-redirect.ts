@@ -10,7 +10,6 @@ export type PostAuthDestination =
   | "/app"
   | "/admin"
   | "/onboarding"
-  | "/app/pricing"
   | "/app/lsac-link"
   | "/app/lsac-link-step"
   | "/intent"
