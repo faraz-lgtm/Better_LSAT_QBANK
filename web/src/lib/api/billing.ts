@@ -166,9 +166,16 @@ export function createBillingApi(supabase: SupabaseClient) {
       if (error) throw error
     },
 
-    async getPaymentMethods(): Promise<BillingPaymentMethod[]> {
+    async getPaymentMethods(options?: {
+      replacePaymentMethodId?: string
+    }): Promise<BillingPaymentMethod[]> {
       const { data, error } = await invokeBillingPost<{ paymentMethods: BillingPaymentMethod[] }>(
         'billing-get-payment-methods',
+        {
+          ...(options?.replacePaymentMethodId
+            ? { replacePaymentMethodId: options.replacePaymentMethodId }
+            : {}),
+        },
       )
       if (error) throw error
       return data?.paymentMethods ?? []
@@ -182,11 +189,17 @@ export function createBillingApi(supabase: SupabaseClient) {
       return data?.invoices ?? []
     },
 
-    async createBillingPortalSession(options?: { appBaseUrl?: string }): Promise<string> {
+    async createBillingPortalSession(options?: {
+      appBaseUrl?: string
+      replacePaymentMethodId?: string
+    }): Promise<string> {
       const { data, error } = await invokeBillingPost<{ url: string }>(
         'billing-create-portal-session',
         {
           appBaseUrl: options?.appBaseUrl ?? window.location.origin,
+          ...(options?.replacePaymentMethodId
+            ? { replacePaymentMethodId: options.replacePaymentMethodId }
+            : {}),
         },
       )
       if (error) throw error

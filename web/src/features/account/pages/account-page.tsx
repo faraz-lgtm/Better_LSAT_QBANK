@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import { Camera, Check, CreditCard, Calendar, ExternalLink, FileText, Globe2, ImagePlus, LockKeyhole, Mail, Phone, Trash2, UserRound } from "lucide-react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useSearchParams } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -721,6 +721,7 @@ function BillingHistoryRow({ invoice }: { invoice: BillingInvoice }) {
 
 function AccountPage() {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   useTrackCheckoutPurchase()
   const { openPricingModal } = useGuestPricingModal()
   const { entitlement, loading: entitlementLoading, refresh } = useStudentEntitlement()
@@ -869,6 +870,8 @@ function AccountPage() {
     [entitlement, profile],
   )
 
+  const replacePaymentMethodParam = searchParams.get("replace_pm")?.trim() || null
+
   useEffect(() => {
     if (!hasProPlan || entitlementLoading) return
     let alive = true
@@ -878,10 +881,19 @@ function AccountPage() {
         const billingApi = createBillingApi(getSupabaseBrowserClient())
         const [status, methods, invoices] = await Promise.all([
           billingApi.getStatus(),
-          billingApi.getPaymentMethods(),
+          billingApi.getPaymentMethods(
+            replacePaymentMethodParam
+              ? { replacePaymentMethodId: replacePaymentMethodParam }
+              : undefined,
+          ),
           billingApi.getInvoices(),
         ])
         if (!alive) return
+        if (replacePaymentMethodParam) {
+          const next = new URLSearchParams(searchParams)
+          next.delete("replace_pm")
+          setSearchParams(next, { replace: true })
+        }
         setBillingStatus(status)
         setPaymentMethods(methods)
         setBillingInvoices(invoices)
@@ -898,14 +910,17 @@ function AccountPage() {
     return () => {
       alive = false
     }
-  }, [entitlementLoading, hasProPlan])
+    // replacePaymentMethodParam: re-run once after portal return so we detach the old card.
+  }, [entitlementLoading, hasProPlan, replacePaymentMethodParam, searchParams, setSearchParams])
 
-  async function openBillingPortal() {
+  async function openBillingPortal(options?: { replacePaymentMethodId?: string }) {
     setOpeningPortal(true)
     setPaymentError(null)
     try {
       const billingApi = createBillingApi(getSupabaseBrowserClient())
-      const url = await billingApi.createBillingPortalSession()
+      const url = await billingApi.createBillingPortalSession({
+        replacePaymentMethodId: options?.replacePaymentMethodId,
+      })
       window.location.assign(url)
     } catch (portalError) {
       setPaymentError(portalError instanceof Error ? portalError.message : "Unable to open billing portal.")
@@ -1413,7 +1428,7 @@ function AccountPage() {
                         key={method.id}
                         method={method}
                         replacing={openingPortal}
-                        onReplace={() => void openBillingPortal()}
+                        onReplace={() => void openBillingPortal({ replacePaymentMethodId: method.id })}
                       />
                     ))}
                     {paymentError ? <p className="text-xs text-[#95122b]">{paymentError}</p> : null}

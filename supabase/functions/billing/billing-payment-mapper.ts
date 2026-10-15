@@ -1,4 +1,6 @@
 import {
+  BILLING_PLAN_CATALOG,
+  type BillingPlanId,
   type CheckoutPlanId,
   checkoutPlanFromId,
 } from '../_shared/stripe-env.ts'
@@ -64,39 +66,95 @@ function lineLooksLikeLive(line: string): boolean {
   return /\blive\b/.test(n) && (n.includes('lsat') || n.includes('monthly') || n.includes('plan'))
 }
 
-function lineLooksLikeCore(line: string): boolean {
+function lineLooksLikeCoreProduct(line: string): boolean {
   const n = normalizeLine(line)
-  return n.includes('better lsat core') || /\bcore\b/.test(n)
+  return n.includes('better lsat') || /\bcore\b/.test(n)
+}
+
+/** Infer checkout interval from Stripe line copy / product names. */
+export function checkoutPlanFromLineDescription(line: string): CheckoutPlanId | null {
+  const n = normalizeLine(line)
+  if (!n || lineLooksLikeLawHub(line)) return null
+
+  if (
+    n.includes('3 month') ||
+    n.includes('three month') ||
+    n.includes('every 3') ||
+    n.includes('/ 3 month')
+  ) {
+    return 'three_month'
+  }
+  if (
+    n.includes('6 month') ||
+    n.includes('six month') ||
+    n.includes('every 6') ||
+    n.includes('/ 6 month')
+  ) {
+    return 'six_month'
+  }
+  if (
+    n.includes('yearly') ||
+    n.includes('12 month') ||
+    n.includes('every 12') ||
+    n.includes('/ year') ||
+    n.includes('per year')
+  ) {
+    return 'yearly'
+  }
+  if (
+    n.includes('better lsat monthly') ||
+    n.includes('better lsat core') ||
+    (/\bmonthly\b/.test(n) && lineLooksLikeCoreProduct(line)) ||
+    (/\/\s*month\b/.test(n) && lineLooksLikeCoreProduct(line) && !n.includes('every'))
+  ) {
+    return 'monthly'
+  }
+  return null
+}
+
+function planDisplayName(
+  checkoutPlan: CheckoutPlanId | null,
+  planTierFallback?: BillingPlanId | null,
+  hasLiveLine?: boolean,
+): string | null {
+  if (hasLiveLine || planTierFallback === 'live') return 'Live'
+  if (checkoutPlan) return checkoutPlanFromId(checkoutPlan).name
+  if (planTierFallback === 'core') return BILLING_PLAN_CATALOG.monthly.name
+  return null
 }
 
 /**
- * Prefer plan names over raw Stripe line copy (LawHub often appears first on combo invoices).
+ * Prefer catalog plan names over raw Stripe line copy (LawHub often appears first on combo invoices).
  */
 export function resolveInvoiceTitle(
   lineDescriptions: string[],
-  planTierFallback?: 'core' | 'live' | null,
-  checkoutPlan?: CheckoutPlanId | null,
+  planTierFallback?: BillingPlanId | null,
+  checkoutPlanHint?: CheckoutPlanId | null,
 ): string {
   const lines = lineDescriptions.map((line) => line.trim()).filter(Boolean)
   const hasLawHub = lines.some(lineLooksLikeLawHub)
   const hasLive = lines.some(lineLooksLikeLive)
-  const hasCore = lines.some(lineLooksLikeCore)
 
-  let planTitle: string | null = null
-  if (hasLive || planTierFallback === 'live') planTitle = 'Live Monthly'
-  else if (checkoutPlan) planTitle = checkoutPlanFromId(checkoutPlan).name
-  else if (hasCore || planTierFallback === 'core') planTitle = 'Monthly'
+  let checkoutPlan = checkoutPlanHint ?? null
+  if (!checkoutPlan) {
+    for (const line of lines) {
+      checkoutPlan = checkoutPlanFromLineDescription(line)
+      if (checkoutPlan) break
+    }
+  }
+
+  const planTitle = planDisplayName(checkoutPlan, planTierFallback, hasLive)
 
   if (planTitle) {
     return hasLawHub ? `${planTitle} + LawHub` : planTitle
   }
 
-  if (hasLawHub) return 'LawHub Advantage'
+  if (hasLawHub) return BILLING_PLAN_CATALOG.lsacYearly.name
   if (lines[0]) {
     // Strip noisy Stripe quantity prefixes like "1 × …"
-    return lines[0].replace(/^\d+\s*[x×]\s*/i, '').trim() || 'Pro Monthly'
+    return lines[0].replace(/^\d+\s*[x×]\s*/i, '').trim() || BILLING_PLAN_CATALOG.monthly.name
   }
-  return 'Pro Monthly'
+  return BILLING_PLAN_CATALOG.monthly.name
 }
 
 export function mapStripeCardPaymentMethod(input: {
@@ -132,13 +190,17 @@ export function mapStripeInvoice(input: {
   invoicePdf: string | null
   hostedInvoiceUrl: string | null
   lineDescriptions: string[]
-  planTierFallback?: 'core' | 'live' | null
-  checkoutPlan?: CheckoutPlanId | null
+  planTierFallback?: BillingPlanId | null
+  checkoutPlanHint?: CheckoutPlanId | null
 }): BillingInvoiceDto {
   return {
     id: input.id,
     number: input.number,
-    title: resolveInvoiceTitle(input.lineDescriptions, input.planTierFallback, input.checkoutPlan),
+    title: resolveInvoiceTitle(
+      input.lineDescriptions,
+      input.planTierFallback,
+      input.checkoutPlanHint,
+    ),
     amountPaidCents: input.amountPaid,
     currency: input.currency,
     status: input.status ?? 'unknown',
