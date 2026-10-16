@@ -23,6 +23,10 @@ function LsacLinkStepPage() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const checkoutSuccess = searchParams.get("checkout") === "success"
+  const previewParam = searchParams.get("preview")
+  const previewInvite = previewParam === "invite"
+  const previewPending = previewParam === "1" || previewParam === "pending"
+  const isUiPreview = previewInvite || previewPending
   const entitlementCtx = useStudentEntitlementOptional()
   const { openPricingModal } = useGuestPricingModal()
 
@@ -110,12 +114,12 @@ function LsacLinkStepPage() {
           }
         }
 
-        if (nextEntitlement.isLsacEligible) {
+        if (!isUiPreview && nextEntitlement.isLsacEligible) {
           const checkoutQuery = checkoutSuccess ? "?checkout=success" : ""
           navigate(`/app${checkoutQuery}`, { replace: true })
           return
         }
-        if (!nextEntitlement.hasActiveCore) {
+        if (!isUiPreview && !nextEntitlement.hasActiveCore) {
           openPricingModal()
           navigate("/app", { replace: true })
           return
@@ -134,7 +138,9 @@ function LsacLinkStepPage() {
           setFirstName(names.firstName)
           setLastName(names.lastName)
         }
-        if (nextProfile.student_coaching_id?.trim()) {
+        if (isUiPreview && previewPending) {
+          if (alive) setConfirmUrl("https://example.com/lawhub-preview")
+        } else if (nextProfile.student_coaching_id?.trim()) {
           try {
             const url = await usersApi.lawHubConfirmUrl()
             if (alive) setConfirmUrl(url)
@@ -167,18 +173,25 @@ function LsacLinkStepPage() {
     }
     // entitlementCtx is read for refresh only; do not re-bootstrap when shell entitlement updates.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional mount/checkout-success bootstrap
-  }, [checkoutSuccess, navigate, openPricingModal, usersApi])
+  }, [checkoutSuccess, isUiPreview, navigate, openPricingModal, previewPending, usersApi])
 
   const hasCoachingId = Boolean(profile?.student_coaching_id?.trim())
   const pendingActivation = Boolean(
     entitlement && entitlement.hasActiveCore && entitlement.isLsacLinked && !entitlement.isLsacEligible,
   )
-  const needsInvite = Boolean(
-    entitlement && entitlement.hasActiveCore && !entitlement.isLsacEligible && !hasCoachingId,
-  )
+  const needsInvite = previewInvite
+    ? true
+    : previewPending
+      ? false
+      : Boolean(entitlement && entitlement.hasActiveCore && !entitlement.isLsacEligible && !hasCoachingId)
+  const showPendingActivation = previewPending
+    ? true
+    : previewInvite
+      ? false
+      : (pendingActivation || (hasCoachingId && needsLsacSetupStep(entitlement))) && !needsInvite
 
   useEffect(() => {
-    if (!pendingActivation || !usersApi) return
+    if (isUiPreview || !pendingActivation || !usersApi) return
 
     pendingPollStartedAt.current = Date.now()
     const interval = window.setInterval(() => {
@@ -324,7 +337,7 @@ function LsacLinkStepPage() {
   if (!usersApi) {
     return (
       <StudentMain>
-        <div className="mx-auto w-full max-w-3xl rounded-xl border border-[var(--greyscale-100)] bg-white p-6 sm:p-8">
+        <div className="mx-auto w-full max-w-3xl rounded-xl border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6 sm:p-8">
           <h1 className="text-2xl font-semibold text-[var(--color-student-heading)]">Complete LawHub setup</h1>
           <p className="mt-2 text-sm text-[var(--greyscale-500)]">
             Supabase env is missing. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.
@@ -334,13 +347,10 @@ function LsacLinkStepPage() {
     )
   }
 
-  const showPendingActivation =
-    (pendingActivation || (hasCoachingId && needsLsacSetupStep(entitlement))) && !needsInvite
-
   return (
     <StudentMain>
       <CheckoutPaymentSuccessDialog confirmLabel="Continue to LawHub setup" />
-      <div className="mx-auto w-full max-w-3xl rounded-xl border border-[var(--greyscale-100)] bg-white p-6 shadow-[0_1px_3px_rgba(15,23,42,0.04)] sm:p-8">
+      <div className="mx-auto w-full max-w-3xl rounded-xl border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6 shadow-[0_1px_3px_rgba(15,23,42,0.04)] sm:p-8 dark:shadow-[0_1px_3px_rgba(0,0,0,0.35)]">
         <div className="border-b border-[var(--greyscale-100)] pb-5">
           <p className="text-xs font-semibold uppercase tracking-wide text-[var(--greyscale-500)]">
             {needsInvite ? "Step 1 of 2" : showPendingActivation ? "Step 2 of 2" : "LawHub"}
@@ -391,8 +401,8 @@ function LsacLinkStepPage() {
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
-              <div className="relative rounded-xl border-2 border-[var(--color-student-heading)]/15 bg-[var(--greyscale-0)] p-4">
-                <span className="absolute -top-2.5 left-3 rounded-md bg-[var(--color-student-heading)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+              <div className="relative rounded-xl border-2 border-[var(--color-student-heading)]/15 bg-[var(--greyscale-25)] p-4">
+                <span className="absolute -top-2.5 left-3 rounded-md bg-[var(--color-student-heading)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[var(--greyscale-0)]">
                   Recommended
                 </span>
                 <h2 className="text-sm font-semibold text-[var(--color-student-heading)]">
@@ -418,7 +428,7 @@ function LsacLinkStepPage() {
                   {isSubmitting ? "Setting up…" : "Set up LawHub with my plan"}
                 </Button>
               </div>
-              <div className="rounded-xl border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-4">
+              <div className="rounded-xl border border-[var(--greyscale-100)] bg-[var(--greyscale-25)] p-4">
                 <h2 className="text-sm font-semibold text-[var(--color-student-heading)]">
                   I already have LawHub PrepPlus
                 </h2>
@@ -452,58 +462,58 @@ function LsacLinkStepPage() {
         ) : null}
 
         {showPendingActivation ? (
-          <div className="mt-6 space-y-5">
+          <div className="mt-6">
             <p className="text-sm font-medium text-[var(--color-student-heading)]">
               Coach invite created. Finish on LawHub:
             </p>
-            <ol className="m-0 list-none space-y-3 p-0">
+            <ol className="m-0 mt-4 list-none space-y-3.5 p-0">
               <li className="flex gap-3">
                 <span
-                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--color-student-heading)] text-xs font-bold text-white"
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--color-student-heading)] text-xs font-bold text-[var(--greyscale-0)]"
                   aria-hidden
                 >
                   1
                 </span>
-                <span className="pt-0.5 text-sm leading-relaxed text-[var(--color-student-heading)]">
+                <span className="min-w-0 pt-0.5 text-sm leading-relaxed text-[var(--color-student-heading)]">
                   Click <strong>Activate LawHub</strong> to open LSAC in a new tab.
                 </span>
               </li>
               <li className="flex gap-3">
                 <span
-                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--color-student-heading)] text-xs font-bold text-white"
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--color-student-heading)] text-xs font-bold text-[var(--greyscale-0)]"
                   aria-hidden
                 >
                   2
                 </span>
-                <span className="pt-0.5 text-sm leading-relaxed text-[var(--color-student-heading)]">
+                <span className="min-w-0 pt-0.5 text-sm leading-relaxed text-[var(--color-student-heading)]">
                   Sign in or create your LawHub account and accept the coach link.
                 </span>
               </li>
               <li className="flex gap-3">
                 <span
-                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--color-student-heading)] text-xs font-bold text-white"
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--color-student-heading)] text-xs font-bold text-[var(--greyscale-0)]"
                   aria-hidden
                 >
                   3
                 </span>
-                <span className="pt-0.5 text-sm leading-relaxed text-[var(--color-student-heading)]">
+                <span className="min-w-0 pt-0.5 text-sm leading-relaxed text-[var(--color-student-heading)]">
                   Return here — we check automatically, or tap the button below.
                 </span>
               </li>
             </ol>
-            <p className="text-xs leading-relaxed text-[var(--greyscale-500)]">
+            <p className="mt-6 pl-10 text-xs leading-relaxed text-[var(--greyscale-500)]">
               The LawHub fee goes to LSAC. One PrepPlus subscription works across prep platforms.
             </p>
-            <div className="flex flex-col gap-3 sm:flex-row">
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-stretch">
               <Button
-                className="w-full sm:min-w-[10rem] sm:flex-1"
+                className="w-full sm:min-w-0 sm:flex-1"
                 disabled={isSubmitting || isRefreshing}
                 onClick={() => void openActivationLink()}
               >
                 Activate LawHub
               </Button>
               <Button
-                className="w-full sm:min-w-[10rem] sm:flex-1"
+                className="w-full sm:min-w-0 sm:flex-1"
                 variant="outline"
                 disabled={isRefreshing || isSubmitting}
                 onClick={() => void handlePendingRefresh()}
@@ -516,14 +526,14 @@ function LsacLinkStepPage() {
 
         {error ? (
           <p
-            className="mt-5 rounded-lg border border-[#f1c4cd] bg-[#fff5f7] px-3 py-2.5 text-sm text-[#95122b]"
+            className="mt-5 rounded-lg border border-[#f1c4cd] bg-[#fff5f7] px-3 py-2.5 text-sm text-[#95122b] dark:border-[#5c2a35] dark:bg-[#3a2228] dark:text-[#ffb3c0]"
             role="alert"
           >
             {error}
           </p>
         ) : null}
         {statusMessage && !error ? (
-          <p className="mt-5 rounded-lg border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-3 py-2.5 text-sm text-[var(--explanation-answered)]">
+          <p className="mt-5 rounded-lg border border-[var(--greyscale-100)] bg-[var(--greyscale-25)] px-3 py-2.5 text-sm text-[var(--explanation-answered)]">
             {statusMessage}
           </p>
         ) : null}

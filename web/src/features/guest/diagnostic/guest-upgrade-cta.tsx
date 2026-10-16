@@ -77,7 +77,7 @@ function GuestUpgradeCta({ variant = 'header', className }: GuestUpgradeCtaProps
     <Button
       type="button"
       onClick={handleClick}
-      className={cn('guest-upgrade-cta-primary hidden sm:inline-flex', className)}
+      className={cn('guest-upgrade-cta-primary hidden lg:inline-flex', className)}
     >
       {label}
     </Button>
