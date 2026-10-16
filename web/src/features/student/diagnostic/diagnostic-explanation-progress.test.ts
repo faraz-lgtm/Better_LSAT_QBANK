@@ -186,13 +186,13 @@ describe("buildDiagnosticExplanationProgressMap", () => {
 
     expect(rows).toHaveLength(2)
     expect(rows[0]).toMatchObject({
-      source: "Quick Baseline",
+      source: "Mini",
       status: "answered",
       timeRange: "0:55",
       dateLabel: "Feb 15",
     })
     expect(rows[1]).toMatchObject({
-      source: "Quick Baseline",
+      source: "Mini",
       status: "answered",
       timeRange: "0:40",
       dateLabel: "Jan 1",

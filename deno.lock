@@ -8,6 +8,7 @@
     "npm:@supabase/auth-js@2": "2.103.0",
     "npm:@supabase/supabase-js@2": "2.103.0",
     "npm:csv-parse@5.6.0": "5.6.0",
+    "npm:csv-stringify@6.5.2": "6.5.2",
     "npm:fast-xml-parser@4.5.0": "4.5.0",
     "npm:jszip@3.10.1": "3.10.1",
     "npm:simple-git-hooks@^2.13.1": "2.13.1",
@@ -112,6 +113,9 @@
     },
     "csv-parse@5.6.0": {
       "integrity": "sha512-l3nz3euub2QMg5ouu5U09Ew9Wf6/wQ8I++ch1loQ0ljmzhmfZYrH9fflS22i/PQEvsPvxCwxgz5q7UB8K1JO4Q=="
+    },
+    "csv-stringify@6.5.2": {
+      "integrity": "sha512-RFPahj0sXcmUyjrObAK+DOWtMvMIFV328n4qZJhgX3x2RqkQgOTU2mCUmiFR0CzM6AzChlRSUErjiJeEt8BaQA=="
     },
     "dunder-proto@1.0.1": {
       "integrity": "sha512-KIN/nDJBQRcXw0MLVhZE9iQHmG68qAVIBg9CqmUYjmQIhgij9U5MFvrqkUL5FbtyyzZuOeOt0zdeRe4UY7ct+A==",

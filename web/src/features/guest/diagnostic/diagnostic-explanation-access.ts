@@ -1,7 +1,7 @@
 import type { GuestDiagnosticIntentId } from "@/features/guest/diagnostic/guest-diagnostic-intent-types"
 import { resolveDiagnosticSourceQuestion } from "@/features/guest/diagnostic/mini-diagnostic-content"
 
-/** Free Quick Baseline: first N result / Review explanations unlocked. */
+/** Free Mini: first N result / Review explanations unlocked. */
 const FREE_MINI_DIAGNOSTIC_EXPLANATION_LIMIT = 5
 
 /**
@@ -23,7 +23,7 @@ function freeDiagnosticExplanationLimit(intentId: GuestDiagnosticIntentId): numb
 
 /**
  * Map a catalog / review question id onto the diagnostic intent used for teaser limits.
- * Quick Baseline → 5; Full Section → 10.
+ * Mini → 5; Full Section → 10.
  */
 function resolveDiagnosticExplanationIntentId(questionId: string): GuestDiagnosticIntentId | null {
   const id = questionId.trim()
@@ -54,7 +54,7 @@ function canShowDiagnosticExplanation(input: {
 }
 
 /**
- * Results-list access. Free students unlock the first 5 rows on Quick Baseline and the
+ * Results-list access. Free students unlock the first 5 rows on Mini and the
  * first 10 on Full Section. Remaining rows stay blurred until upgrade.
  */
 function canShowDiagnosticResultDetails(input: {

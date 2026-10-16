@@ -80,7 +80,7 @@ describe("FreePlanDashboard", () => {
     expect(screen.getByRole("heading", { name: "Start a diagnostic" })).toBeInTheDocument()
 
     const fullLink = screen.getByRole("link", { name: /Start Full Section/i })
-    const miniLink = screen.getByRole("link", { name: "Start Quick Baseline" })
+    const miniLink = screen.getByRole("link", { name: "Start Mini" })
     expect(fullLink).toHaveAttribute("href", FREE_START_FULL_HREF)
     expect(miniLink).toHaveAttribute("href", FREE_START_MINI_HREF)
   })
@@ -134,16 +134,16 @@ describe("FreePlanDashboard", () => {
     renderFreeDashboard()
 
     expect(screen.getByText("Full Section #1")).toBeInTheDocument()
-    expect(screen.getByText("Quick Baseline #1")).toBeInTheDocument()
+    expect(screen.getByText("Mini #1")).toBeInTheDocument()
 
     const tablist = screen.getByRole("tablist", { name: "Filter diagnostics" })
-    await user.click(within(tablist).getByRole("tab", { name: "Quick Baseline" }))
+    await user.click(within(tablist).getByRole("tab", { name: "Mini" }))
 
     expect(screen.queryByText("Full Section #1")).not.toBeInTheDocument()
-    expect(screen.getByText("Quick Baseline #1")).toBeInTheDocument()
+    expect(screen.getByText("Mini #1")).toBeInTheDocument()
 
     await user.click(within(tablist).getByRole("tab", { name: "Full Section" }))
     expect(screen.getByText("Full Section #1")).toBeInTheDocument()
-    expect(screen.queryByText("Quick Baseline #1")).not.toBeInTheDocument()
+    expect(screen.queryByText("Mini #1")).not.toBeInTheDocument()
   })
 })

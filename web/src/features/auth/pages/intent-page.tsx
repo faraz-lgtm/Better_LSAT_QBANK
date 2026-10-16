@@ -26,7 +26,7 @@ const MARKETING_SITE_HREF = "https://betterlsat.com"
 const DIAGNOSTIC_TIERS: DiagnosticIntentTierConfig[] = [
   {
     id: "mini",
-    name: "Quick Baseline",
+    name: "Mini",
     tagline: "Quick overview of your weakest areas",
     questions: "10q",
     duration: "~13 min",
@@ -46,7 +46,7 @@ const DIAGNOSTIC_TIERS: DiagnosticIntentTierConfig[] = [
 ]
 
 const TIER_LABELS: Record<DiagnosticIntentTier, string> = {
-  mini: "Quick Baseline",
+  mini: "Mini",
   quick: "Full Section",
   full: "Full Section",
 }

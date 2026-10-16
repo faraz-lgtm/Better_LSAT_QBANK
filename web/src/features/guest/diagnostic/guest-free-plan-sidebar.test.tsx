@@ -91,7 +91,7 @@ describe("GuestFreePlanSidebar", () => {
     expect(screen.getByTestId("path")).toHaveTextContent("/app")
   })
 
-  it("still expands Diagnostic Results to Quick Baseline and Full Section", async () => {
+  it("still expands Diagnostic Results to Mini and Full Section", async () => {
     const user = userEvent.setup()
     render(
       <MemoryRouter initialEntries={["/app"]}>
@@ -100,7 +100,7 @@ describe("GuestFreePlanSidebar", () => {
     )
 
     await user.click(screen.getByRole("button", { name: /Diagnostic Results/i }))
-    expect(screen.getByRole("link", { name: "Quick Baseline" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Mini" })).toHaveAttribute(
       "href",
       "/app/diagnostic/results/mini",
     )

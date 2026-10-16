@@ -324,141 +324,210 @@ function LsacLinkStepPage() {
   if (!usersApi) {
     return (
       <StudentMain>
-        <h1 className="text-2xl font-semibold text-[var(--color-student-heading)]">Complete LawHub setup</h1>
-        <p className="mt-2 text-sm text-[var(--greyscale-500)]">
-          Supabase env is missing. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.
-        </p>
+        <div className="mx-auto w-full max-w-3xl rounded-xl border border-[var(--greyscale-100)] bg-white p-6 sm:p-8">
+          <h1 className="text-2xl font-semibold text-[var(--color-student-heading)]">Complete LawHub setup</h1>
+          <p className="mt-2 text-sm text-[var(--greyscale-500)]">
+            Supabase env is missing. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.
+          </p>
+        </div>
       </StudentMain>
     )
   }
 
+  const showPendingActivation =
+    (pendingActivation || (hasCoachingId && needsLsacSetupStep(entitlement))) && !needsInvite
+
   return (
     <StudentMain>
       <CheckoutPaymentSuccessDialog confirmLabel="Continue to LawHub setup" />
-      <h1 className="text-2xl font-semibold text-[var(--color-student-heading)]">Complete LawHub setup</h1>
-      <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[var(--greyscale-500)]">
-        {needsInvite
-          ? "Choose one path. Both use your Better LSAT signup email and the name below. Next you’ll open LawHub to accept Better LSAT as your coach."
-          : "Link your Official LSAT PrepPlus through LawHub to unlock PrepTests, drills, and other LSAC content."}
-      </p>
+      <div className="mx-auto w-full max-w-3xl rounded-xl border border-[var(--greyscale-100)] bg-white p-6 shadow-[0_1px_3px_rgba(15,23,42,0.04)] sm:p-8">
+        <div className="border-b border-[var(--greyscale-100)] pb-5">
+          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--greyscale-500)]">
+            {needsInvite ? "Step 1 of 2" : showPendingActivation ? "Step 2 of 2" : "LawHub"}
+          </p>
+          <h1 className="mt-1 text-2xl font-semibold text-[var(--color-student-heading)]">
+            Complete LawHub setup
+          </h1>
+          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[var(--greyscale-500)]">
+            {needsInvite
+              ? "Choose one path. Both use your Better LSAT signup email and the name below. Next you’ll open LawHub to accept Better LSAT as your coach."
+              : "Link your Official LSAT PrepPlus through LawHub to unlock PrepTests, drills, and other LSAC content."}
+          </p>
+        </div>
 
-      {needsInvite ? (
-        <div className="mt-6 max-w-3xl space-y-4">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div>
-              <label htmlFor="lsac-link-first-name" className="mb-1.5 block text-sm font-medium text-[var(--color-student-heading)]">
-                First name
-              </label>
-              <Input
-                id="lsac-link-first-name"
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-                autoComplete="given-name"
-                disabled={isSubmitting}
-              />
+        {needsInvite ? (
+          <div className="mt-6 space-y-5">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label
+                  htmlFor="lsac-link-first-name"
+                  className="mb-1.5 block text-sm font-medium text-[var(--color-student-heading)]"
+                >
+                  First name
+                </label>
+                <Input
+                  id="lsac-link-first-name"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  autoComplete="given-name"
+                  disabled={isSubmitting}
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="lsac-link-last-name"
+                  className="mb-1.5 block text-sm font-medium text-[var(--color-student-heading)]"
+                >
+                  Last name
+                </label>
+                <Input
+                  id="lsac-link-last-name"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  autoComplete="family-name"
+                  disabled={isSubmitting}
+                />
+              </div>
             </div>
-            <div>
-              <label htmlFor="lsac-link-last-name" className="mb-1.5 block text-sm font-medium text-[var(--color-student-heading)]">
-                Last name
-              </label>
-              <Input
-                id="lsac-link-last-name"
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-                autoComplete="family-name"
-                disabled={isSubmitting}
-              />
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="relative rounded-xl border-2 border-[var(--color-student-heading)]/15 bg-[var(--greyscale-0)] p-4">
+                <span className="absolute -top-2.5 left-3 rounded-md bg-[var(--color-student-heading)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+                  Recommended
+                </span>
+                <h2 className="text-sm font-semibold text-[var(--color-student-heading)]">
+                  PrepPlus included with your plan
+                </h2>
+                <ol className="mt-2 list-decimal space-y-1.5 pl-4 text-xs leading-relaxed text-[var(--greyscale-500)]">
+                  <li>Click the button to create your LawHub coach invite (PrepPlus comes with your plan).</li>
+                  <li>
+                    On the next screen, open{" "}
+                    <strong className="font-semibold text-[var(--color-student-heading)]">Activate LawHub</strong>.
+                  </li>
+                  <li>
+                    Create or sign in on LawHub with{" "}
+                    <strong className="font-semibold text-[var(--color-student-heading)]">this same email</strong>, then
+                    accept the coach link.
+                  </li>
+                </ol>
+                <Button
+                  className="mt-4 w-full"
+                  disabled={isSubmitting}
+                  onClick={() => void completeVendorLawHubLink()}
+                >
+                  {isSubmitting ? "Setting up…" : "Set up LawHub with my plan"}
+                </Button>
+              </div>
+              <div className="rounded-xl border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-4">
+                <h2 className="text-sm font-semibold text-[var(--color-student-heading)]">
+                  I already have LawHub PrepPlus
+                </h2>
+                <ol className="mt-2 list-decimal space-y-1.5 pl-4 text-xs leading-relaxed text-[var(--greyscale-500)]">
+                  <li>Click only if you already pay LSAC for PrepPlus.</li>
+                  <li>
+                    Your LawHub account must use the{" "}
+                    <strong className="font-semibold text-[var(--color-student-heading)]">same email</strong> as Better
+                    LSAT.
+                  </li>
+                  <li>
+                    We’ll invite you as coach (we won’t sell you another PrepPlus). Then{" "}
+                    <strong className="font-semibold text-[var(--color-student-heading)]">Activate LawHub</strong> → sign
+                    into your existing account → accept the coach.
+                  </li>
+                </ol>
+                <Button
+                  className="mt-4 w-full"
+                  variant="outline"
+                  disabled={isSubmitting}
+                  onClick={() => void linkExistingPrepPlus()}
+                >
+                  {isSubmitting ? "Linking…" : "Link my existing PrepPlus"}
+                </Button>
+              </div>
             </div>
+            <p className="text-xs leading-relaxed text-[var(--greyscale-500)]">
+              LSAC may also email you; you can ignore it if you use Activate LawHub here.
+            </p>
           </div>
+        ) : null}
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-xl border border-[var(--greyscale-100)] bg-white p-4">
-              <h2 className="text-sm font-semibold text-[var(--color-student-heading)]">PrepPlus included with your plan</h2>
-              <ol className="mt-2 list-decimal space-y-1.5 pl-4 text-xs leading-relaxed text-[var(--greyscale-500)]">
-                <li>Click the button to create your LawHub coach invite (PrepPlus comes with your plan).</li>
-                <li>
-                  On the next screen, open <strong className="font-semibold text-[var(--color-student-heading)]">Activate LawHub</strong>.
-                </li>
-                <li>
-                  Create or sign in on LawHub with <strong className="font-semibold text-[var(--color-student-heading)]">this same email</strong>, then
-                  accept the coach link.
-                </li>
-              </ol>
+        {showPendingActivation ? (
+          <div className="mt-6 space-y-5">
+            <p className="text-sm font-medium text-[var(--color-student-heading)]">
+              Coach invite created. Finish on LawHub:
+            </p>
+            <ol className="m-0 list-none space-y-3 p-0">
+              <li className="flex gap-3">
+                <span
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--color-student-heading)] text-xs font-bold text-white"
+                  aria-hidden
+                >
+                  1
+                </span>
+                <span className="pt-0.5 text-sm leading-relaxed text-[var(--color-student-heading)]">
+                  Click <strong>Activate LawHub</strong> to open LSAC in a new tab.
+                </span>
+              </li>
+              <li className="flex gap-3">
+                <span
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--color-student-heading)] text-xs font-bold text-white"
+                  aria-hidden
+                >
+                  2
+                </span>
+                <span className="pt-0.5 text-sm leading-relaxed text-[var(--color-student-heading)]">
+                  Sign in or create your LawHub account and accept the coach link.
+                </span>
+              </li>
+              <li className="flex gap-3">
+                <span
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--color-student-heading)] text-xs font-bold text-white"
+                  aria-hidden
+                >
+                  3
+                </span>
+                <span className="pt-0.5 text-sm leading-relaxed text-[var(--color-student-heading)]">
+                  Return here — we check automatically, or tap the button below.
+                </span>
+              </li>
+            </ol>
+            <p className="text-xs leading-relaxed text-[var(--greyscale-500)]">
+              The LawHub fee goes to LSAC. One PrepPlus subscription works across prep platforms.
+            </p>
+            <div className="flex flex-col gap-3 sm:flex-row">
               <Button
-                className="mt-3 w-full"
-                disabled={isSubmitting}
-                onClick={() => void completeVendorLawHubLink()}
+                className="w-full sm:min-w-[10rem] sm:flex-1"
+                disabled={isSubmitting || isRefreshing}
+                onClick={() => void openActivationLink()}
               >
-                {isSubmitting ? "Setting up…" : "Set up LawHub with my plan"}
+                Activate LawHub
               </Button>
-            </div>
-            <div className="rounded-xl border border-[var(--greyscale-100)] bg-white p-4">
-              <h2 className="text-sm font-semibold text-[var(--color-student-heading)]">I already have LawHub PrepPlus</h2>
-              <ol className="mt-2 list-decimal space-y-1.5 pl-4 text-xs leading-relaxed text-[var(--greyscale-500)]">
-                <li>Click only if you already pay LSAC for PrepPlus.</li>
-                <li>
-                  Your LawHub account must use the{" "}
-                  <strong className="font-semibold text-[var(--color-student-heading)]">same email</strong> as Better LSAT.
-                </li>
-                <li>
-                  We’ll invite you as coach (we won’t sell you another PrepPlus). Then{" "}
-                  <strong className="font-semibold text-[var(--color-student-heading)]">Activate LawHub</strong> → sign into your existing
-                  account → accept the coach.
-                </li>
-              </ol>
               <Button
-                className="mt-3 w-full"
+                className="w-full sm:min-w-[10rem] sm:flex-1"
                 variant="outline"
-                disabled={isSubmitting}
-                onClick={() => void linkExistingPrepPlus()}
+                disabled={isRefreshing || isSubmitting}
+                onClick={() => void handlePendingRefresh()}
               >
-                {isSubmitting ? "Linking…" : "Link my existing PrepPlus"}
+                {isRefreshing ? "Checking…" : "I've finished on LawHub"}
               </Button>
             </div>
           </div>
-          <p className="text-xs leading-relaxed text-[var(--greyscale-500)]">
-            LSAC may also email you; you can ignore it if you use Activate LawHub here.
-          </p>
-        </div>
-      ) : null}
+        ) : null}
 
-      {(pendingActivation || (hasCoachingId && needsLsacSetupStep(entitlement))) && !needsInvite ? (
-        <div className="mt-6 max-w-2xl space-y-4">
-          <p className="text-sm font-medium text-[var(--color-student-heading)]">Coach invite created. Finish on LawHub:</p>
-          <ol className="list-decimal space-y-2 pl-5 text-sm leading-relaxed text-[var(--color-student-heading)]">
-            <li>
-              Click <strong>Activate LawHub</strong> to open LSAC in a new tab.
-            </li>
-            <li>Sign in or create your LawHub account and accept the coach link.</li>
-            <li>Return here — we check automatically, or tap the button below.</li>
-          </ol>
-          <p className="text-xs leading-relaxed text-[var(--greyscale-500)]">
-            The LawHub fee goes to LSAC. One PrepPlus subscription works across prep platforms.
+        {error ? (
+          <p
+            className="mt-5 rounded-lg border border-[#f1c4cd] bg-[#fff5f7] px-3 py-2.5 text-sm text-[#95122b]"
+            role="alert"
+          >
+            {error}
           </p>
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <Button
-              className="w-full sm:w-auto"
-              disabled={isSubmitting || isRefreshing}
-              onClick={() => void openActivationLink()}
-            >
-              Activate LawHub
-            </Button>
-            <Button
-              className="w-full sm:w-auto"
-              variant="outline"
-              disabled={isRefreshing || isSubmitting}
-              onClick={() => void handlePendingRefresh()}
-            >
-              {isRefreshing ? "Checking…" : "I've finished on LawHub"}
-            </Button>
-          </div>
-        </div>
-      ) : null}
-
-      {error ? <p className="mt-4 text-sm text-[#95122b]">{error}</p> : null}
-      {statusMessage && !error ? (
-        <p className="mt-4 text-sm text-[var(--explanation-answered)]">{statusMessage}</p>
-      ) : null}
+        ) : null}
+        {statusMessage && !error ? (
+          <p className="mt-5 rounded-lg border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-3 py-2.5 text-sm text-[var(--explanation-answered)]">
+            {statusMessage}
+          </p>
+        ) : null}
+      </div>
     </StudentMain>
   )
 }

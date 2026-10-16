@@ -5,17 +5,20 @@ import {
   closeProduktlyFeedback,
   identifyProduktlyUser,
   openProduktlyFeedback,
+  startProduktlyTour,
 } from "./produktly"
 
 describe("produktly helpers", () => {
   const identifyUser = vi.fn()
   const clearCurrentUser = vi.fn()
+  const startTour = vi.fn()
   const openFeedback = vi.fn()
   const closeFeedback = vi.fn()
 
   beforeEach(() => {
     identifyUser.mockReset()
     clearCurrentUser.mockReset()
+    startTour.mockReset()
     openFeedback.mockReset()
     closeFeedback.mockReset()
     clearProduktlyUser()
@@ -24,6 +27,7 @@ describe("produktly helpers", () => {
       identifyUser,
       clearCurrentUser,
       configure: vi.fn(),
+      startTour,
       openFeedback,
       closeFeedback,
     }
@@ -72,8 +76,37 @@ describe("produktly helpers", () => {
     delete window.Produktly
     expect(() => identifyProduktlyUser("user-1")).not.toThrow()
     expect(() => clearProduktlyUser()).not.toThrow()
+    expect(() => startProduktlyTour({ tourId: 99 })).not.toThrow()
     expect(() => openProduktlyFeedback(2722)).not.toThrow()
     expect(() => closeProduktlyFeedback(2722)).not.toThrow()
+  })
+
+  it("startProduktlyTour forwards params", () => {
+    startProduktlyTour({ tourId: 99, stepIndex: 2 })
+    expect(startTour).toHaveBeenCalledWith({ tourId: 99, stepIndex: 2 })
+  })
+
+  it("startProduktlyTour adds refreshToken when clearing progress so dismissed tours restart", () => {
+    startProduktlyTour({ tourId: 99, clearProgress: true })
+    expect(startTour).toHaveBeenCalledWith({
+      tourId: 99,
+      clearProgress: true,
+      refreshToken: expect.any(Number),
+    })
+  })
+
+  it("startProduktlyTour keeps an explicit refreshToken when clearing progress", () => {
+    startProduktlyTour({ tourId: 99, clearProgress: true, refreshToken: "manual" })
+    expect(startTour).toHaveBeenCalledWith({
+      tourId: 99,
+      clearProgress: true,
+      refreshToken: "manual",
+    })
+  })
+
+  it("startProduktlyTour no-ops for empty tour id", () => {
+    startProduktlyTour({ tourId: 0 })
+    expect(startTour).not.toHaveBeenCalled()
   })
 
   it("openProduktlyFeedback forwards id", () => {

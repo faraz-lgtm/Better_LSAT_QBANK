@@ -50,7 +50,7 @@ describe("ExplanationExplainTabPanel", () => {
           {
             ...baseVideos[1]!,
             videoUrl: "https://example.com/video.mp4",
-            postedLine: "Posted Wednesday, Jun 4, 2025 • Taken on Quick Baseline",
+            postedLine: "Posted Wednesday, Jun 4, 2025 • Taken on Mini",
           },
         ]}
       />,
@@ -60,7 +60,7 @@ describe("ExplanationExplainTabPanel", () => {
     expect(screen.getByText("J.Y.'s explanation")).toBeInTheDocument()
     expect(screen.getByText("Question explanation")).toBeInTheDocument()
     expect(
-      screen.getByText("Posted Wednesday, Jun 4, 2025 • Taken on Quick Baseline"),
+      screen.getByText("Posted Wednesday, Jun 4, 2025 • Taken on Mini"),
     ).toBeInTheDocument()
     expect(document.querySelector("video")).toHaveAttribute("src", "https://example.com/video.mp4")
   })
@@ -100,7 +100,7 @@ describe("ExplanationExplainTabPanel", () => {
           {
             ...baseVideos[1]!,
             videoUrl: "https://example.com/video.mp4",
-            postedLine: "Posted Wednesday, Jun 4, 2025 • Taken on Quick Baseline",
+            postedLine: "Posted Wednesday, Jun 4, 2025 • Taken on Mini",
           },
         ]}
       />,
@@ -110,7 +110,7 @@ describe("ExplanationExplainTabPanel", () => {
     expect(screen.queryByText("Question explanation")).not.toBeInTheDocument()
     expect(screen.queryByText("J.Y.'s explanation")).not.toBeInTheDocument()
     expect(
-      screen.queryByText("Posted Wednesday, Jun 4, 2025 • Taken on Quick Baseline"),
+      screen.queryByText("Posted Wednesday, Jun 4, 2025 • Taken on Mini"),
     ).not.toBeInTheDocument()
     expect(document.querySelector("video")).toHaveAttribute("src", "https://example.com/video.mp4")
   })

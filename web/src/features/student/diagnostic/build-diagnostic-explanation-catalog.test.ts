@@ -13,7 +13,7 @@ import type { GuestDiagnosticResult } from "@/features/guest/diagnostic/guest-di
 describe("diagnostic explanation catalog", () => {
   it("lists Mini and Section diagnostic sets", () => {
     const items = buildDiagnosticExplanationListItems()
-    expect(items.map((item) => item.title)).toEqual(["Quick Baseline", "Full Section"])
+    expect(items.map((item) => item.title)).toEqual(["Mini", "Full Section"])
     expect(items[0]?.questionCount).toBeGreaterThan(0)
     expect(items[1]?.questionCount).toBeGreaterThan(0)
   })
@@ -86,7 +86,7 @@ describe("diagnostic explanation catalog", () => {
     expect(view?.analytics.yourTimeSeconds).toBe(52)
     expect(view?.analytics.history).toHaveLength(1)
     expect(view?.analytics.history[0]).toMatchObject({
-      source: "Quick Baseline",
+      source: "Mini",
       status: "answered",
       timeRange: "0:52",
     })

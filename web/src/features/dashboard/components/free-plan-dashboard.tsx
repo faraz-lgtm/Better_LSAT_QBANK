@@ -92,12 +92,12 @@ function formatHistoryDateLabel(isoDate: string): string {
 
 function formatHistoryTitle(attempt: GuestDiagnosticResult): string {
   const n = attempt.diagnosticNumber
-  if (attempt.intentId === "mini") return `Quick Baseline #${n}`
+  if (attempt.intentId === "mini") return `Mini #${n}`
   return `Full Section #${n}`
 }
 
 function historyKindBadge(attempt: GuestDiagnosticResult): string {
-  return attempt.intentId === "mini" ? "Quick Baseline" : "Full Section"
+  return attempt.intentId === "mini" ? "Mini" : "Full Section"
 }
 
 function FreePlanUpgradeBanner() {
@@ -146,11 +146,11 @@ function FreePlanDiagnosticStartCards() {
         <article className="flex min-h-[237px] flex-col rounded-[20px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-[22px] pb-5 pt-[22px]">
           <div className="mb-2.5 flex items-center">
             <span className="rounded-full bg-[var(--greyscale-25)] px-[10px] py-[3px] text-xs font-bold leading-[18px] text-[var(--greyscale-500)]">
-              Quick Baseline
+              Mini
             </span>
           </div>
           <h3 className="m-0 text-lg font-semibold leading-[1.4] tracking-[0.36px] text-[var(--color-student-heading)]">
-            Quick Baseline
+            Mini
           </h3>
           <p className="mt-1 text-base leading-[1.5] tracking-[0.32px] text-[var(--greyscale-500)]">
             See your weakest areas without committing to a full section.
@@ -171,7 +171,7 @@ function FreePlanDiagnosticStartCards() {
               to={FREE_START_MINI_HREF}
               className="inline-flex min-h-11 items-center justify-center rounded-[10px] bg-[var(--greyscale-25)] px-[18px] text-[15px] font-bold leading-[22.5px] text-[var(--primary)] hover:bg-[var(--greyscale-50)]"
             >
-              Start Quick Baseline
+              Start Mini
             </Link>
           </div>
         </article>
@@ -311,7 +311,7 @@ function FreePlanDiagnosticHistory() {
   const tabs: { id: HistoryFilter; label: string }[] = [
     { id: "all", label: "All" },
     { id: "full", label: "Full Section" },
-    { id: "mini", label: "Quick Baseline" },
+    { id: "mini", label: "Mini" },
   ]
 
   return (
@@ -351,7 +351,7 @@ function FreePlanDiagnosticHistory() {
       <div className="mt-4 overflow-hidden rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-1.5 sm:rounded-[20px] sm:p-2">
         {attempts.length === 0 ? (
           <p className="m-0 rounded-[14px] px-4 py-8 text-center text-sm text-[var(--greyscale-500)]">
-            No diagnostics yet. Start a Quick Baseline or Full Section above — both are free.
+            No diagnostics yet. Start a Mini or Full Section above — both are free.
           </p>
         ) : (
           <div className="flex flex-col">

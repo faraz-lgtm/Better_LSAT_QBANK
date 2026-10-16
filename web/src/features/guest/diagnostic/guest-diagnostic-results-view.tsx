@@ -72,7 +72,7 @@ const LSAT_MIN = 120
 const LSAT_MAX = 180
 const LSAT_GOAL_SCORE = 165
 
-/** Collapsed results list: Quick Baseline shows 3 rows before “See All”. */
+/** Collapsed results list: Mini shows 3 rows before “See All”. */
 const RESULTS_LIST_PREVIEW_MINI = 3
 /** Collapsed results list: Full Section shows 5 rows before “See All”. */
 const RESULTS_LIST_PREVIEW_FULL = 5
@@ -573,7 +573,7 @@ const LOCKED_TEASER_DUMMY_TYPES = ['Assumption', 'Inference', 'Flaw', 'Strengthe
 /** Placeholder row for gated questions. Never reads real question/explanation data. */
 function GuestDiagnosticLockedQuestionRow({
   number,
-  heading = 'Quick Baseline',
+  heading = 'Mini',
 }: {
   number: number
   heading?: string
@@ -1148,7 +1148,7 @@ function DiagnosticUpgradeCTA({
         <p className="text-xs leading-relaxed text-[#a9c0e8]">
           Plans include the betterLSAT platform. Official LSAC practice tests require{' '}
           LawHub Advantage{' '}
-          <strong className="font-bold">($99/yr, paid to LSAC)</strong>{' '}
+          <strong className="font-bold">($124/yr, paid to LSAC)</strong>{' '}
           — add it at checkout, or skip it if you already have PrepPlus.
         </p>
       </div>

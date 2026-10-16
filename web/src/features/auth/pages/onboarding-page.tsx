@@ -163,7 +163,7 @@ function OnboardingPage() {
 
   function validateStep1(): boolean {
     if (!firstName.trim() || !lastName.trim()) {
-      return setError("First and last name are required for LawHub registration."), false
+      return setError("First and last name are required."), false
     }
     if (!plannedLsatDate) return setError("Please select when you plan to take the LSAT."), false
     if (requiresPassword) {
@@ -174,7 +174,7 @@ function OnboardingPage() {
     return true
   }
 
-  async function completeOnboarding() {
+  async function completeOnboarding(options?: { startDiagnostic?: boolean }) {
     if (!authApi || !usersApi) {
       setError("Supabase env is missing. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.")
       return
@@ -183,7 +183,7 @@ function OnboardingPage() {
     setIsSubmitting(true)
     setError(null)
     try {
-if (requiresPassword && !passwordUpdated) {
+      if (requiresPassword && !passwordUpdated) {
         await authApi.updatePassword(password)
         setPasswordUpdated(true)
       }
@@ -203,6 +203,11 @@ if (requiresPassword && !passwordUpdated) {
       const completed = await usersApi.completeFirstLogin()
       hydrateSessionProfile(completed)
       captureEvent(AnalyticsEvent.onboardingCompleted)
+      if (options?.startDiagnostic) {
+        const intent = ensureDiagnosticIntent()
+        navigate(`/diagnostic/start?intent=${intent}`, { replace: true })
+        return
+      }
       const destination = resolvePendingCheckoutDestination(
         await fetchPostAuthDestination(usersApi),
       )
@@ -433,14 +438,12 @@ if (requiresPassword && !passwordUpdated) {
                   <Button
                     type="button"
                     className="ds-btn w-full"
-                    onClick={() => {
-                      const intent = ensureDiagnosticIntent()
-                      navigate(`/diagnostic/start?intent=${intent}`)
-                    }}
+                    disabled={isSubmitting}
+                    onClick={() => void completeOnboarding({ startDiagnostic: true })}
                   >
-                    Start Diagnostic
+                    {isSubmitting ? "Starting…" : "Start Diagnostic"}
                   </Button>
-                  <Button type="button" variant="outline" className="w-full rounded-2xl" onClick={() => setStep(9)}>Skip</Button>
+                  <Button type="button" variant="outline" className="w-full rounded-2xl" onClick={() => setStep(9)} disabled={isSubmitting}>Skip</Button>
                 </>
               )}
               {step === 9 && (

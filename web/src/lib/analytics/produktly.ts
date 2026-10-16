@@ -1,5 +1,14 @@
 export type ProduktlyUserMetadata = Record<string, string | number | boolean | null | undefined>
 
+export type StartProduktlyTourParams = {
+  tourId: number
+  stepIndex?: number
+  ignorePublish?: boolean
+  respectAllTourSettings?: boolean
+  clearProgress?: boolean
+  refreshToken?: string | number
+}
+
 type ProduktlyApi = {
   identifyUser: (
     userId: string | number,
@@ -12,6 +21,7 @@ type ProduktlyApi = {
     redirect?: (url: string) => void
     waitForUser?: boolean
   }) => void
+  startTour?: (params: StartProduktlyTourParams) => void
   openFeedback?: (params: { id: number; ignorePublish?: boolean }) => void
   closeFeedback?: (params: { id: number }) => void
 }
@@ -47,6 +57,20 @@ export function identifyProduktlyUser(
 export function clearProduktlyUser(): void {
   lastIdentifiedUserId = null
   getProduktly()?.clearCurrentUser()
+}
+
+/**
+ * Start a Produktly product tour by dashboard id.
+ * When `clearProgress` is set, also bumps `refreshToken` so a dismissed tour
+ * restarts from step 0 instead of being ignored / resumed mid-tour.
+ */
+export function startProduktlyTour(params: StartProduktlyTourParams): void {
+  if (!params.tourId) return
+  const payload =
+    params.clearProgress && params.refreshToken === undefined
+      ? { ...params, refreshToken: Date.now() }
+      : params
+  getProduktly()?.startTour?.(payload)
 }
 
 /** Open a Produktly feedback collector widget by dashboard id. */

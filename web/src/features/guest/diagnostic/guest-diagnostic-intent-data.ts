@@ -5,7 +5,7 @@ import { DIAGNOSTIC_INTENT_STORAGE_KEY } from "@/lib/auth/diagnostic-intent"
 const GUEST_DIAGNOSTIC_INTENT_OPTIONS: ReadonlyArray<GuestDiagnosticIntentOption> = [
   {
     id: "mini",
-    title: "Quick Baseline",
+    title: "Mini",
     description: "Quick overview of your weakest areas",
     questionCount: "10q",
     duration: "~20 min",

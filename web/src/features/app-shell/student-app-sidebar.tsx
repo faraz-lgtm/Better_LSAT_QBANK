@@ -11,6 +11,8 @@ import {
   STUDENT_DIAGNOSTIC_HREF,
   STUDENT_DIAGNOSTIC_ICON,
   STUDENT_DIAGNOSTIC_NAV_SECTION,
+  STUDENT_GET_STARTED_ICON,
+  STUDENT_GET_STARTED_LABEL,
   STUDENT_MAIN_NAV_SECTION,
   STUDENT_NAV_ITEM_ICON_SRC,
   STUDENT_NAV_LOGOUT_ICON_SRC,
@@ -29,6 +31,8 @@ import {
 import { DiagnosticResultsNavItem } from "@/features/student/diagnostic/diagnostic-results-nav-item"
 import { cn } from "@/lib/utils"
 import { resetUser } from "@/lib/analytics/posthog"
+import { startProduktlyTour } from "@/lib/analytics/produktly"
+import { PRODUKTLY_PRODUCT_TOUR_ID } from "@/lib/analytics/produktly-widgets"
 import { prefetchExplanationList } from "@/features/student/explanation-detail/prefetch-explanation-list"
 import { prefetchPrepTestPool } from "@/features/student/preptests/prefetch-prep-test-pool"
 import { clearStudentSessionCaches } from "@/lib/auth/clear-student-session-caches"
@@ -281,6 +285,24 @@ function StudentAppSidebar({
 
         <nav className="student-sidebar-nav flex min-h-0 flex-1 flex-col overflow-y-auto">
           <div className="student-sidebar-menu shrink-0">
+            {PRODUKTLY_PRODUCT_TOUR_ID > 0 ? (
+              <button
+                type="button"
+                className="student-sidebar-link w-full"
+                aria-label={STUDENT_GET_STARTED_LABEL}
+                title={STUDENT_GET_STARTED_LABEL}
+                onClick={() => {
+                  startProduktlyTour({
+                    tourId: PRODUKTLY_PRODUCT_TOUR_ID,
+                    clearProgress: true,
+                  })
+                  onMobileClose()
+                }}
+              >
+                <SidebarNavIcon icon={STUDENT_GET_STARTED_ICON} />
+                <span className="student-sidebar-label">{STUDENT_GET_STARTED_LABEL}</span>
+              </button>
+            ) : null}
             <p className="student-sidebar-heading">{STUDENT_MAIN_NAV_SECTION.label}</p>
             <Link
               to={dashboardHref}
