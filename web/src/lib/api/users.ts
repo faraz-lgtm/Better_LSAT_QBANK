@@ -281,6 +281,33 @@ export function createUsersApi(supabase: SupabaseClient) {
       return data.profile
     },
 
+    async trackSignupConversion(input?: {
+      attribution?: Record<string, unknown> | null
+      eventSourceUrl?: string | null
+    }): Promise<{
+      tracked: boolean
+      alreadyTracked?: boolean
+      ineligible?: boolean
+      eventId: string
+      email: string | null
+      attribution: Record<string, unknown> | null
+    }> {
+      const { data, error } = await invokeUsersPost<{
+        tracked: boolean
+        alreadyTracked?: boolean
+        ineligible?: boolean
+        eventId: string
+        email: string | null
+        attribution: Record<string, unknown> | null
+      }>('users-track-signup-conversion', {
+        attribution: input?.attribution ?? null,
+        eventSourceUrl: input?.eventSourceUrl ?? null,
+      })
+      if (error) throw error
+      if (!data) throw new Error('No signup conversion payload returned')
+      return data
+    },
+
     async updateAccountProfile(input: { firstName: string; lastName: string }): Promise<UserProfile> {
       const { data, error } = await invokeUsersPost<{ profile: UserProfile }>('users', {
         action: 'users-update-account-profile',

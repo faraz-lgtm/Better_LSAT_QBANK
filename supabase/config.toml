@@ -682,6 +682,9 @@ verify_jwt = false
 [functions.users-complete-first-login]
 verify_jwt = false
 
+[functions.users-track-signup-conversion]
+verify_jwt = false
+
 [functions.users-update-account-profile]
 verify_jwt = false
 

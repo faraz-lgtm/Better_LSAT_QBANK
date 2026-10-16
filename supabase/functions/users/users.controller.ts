@@ -31,6 +31,33 @@ export async function handleUsersRequest(req: Request): Promise<Response> {
         return json({ profile }, {}, corsHeaders)
       }
 
+      if (action === 'users-track-signup-conversion') {
+        const attribution =
+          body.attribution && typeof body.attribution === 'object' && !Array.isArray(body.attribution)
+            ? (body.attribution as Record<string, unknown>)
+            : null
+        const meta = auth.user.user_metadata as Record<string, unknown> | undefined
+        const userMetadataAttribution =
+          meta?.attribution && typeof meta.attribution === 'object' && !Array.isArray(meta.attribution)
+            ? (meta.attribution as Record<string, unknown>)
+            : null
+        const result = await service.trackSignupConversion({
+          userId: auth.user.id,
+          email: auth.user.email ?? null,
+          attribution,
+          userMetadataAttribution,
+          authCreatedAt: auth.user.created_at || null,
+          eventSourceUrl:
+            typeof body.eventSourceUrl === 'string' ? body.eventSourceUrl : null,
+          clientUserAgent: req.headers.get('user-agent'),
+          clientIpAddress:
+            req.headers.get('cf-connecting-ip') ??
+            req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+            null,
+        })
+        return json(result, {}, corsHeaders)
+      }
+
       if (action === 'users-update-account-profile') {
         const profile = await service.updateAccountProfile(auth.user.id, {
           ...(typeof body.firstName === 'string' ? { firstName: body.firstName } : {}),

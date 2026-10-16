@@ -5,6 +5,7 @@ export const AnalyticsEvent = {
   signupStarted: 'signup_started',
   userLoggedIn: 'user_logged_in',
   authCompleted: 'auth_completed',
+  freeDiagnosticSignup: 'free_diagnostic_signup',
   onboardingCompleted: 'onboarding_completed',
   diagnosticStarted: 'diagnostic_started',
   diagnosticCompleted: 'diagnostic_completed',
@@ -25,7 +26,7 @@ function getToken(): string {
 function getHost(): string {
   return (
     (import.meta.env.VITE_PUBLIC_POSTHOG_HOST as string | undefined)?.trim() ||
-    'https://e.bettermcat.com'
+    'https://us.i.posthog.com'
   )
 }
 

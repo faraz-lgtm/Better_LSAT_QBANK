@@ -2,10 +2,8 @@ import { useEffect, useMemo, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import type { EmailOtpType } from "@supabase/supabase-js"
 
-import {
-  consumePendingFreeDiagnosticSignup,
-  trackFreeDiagnosticSignup,
-} from "@/lib/analytics/gtm"
+import { readAttribution } from "@/lib/analytics/attribution"
+import { trackFreeDiagnosticSignupAndWait } from "@/lib/analytics/gtm"
 import { AnalyticsEvent, captureEvent } from "@/lib/analytics/posthog"
 import { createAuthApi } from "@/lib/api/auth"
 import { createUsersApi } from "@/lib/api/users"
@@ -139,8 +137,8 @@ function AuthCallbackPage() {
           stripAuthParamsFromUrl()
         }
 
-        const hasSession = await authApi.hasSession()
-        if (!hasSession) {
+        const session = await authApi.getSession()
+        if (!session?.user) {
           throw new Error("Auth session not found. Please request a new login link from the same browser.")
         }
 
@@ -150,13 +148,32 @@ function AuthCallbackPage() {
         }
 
         captureEvent(AnalyticsEvent.authCompleted)
-        if (consumePendingFreeDiagnosticSignup()) {
-          trackFreeDiagnosticSignup()
+
+        let conversionWait: Promise<void> = Promise.resolve()
+        try {
+          const conversion = await usersApi.trackSignupConversion({
+            attribution: readAttribution(),
+            eventSourceUrl: window.location.href,
+          })
+          if (conversion.tracked) {
+            const payload = {
+              user_email: conversion.email ?? session.user.email ?? null,
+              user_id: session.user.id,
+              event_id: conversion.eventId,
+              ...(conversion.attribution ?? {}),
+            }
+            captureEvent(AnalyticsEvent.freeDiagnosticSignup, payload)
+            conversionWait = trackFreeDiagnosticSignupAndWait(payload, 300)
+          }
+        } catch {
+          // Conversion tracking must not block auth completion.
         }
-        navigate(
-          resolvePendingCheckoutDestination(await fetchPostAuthDestination(usersApi)),
-          { replace: true },
+
+        const destination = resolvePendingCheckoutDestination(
+          await fetchPostAuthDestination(usersApi),
         )
+        await conversionWait
+        navigate(destination, { replace: true })
       } catch (callbackError) {
         if (!isActive) return
         setError(

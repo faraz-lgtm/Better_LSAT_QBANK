@@ -204,6 +204,33 @@ export async function handleUsersPostMicro(req: Request, slug: string): Promise<
       return json({ profile }, {}, corsHeaders)
     }
 
+    if (action === 'users-track-signup-conversion') {
+      const attribution =
+        body.attribution && typeof body.attribution === 'object' && !Array.isArray(body.attribution)
+          ? (body.attribution as Record<string, unknown>)
+          : null
+      const meta = user.user_metadata as Record<string, unknown> | undefined
+      const userMetadataAttribution =
+        meta?.attribution && typeof meta.attribution === 'object' && !Array.isArray(meta.attribution)
+          ? (meta.attribution as Record<string, unknown>)
+          : null
+      const result = await service.trackSignupConversion({
+        userId: user.id,
+        email: user.email ?? null,
+        attribution,
+        userMetadataAttribution,
+        authCreatedAt: user.created_at || null,
+        eventSourceUrl:
+          typeof body.eventSourceUrl === 'string' ? body.eventSourceUrl : null,
+        clientUserAgent: req.headers.get('user-agent'),
+        clientIpAddress:
+          req.headers.get('cf-connecting-ip') ??
+          req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+          null,
+      })
+      return json(result, {}, corsHeaders)
+    }
+
     if (action === 'users-save-onboarding') {
       const firstName = typeof body.firstName === 'string' ? body.firstName : ''
       const lastName = typeof body.lastName === 'string' ? body.lastName : ''

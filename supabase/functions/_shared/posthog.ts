@@ -17,7 +17,7 @@ export async function capturePostHogEvent(input: CapturePostHogEventInput): Prom
   const token = getEnv('POSTHOG_PROJECT_TOKEN')?.trim()
   if (!token || !input.distinctId.trim() || !input.event.trim()) return false
 
-  const host = (getEnv('POSTHOG_HOST')?.trim() || 'https://e.bettermcat.com').replace(/\/$/, '')
+  const host = (getEnv('POSTHOG_HOST')?.trim() || 'https://us.i.posthog.com').replace(/\/$/, '')
   const fetchImpl = input.fetchImpl ?? fetch
 
   try {

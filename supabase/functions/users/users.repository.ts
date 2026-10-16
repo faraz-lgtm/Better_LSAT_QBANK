@@ -5,6 +5,8 @@ import type { ProfileUpsertInput } from './users.mapper.ts'
 
 export type LawHubInviteStatus = 'skipped' | 'invited' | 'failed'
 
+export type SignupAttribution = Record<string, unknown>
+
 export type ProfileRow = {
   id: string
   email: string | null
@@ -21,6 +23,8 @@ export type ProfileRow = {
   lawhub_invite_last_error: string | null
   lawhub_invited_at: string | null
   is_first_time_login: boolean
+  signup_conversion_tracked_at: string | null
+  signup_attribution: SignupAttribution | null
   created_at: string
   updated_at: string
 }
@@ -181,6 +185,59 @@ export function createUsersRepository(client: SupabaseClient) {
             id: userId,
             role: 'student',
             is_first_time_login: isFirstTimeLogin,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'id' },
+        )
+        .select()
+        .single()
+      if (error) throw error
+      return data as ProfileRow
+    },
+
+    async getAuthUserCreatedAt(userId: string): Promise<string | null> {
+      const { data, error } = await client.auth.admin.getUserById(userId)
+      if (error) throw error
+      return data.user?.created_at ?? null
+    },
+
+    async claimSignupConversion(input: {
+      userId: string
+      email: string | null
+      attribution: SignupAttribution | null
+      trackedAt: string
+    }): Promise<ProfileRow> {
+      const existing = await this.getProfileById(input.userId)
+      if (existing) {
+        const { data, error } = await client
+          .from('profiles')
+          .update({
+            email: input.email ?? existing.email,
+            signup_conversion_tracked_at: input.trackedAt,
+            signup_attribution: input.attribution,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', input.userId)
+          .is('signup_conversion_tracked_at', null)
+          .select()
+          .maybeSingle()
+        if (error) throw error
+        if (data) return data as ProfileRow
+        const refreshed = await this.getProfileById(input.userId)
+        if (!refreshed) throw new Error('Profile missing after signup conversion claim')
+        return refreshed
+      }
+
+      const { data, error } = await client
+        .from('profiles')
+        .upsert(
+          {
+            id: input.userId,
+            email: input.email,
+            role: 'student',
+            is_first_time_login: true,
+            signup_conversion_tracked_at: input.trackedAt,
+            signup_attribution: input.attribution,
             updated_at: new Date().toISOString(),
           },
           { onConflict: 'id' },

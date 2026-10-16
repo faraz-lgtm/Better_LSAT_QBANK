@@ -45,7 +45,7 @@ describe('posthog analytics helper', () => {
 
   it('initPostHog initializes and helpers call through', async () => {
     vi.stubEnv('VITE_PUBLIC_POSTHOG_PROJECT_TOKEN', 'phc_test')
-    vi.stubEnv('VITE_PUBLIC_POSTHOG_HOST', 'https://e.bettermcat.com')
+    vi.stubEnv('VITE_PUBLIC_POSTHOG_HOST', 'https://us.i.posthog.com')
     const {
       initPostHog,
       captureEvent,
@@ -62,7 +62,7 @@ describe('posthog analytics helper', () => {
     expect(client).not.toBeNull()
     expect(isPostHogReady()).toBe(true)
     expect(init).toHaveBeenCalledWith('phc_test', {
-      api_host: 'https://e.bettermcat.com',
+      api_host: 'https://us.i.posthog.com',
       defaults: '2026-05-30',
     })
 

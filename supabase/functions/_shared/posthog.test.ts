@@ -25,7 +25,7 @@ Deno.test('capturePostHogEvent posts capture payload', async () => {
     properties: { plan: 'monthly' },
     getEnv: (key) => {
       if (key === 'POSTHOG_PROJECT_TOKEN') return 'phc_test'
-      if (key === 'POSTHOG_HOST') return 'https://e.bettermcat.com'
+      if (key === 'POSTHOG_HOST') return 'https://us.i.posthog.com'
       return undefined
     },
     fetchImpl: async (input, init) => {
@@ -36,7 +36,7 @@ Deno.test('capturePostHogEvent posts capture payload', async () => {
     },
   })
   assertEquals(ok, true)
-  assertEquals(url, 'https://e.bettermcat.com/capture/')
+  assertEquals(url, 'https://us.i.posthog.com/capture/')
   assertEquals(body.api_key, 'phc_test')
   assertEquals(body.event, 'subscription_completed')
   assertEquals(body.distinct_id, 'u-1')

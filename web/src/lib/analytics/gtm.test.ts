@@ -1,23 +1,21 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
-  GTM_PENDING_FREE_DIAGNOSTIC_SIGNUP_KEY,
-  consumePendingFreeDiagnosticSignup,
-  markPendingFreeDiagnosticSignup,
   pushDataLayer,
   trackFreeDiagnosticSignup,
+  trackFreeDiagnosticSignupAndWait,
   trackPurchase,
 } from "./gtm"
 
 describe("gtm helpers", () => {
   beforeEach(() => {
     window.dataLayer = []
-    window.sessionStorage.clear()
+    vi.useFakeTimers()
   })
 
   afterEach(() => {
     window.dataLayer = []
-    window.sessionStorage.clear()
+    vi.useRealTimers()
   })
 
   it("pushDataLayer appends to window.dataLayer", () => {
@@ -25,9 +23,32 @@ describe("gtm helpers", () => {
     expect(window.dataLayer).toEqual([{ event: "test_event", foo: 1 }])
   })
 
-  it("trackFreeDiagnosticSignup pushes the expected event", () => {
-    trackFreeDiagnosticSignup()
-    expect(window.dataLayer).toEqual([{ event: "free_diagnostic_signup" }])
+  it("trackFreeDiagnosticSignup pushes email and attribution", () => {
+    trackFreeDiagnosticSignup({
+      user_email: "a@b.com",
+      user_id: "u1",
+      event_id: "signup:u1",
+      gclid: "g-1",
+    })
+    expect(window.dataLayer).toEqual([
+      {
+        event: "free_diagnostic_signup",
+        user_email: "a@b.com",
+        user_id: "u1",
+        event_id: "signup:u1",
+        gclid: "g-1",
+      },
+    ])
+  })
+
+  it("trackFreeDiagnosticSignupAndWait resolves on timeout", async () => {
+    const pending = trackFreeDiagnosticSignupAndWait({ user_id: "u1" }, 300)
+    expect(window.dataLayer?.[0]).toMatchObject({
+      event: "free_diagnostic_signup",
+      user_id: "u1",
+    })
+    await vi.advanceTimersByTimeAsync(300)
+    await pending
   })
 
   it("trackPurchase pushes purchase with CAD currency", () => {
@@ -40,13 +61,5 @@ describe("gtm helpers", () => {
         transaction_id: "cs_test_123",
       },
     ])
-  })
-
-  it("mark and consume pending free diagnostic signup flag", () => {
-    expect(consumePendingFreeDiagnosticSignup()).toBe(false)
-    markPendingFreeDiagnosticSignup()
-    expect(window.sessionStorage.getItem(GTM_PENDING_FREE_DIAGNOSTIC_SIGNUP_KEY)).toBe("1")
-    expect(consumePendingFreeDiagnosticSignup()).toBe(true)
-    expect(consumePendingFreeDiagnosticSignup()).toBe(false)
   })
 })

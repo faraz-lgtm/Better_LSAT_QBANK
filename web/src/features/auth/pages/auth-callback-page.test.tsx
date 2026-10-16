@@ -3,23 +3,31 @@ import { render, screen } from "@testing-library/react"
 import { MemoryRouter, Route, Routes } from "react-router-dom"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { store } from "@/app/store"
-import { GTM_PENDING_FREE_DIAGNOSTIC_SIGNUP_KEY } from "@/lib/analytics/gtm"
 import { resetEnsureStudentSessionInflight } from "@/features/student-session/ensure-student-session"
 import { resetStudentSession } from "@/features/student-session/studentSessionSlice"
 import { AuthCallbackPage } from "./auth-callback-page"
 
-const trackFreeDiagnosticSignupMock = vi.fn()
+const trackFreeDiagnosticSignupAndWaitMock = vi.fn(
+  async (_payload?: unknown, _timeoutMs?: number) => {},
+)
 
 vi.mock("@/lib/analytics/gtm", async () => {
   const actual = await vi.importActual<typeof import("@/lib/analytics/gtm")>("@/lib/analytics/gtm")
   return {
     ...actual,
-    trackFreeDiagnosticSignup: (...args: unknown[]) => trackFreeDiagnosticSignupMock(...args),
+    trackFreeDiagnosticSignupAndWait: trackFreeDiagnosticSignupAndWaitMock,
   }
 })
 
+vi.mock("@/lib/analytics/attribution", () => ({
+  readAttribution: () => ({ gclid: "test-gclid" }),
+}))
+
 vi.mock("@/lib/analytics/posthog", () => ({
-  AnalyticsEvent: { authCompleted: "auth_completed" },
+  AnalyticsEvent: {
+    authCompleted: "auth_completed",
+    freeDiagnosticSignup: "free_diagnostic_signup",
+  },
   captureEvent: vi.fn(),
 }))
 
@@ -56,7 +64,8 @@ describe("AuthCallbackPage", () => {
     authMock.verifyOtp.mockReset()
     authMock.getSession.mockReset()
     invokeMock.mockReset()
-    trackFreeDiagnosticSignupMock.mockReset()
+    trackFreeDiagnosticSignupAndWaitMock.mockReset()
+    trackFreeDiagnosticSignupAndWaitMock.mockImplementation(async () => {})
     store.dispatch(resetStudentSession())
     resetEnsureStudentSessionInflight()
     sessionStorage.clear()
@@ -65,13 +74,38 @@ describe("AuthCallbackPage", () => {
     window.history.pushState({}, "", "/")
   })
 
+  function mockUsersInvoke(options?: {
+    tracked?: boolean
+    alreadyTracked?: boolean
+    profile?: Record<string, unknown> | null
+  }) {
+    const tracked = options?.tracked ?? false
+    const profile = options?.profile === undefined ? null : options.profile
+    invokeMock.mockImplementation((_functionName: string, invokeOptions?: { body?: Record<string, unknown>; method?: string }) => {
+      const action = invokeOptions?.body?.action
+      if (action === "users-track-signup-conversion") {
+        return Promise.resolve({
+          data: {
+            tracked,
+            alreadyTracked: options?.alreadyTracked ?? false,
+            eventId: "signup:u1",
+            email: "u1@example.com",
+            attribution: { gclid: "test-gclid" },
+          },
+          error: null,
+        })
+      }
+      return Promise.resolve({ data: { profile }, error: null })
+    })
+  }
+
   it("exchanges auth code and redirects to onboarding when session exists", async () => {
     authMock.exchangeCodeForSession.mockResolvedValue({ error: null })
     authMock.getSession.mockResolvedValue({
-      data: { session: { user: { id: "u1" } } },
+      data: { session: { user: { id: "u1", email: "u1@example.com" } } },
       error: null,
     })
-    invokeMock.mockResolvedValue({ data: { profile: null }, error: null })
+    mockUsersInvoke({ tracked: false })
     window.history.pushState({}, "", "/auth/callback?code=test-code")
 
     renderCallback("/auth/callback?code=test-code")
@@ -98,10 +132,22 @@ describe("AuthCallbackPage", () => {
   it("redirects a returning user to the selected paid checkout plan", async () => {
     authMock.exchangeCodeForSession.mockResolvedValue({ error: null })
     authMock.getSession.mockResolvedValue({
-      data: { session: { user: { id: "u1" } } },
+      data: { session: { user: { id: "u1", email: "u1@example.com" } } },
       error: null,
     })
-    invokeMock.mockImplementation((functionName: string) => {
+    invokeMock.mockImplementation((functionName: string, invokeOptions?: { body?: Record<string, unknown> }) => {
+      if (invokeOptions?.body?.action === "users-track-signup-conversion") {
+        return Promise.resolve({
+          data: {
+            tracked: false,
+            alreadyTracked: true,
+            eventId: "signup:u1",
+            email: "u1@example.com",
+            attribution: null,
+          },
+          error: null,
+        })
+      }
       if (functionName === "users") {
         return Promise.resolve({
           data: {
@@ -138,10 +184,10 @@ describe("AuthCallbackPage", () => {
   it("completes auth under React StrictMode with a single PKCE exchange", async () => {
     authMock.exchangeCodeForSession.mockResolvedValue({ error: null })
     authMock.getSession.mockResolvedValue({
-      data: { session: { user: { id: "u1" } } },
+      data: { session: { user: { id: "u1", email: "u1@example.com" } } },
       error: null,
     })
-    invokeMock.mockResolvedValue({ data: { profile: null }, error: null })
+    mockUsersInvoke({ tracked: false })
     window.history.pushState({}, "", "/auth/callback?code=strict-code")
 
     render(
@@ -175,61 +221,67 @@ describe("AuthCallbackPage", () => {
     expect(authMock.exchangeCodeForSession).not.toHaveBeenCalled()
   })
 
-  it("fires free_diagnostic_signup when pending signup flag is set", async () => {
+  it("fires free_diagnostic_signup when signup conversion is tracked", async () => {
     authMock.exchangeCodeForSession.mockResolvedValue({ error: null })
     authMock.getSession.mockResolvedValue({
-      data: { session: { user: { id: "u1" } } },
+      data: { session: { user: { id: "u1", email: "u1@example.com" } } },
       error: null,
     })
-    invokeMock.mockResolvedValue({ data: { profile: null }, error: null })
-    sessionStorage.setItem(GTM_PENDING_FREE_DIAGNOSTIC_SIGNUP_KEY, "1")
+    mockUsersInvoke({ tracked: true })
     window.history.pushState({}, "", "/auth/callback?code=gtm-code")
 
     renderCallback("/auth/callback?code=gtm-code")
 
     expect(await screen.findByText(/onboarding view/i)).toBeInTheDocument()
-    expect(trackFreeDiagnosticSignupMock).toHaveBeenCalledTimes(1)
-    expect(sessionStorage.getItem(GTM_PENDING_FREE_DIAGNOSTIC_SIGNUP_KEY)).toBeNull()
+    expect(trackFreeDiagnosticSignupAndWaitMock).toHaveBeenCalledTimes(1)
+    expect(trackFreeDiagnosticSignupAndWaitMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        user_email: "u1@example.com",
+        user_id: "u1",
+        event_id: "signup:u1",
+        gclid: "test-gclid",
+      }),
+      300,
+    )
   })
 
-  it("does not fire free_diagnostic_signup without pending flag", async () => {
+  it("does not fire free_diagnostic_signup when conversion already tracked", async () => {
     authMock.exchangeCodeForSession.mockResolvedValue({ error: null })
     authMock.getSession.mockResolvedValue({
-      data: { session: { user: { id: "u1" } } },
+      data: { session: { user: { id: "u1", email: "u1@example.com" } } },
       error: null,
     })
-    invokeMock.mockResolvedValue({ data: { profile: null }, error: null })
+    mockUsersInvoke({ tracked: false, alreadyTracked: true })
     window.history.pushState({}, "", "/auth/callback?code=no-gtm-code")
 
     renderCallback("/auth/callback?code=no-gtm-code")
 
     expect(await screen.findByText(/onboarding view/i)).toBeInTheDocument()
-    expect(trackFreeDiagnosticSignupMock).not.toHaveBeenCalled()
+    expect(trackFreeDiagnosticSignupAndWaitMock).not.toHaveBeenCalled()
   })
 
   it("does not fire free_diagnostic_signup on recovery flow", async () => {
     authMock.exchangeCodeForSession.mockResolvedValue({ error: null })
     authMock.getSession.mockResolvedValue({
-      data: { session: { user: { id: "u1" } } },
+      data: { session: { user: { id: "u1", email: "u1@example.com" } } },
       error: null,
     })
-    sessionStorage.setItem(GTM_PENDING_FREE_DIAGNOSTIC_SIGNUP_KEY, "1")
+    mockUsersInvoke({ tracked: true })
     window.history.pushState({}, "", "/auth/callback?code=recovery-code&type=recovery")
 
     renderCallback("/auth/callback?code=recovery-code&type=recovery")
 
     expect(await screen.findByText(/reset password view/i)).toBeInTheDocument()
-    expect(trackFreeDiagnosticSignupMock).not.toHaveBeenCalled()
-    expect(sessionStorage.getItem(GTM_PENDING_FREE_DIAGNOSTIC_SIGNUP_KEY)).toBe("1")
+    expect(trackFreeDiagnosticSignupAndWaitMock).not.toHaveBeenCalled()
   })
 
   it("verifies token_hash magic link and redirects to onboarding", async () => {
     authMock.verifyOtp.mockResolvedValue({ error: null })
     authMock.getSession.mockResolvedValue({
-      data: { session: { user: { id: "u1" } } },
+      data: { session: { user: { id: "u1", email: "u1@example.com" } } },
       error: null,
     })
-    invokeMock.mockResolvedValue({ data: { profile: null }, error: null })
+    mockUsersInvoke({ tracked: false })
     window.history.pushState({}, "", "/auth/callback?token_hash=ml-hash&type=magiclink")
 
     renderCallback("/auth/callback?token_hash=ml-hash&type=magiclink")
@@ -264,10 +316,10 @@ describe("AuthCallbackPage", () => {
   it("completes token_hash auth under React StrictMode with a single verifyOtp", async () => {
     authMock.verifyOtp.mockResolvedValue({ error: null })
     authMock.getSession.mockResolvedValue({
-      data: { session: { user: { id: "u1" } } },
+      data: { session: { user: { id: "u1", email: "u1@example.com" } } },
       error: null,
     })
-    invokeMock.mockResolvedValue({ data: { profile: null }, error: null })
+    mockUsersInvoke({ tracked: false })
     window.history.pushState({}, "", "/auth/callback?token_hash=strict-hash&type=magiclink")
 
     render(

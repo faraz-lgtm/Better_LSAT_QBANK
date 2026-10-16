@@ -10,10 +10,12 @@ import App from './App.tsx'
 import { store } from '@/app/store'
 import { AppErrorScreen } from '@/features/app-shell/app-error-screen'
 import { ThemeProvider } from '@/features/theme/theme-provider'
+import { captureAttributionFromUrl } from '@/lib/analytics/attribution'
 import { initPostHog, posthog } from '@/lib/analytics/posthog'
 import { PostHogAuthBridge } from '@/lib/analytics/posthog-auth-bridge'
 import { ProduktlyAuthBridge } from '@/lib/analytics/produktly-auth-bridge'
 
+captureAttributionFromUrl()
 const posthogClient = initPostHog()
 
 createRoot(document.getElementById('root')!).render(

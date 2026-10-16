@@ -22,10 +22,17 @@ export function createAuthApi(supabase: SupabaseClient) {
       return Boolean(data?.exists)
     },
 
-    async sendMagicLink(email: string, redirectTo: string): Promise<void> {
+    async sendMagicLink(
+      email: string,
+      redirectTo: string,
+      data?: Record<string, unknown>,
+    ): Promise<void> {
       const { error } = await supabase.auth.signInWithOtp({
         email,
-        options: { emailRedirectTo: redirectTo },
+        options: {
+          emailRedirectTo: redirectTo,
+          ...(data && Object.keys(data).length > 0 ? { data } : {}),
+        },
       })
       if (error) throw error
     },
@@ -38,10 +45,16 @@ export function createAuthApi(supabase: SupabaseClient) {
       if (error) throw error
     },
 
-    async signInWithGoogle(redirectTo: string): Promise<void> {
+    async signInWithGoogle(
+      redirectTo: string,
+      data?: Record<string, unknown>,
+    ): Promise<void> {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
-        options: { redirectTo },
+        options: {
+          redirectTo,
+          ...(data && Object.keys(data).length > 0 ? { data } : {}),
+        },
       })
       if (error) throw error
     },

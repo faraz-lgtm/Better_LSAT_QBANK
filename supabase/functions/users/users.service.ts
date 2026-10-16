@@ -14,8 +14,11 @@ import {
   joinLawHubFullName,
   requireLawHubNameParts,
 } from '../_shared/lawhub-student-identity.ts'
+import { capturePostHogEvent } from '../_shared/posthog.ts'
+import { sendMetaCompleteRegistration } from '../_shared/meta-capi.ts'
 import { parseStripeEnv } from '../_shared/stripe-env.ts'
 import type { LsacStudentPayload } from './users.mapper.ts'
+import type { SignupAttribution } from './users.repository.ts'
 import {
   mapLawHubStudentRecordToProfileUpsert,
   mapLsacStudentToProfileUpsert,
@@ -108,6 +111,57 @@ export type LawHubCheckoutInviteContext = {
 export type LawHubCheckoutInviteResult = {
   invited: boolean
   reason?: 'already_linked' | 'no_email' | 'no_name' | 'lawhub_not_configured' | 'invite_failed'
+}
+
+export type TrackSignupConversionInput = {
+  userId: string
+  email?: string | null
+  /** Cookie attribution from the callback browser (same-browser path). */
+  attribution?: SignupAttribution | null
+  /** Auth user_metadata.attribution (cross-browser magic-link path). */
+  userMetadataAttribution?: SignupAttribution | null
+  /** Prefer auth.users.created_at when JWT omits it. */
+  authCreatedAt?: string | null
+  eventSourceUrl?: string | null
+  clientUserAgent?: string | null
+  clientIpAddress?: string | null
+}
+
+export type TrackSignupConversionResult = {
+  tracked: boolean
+  alreadyTracked?: boolean
+  ineligible?: boolean
+  eventId: string
+  email: string | null
+  attribution: SignupAttribution | null
+}
+
+const SIGNUP_CONVERSION_WINDOW_MS = 2 * 60 * 1000
+
+export function mergeSignupAttribution(
+  cookieAttr: SignupAttribution | null | undefined,
+  metadataAttr: SignupAttribution | null | undefined,
+): SignupAttribution | null {
+  const merged: SignupAttribution = {
+    ...(typeof metadataAttr === 'object' && metadataAttr ? metadataAttr : {}),
+    ...(typeof cookieAttr === 'object' && cookieAttr ? cookieAttr : {}),
+  }
+  return Object.keys(merged).length > 0 ? merged : null
+}
+
+export function isSignupConversionEligible(input: {
+  authCreatedAt: string | null | undefined
+  isFirstTimeLogin: boolean | null | undefined
+  nowMs?: number
+}): boolean {
+  const now = input.nowMs ?? Date.now()
+  if (input.authCreatedAt) {
+    const createdMs = Date.parse(input.authCreatedAt)
+    if (Number.isFinite(createdMs) && now - createdMs <= SIGNUP_CONVERSION_WINDOW_MS) {
+      return true
+    }
+  }
+  return input.isFirstTimeLogin === true || input.isFirstTimeLogin == null
 }
 
 function resolveLawHub(
@@ -318,6 +372,98 @@ export function createUsersService(deps: UsersServiceDeps) {
 
     async markFirstTimeLoginComplete(userId: string) {
       return await deps.repository.markFirstTimeLogin(userId, false)
+    },
+
+    async trackSignupConversion(
+      input: TrackSignupConversionInput,
+    ): Promise<TrackSignupConversionResult> {
+      const eventId = `signup:${input.userId}`
+      const existing = await deps.repository.getProfileById(input.userId)
+      if (existing?.signup_conversion_tracked_at) {
+        return {
+          tracked: false,
+          alreadyTracked: true,
+          eventId,
+          email: existing.email ?? input.email ?? null,
+          attribution: existing.signup_attribution,
+        }
+      }
+
+      let authCreatedAt = input.authCreatedAt?.trim() || null
+      if (!authCreatedAt) {
+        try {
+          authCreatedAt = await deps.repository.getAuthUserCreatedAt(input.userId)
+        } catch {
+          authCreatedAt = null
+        }
+      }
+
+      const eligible = isSignupConversionEligible({
+        authCreatedAt,
+        isFirstTimeLogin: existing?.is_first_time_login ?? true,
+      })
+      if (!eligible) {
+        return {
+          tracked: false,
+          ineligible: true,
+          eventId,
+          email: existing?.email ?? input.email ?? null,
+          attribution: existing?.signup_attribution ?? null,
+        }
+      }
+
+      const attribution = mergeSignupAttribution(
+        input.attribution,
+        input.userMetadataAttribution,
+      )
+      const trackedAt = new Date().toISOString()
+      const email = input.email?.trim() || existing?.email || null
+
+      const claimed = await deps.repository.claimSignupConversion({
+        userId: input.userId,
+        email,
+        attribution,
+        trackedAt,
+      })
+
+      // Another request claimed first (conditional update matched 0 rows).
+      if (claimed.signup_conversion_tracked_at !== trackedAt) {
+        return {
+          tracked: false,
+          alreadyTracked: true,
+          eventId,
+          email: claimed.email ?? email,
+          attribution: claimed.signup_attribution,
+        }
+      }
+
+      await sendMetaCompleteRegistration({
+        email,
+        userId: input.userId,
+        eventId,
+        eventSourceUrl: input.eventSourceUrl,
+        clientUserAgent: input.clientUserAgent,
+        clientIpAddress: input.clientIpAddress,
+        attribution,
+      })
+
+      await capturePostHogEvent({
+        distinctId: input.userId,
+        event: 'free_diagnostic_signup',
+        properties: {
+          ...(attribution ?? {}),
+          user_id: input.userId,
+          event_id: eventId,
+          email: email ?? undefined,
+        },
+      })
+
+      return {
+        tracked: true,
+        eventId,
+        email: claimed.email ?? email,
+        attribution: claimed.signup_attribution ?? attribution,
+      }
     },
 
     async requireAdmin(userId: string) {

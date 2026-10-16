@@ -8,7 +8,11 @@ import type {
   ProfileRow,
   UsersRepository,
 } from './users.repository.ts'
-import { createUsersService } from './users.service.ts'
+import {
+  createUsersService,
+  isSignupConversionEligible,
+  mergeSignupAttribution,
+} from './users.service.ts'
 
 /** Test doubles often only mock getStudentsByEmail; wire findStudentsByEmail for service code. */
 function withEmailLookup(
@@ -84,6 +88,8 @@ function mockRepo(overrides: Record<string, unknown> = {}): UsersRepository {
     lawhub_invite_last_error: null,
     lawhub_invited_at: null,
     is_first_time_login: true,
+    signup_conversion_tracked_at: null,
+    signup_attribution: null,
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',
   }
@@ -122,6 +128,18 @@ function mockRepo(overrides: Record<string, unknown> = {}): UsersRepository {
     markFirstTimeLogin:
       (overrides.markFirstTimeLogin as UsersRepository['markFirstTimeLogin']) ??
       (async (userId, isFirstTimeLogin) => ({ ...baseRow, id: userId, is_first_time_login: isFirstTimeLogin })),
+    getAuthUserCreatedAt:
+      (overrides.getAuthUserCreatedAt as UsersRepository['getAuthUserCreatedAt']) ??
+      (async () => new Date().toISOString()),
+    claimSignupConversion:
+      (overrides.claimSignupConversion as UsersRepository['claimSignupConversion']) ??
+      (async (input) => ({
+        ...baseRow,
+        id: input.userId,
+        email: input.email,
+        signup_conversion_tracked_at: input.trackedAt,
+        signup_attribution: input.attribution,
+      })),
     getStudyPreferencesByUserId:
       (overrides.getStudyPreferencesByUserId as UsersRepository['getStudyPreferencesByUserId']) ??
       (async () => null),
@@ -1727,4 +1745,176 @@ Deno.test('autoInviteLawHubAfterCheckout skips without throwing when name is mis
     assertEquals(invited, false)
     assertEquals(inviteOutcome, 'failed')
   })
+})
+
+Deno.test('mergeSignupAttribution prefers cookie over metadata', () => {
+  const merged = mergeSignupAttribution(
+    { gclid: 'cookie-gclid', utm_source: 'google' },
+    { gclid: 'meta-gclid', fbclid: 'fb-1' },
+  )
+  assertEquals(merged?.gclid, 'cookie-gclid')
+  assertEquals(merged?.fbclid, 'fb-1')
+  assertEquals(merged?.utm_source, 'google')
+})
+
+Deno.test('isSignupConversionEligible accepts recent created_at', () => {
+  const now = Date.parse('2026-10-17T12:00:00Z')
+  assertEquals(
+    isSignupConversionEligible({
+      authCreatedAt: '2026-10-17T11:59:00Z',
+      isFirstTimeLogin: false,
+      nowMs: now,
+    }),
+    true,
+  )
+  assertEquals(
+    isSignupConversionEligible({
+      authCreatedAt: '2026-10-17T11:50:00Z',
+      isFirstTimeLogin: false,
+      nowMs: now,
+    }),
+    false,
+  )
+  assertEquals(
+    isSignupConversionEligible({
+      authCreatedAt: '2026-10-17T11:50:00Z',
+      isFirstTimeLogin: true,
+      nowMs: now,
+    }),
+    true,
+  )
+})
+
+Deno.test('trackSignupConversion claims once and returns eventId', async () => {
+  let claimed = false
+  const repository = mockRepo({
+    getProfileById: async (id) => ({
+      id,
+      email: null,
+      full_name: null,
+      first_name: null,
+      last_name: null,
+      phone: null,
+      avatar_url: null,
+      role: 'student',
+      student_coaching_id: null,
+      stripe_customer_id: null,
+      prep_plus_source: null,
+      lawhub_invite_status: null,
+      lawhub_invite_last_error: null,
+      lawhub_invited_at: null,
+      is_first_time_login: true,
+      signup_conversion_tracked_at: null,
+      signup_attribution: null,
+      created_at: '2026-10-17T00:00:00Z',
+      updated_at: '2026-10-17T00:00:00Z',
+    }),
+    claimSignupConversion: async (input) => {
+      claimed = true
+      return {
+        id: input.userId,
+        email: input.email,
+        full_name: null,
+        first_name: null,
+        last_name: null,
+        phone: null,
+        avatar_url: null,
+        role: 'student',
+        student_coaching_id: null,
+        stripe_customer_id: null,
+        prep_plus_source: null,
+        lawhub_invite_status: null,
+        lawhub_invite_last_error: null,
+        lawhub_invited_at: null,
+        is_first_time_login: true,
+        signup_conversion_tracked_at: input.trackedAt,
+        signup_attribution: input.attribution,
+        created_at: '2026-10-17T00:00:00Z',
+        updated_at: input.trackedAt,
+      }
+    },
+  })
+  const service = createUsersService({ repository, lawHub: null })
+  const out = await service.trackSignupConversion({
+    userId: 'user-new',
+    email: 'new@example.com',
+    attribution: { gclid: 'g-1' },
+    userMetadataAttribution: { fbclid: 'f-1' },
+    authCreatedAt: new Date().toISOString(),
+  })
+  assertEquals(claimed, true)
+  assertEquals(out.tracked, true)
+  assertEquals(out.eventId, 'signup:user-new')
+  assertEquals(out.email, 'new@example.com')
+  assertEquals(out.attribution?.gclid, 'g-1')
+  assertEquals(out.attribution?.fbclid, 'f-1')
+})
+
+Deno.test('trackSignupConversion returns alreadyTracked when claimed', async () => {
+  const repository = mockRepo({
+    getProfileById: async (id) => ({
+      id,
+      email: 'old@example.com',
+      full_name: null,
+      first_name: null,
+      last_name: null,
+      phone: null,
+      avatar_url: null,
+      role: 'student',
+      student_coaching_id: null,
+      stripe_customer_id: null,
+      prep_plus_source: null,
+      lawhub_invite_status: null,
+      lawhub_invite_last_error: null,
+      lawhub_invited_at: null,
+      is_first_time_login: false,
+      signup_conversion_tracked_at: '2026-01-01T00:00:00Z',
+      signup_attribution: { utm_source: 'ads' },
+      created_at: '2026-01-01T00:00:00Z',
+      updated_at: '2026-01-01T00:00:00Z',
+    }),
+  })
+  const service = createUsersService({ repository, lawHub: null })
+  const out = await service.trackSignupConversion({
+    userId: 'user-old',
+    email: 'old@example.com',
+  })
+  assertEquals(out.tracked, false)
+  assertEquals(out.alreadyTracked, true)
+  assertEquals(out.attribution?.utm_source, 'ads')
+})
+
+Deno.test('trackSignupConversion returns ineligible for returning users', async () => {
+  const repository = mockRepo({
+    getProfileById: async (id) => ({
+      id,
+      email: 'return@example.com',
+      full_name: null,
+      first_name: null,
+      last_name: null,
+      phone: null,
+      avatar_url: null,
+      role: 'student',
+      student_coaching_id: null,
+      stripe_customer_id: null,
+      prep_plus_source: null,
+      lawhub_invite_status: null,
+      lawhub_invite_last_error: null,
+      lawhub_invited_at: null,
+      is_first_time_login: false,
+      signup_conversion_tracked_at: null,
+      signup_attribution: null,
+      created_at: '2026-01-01T00:00:00Z',
+      updated_at: '2026-01-01T00:00:00Z',
+    }),
+    getAuthUserCreatedAt: async () => '2026-01-01T00:00:00Z',
+  })
+  const service = createUsersService({ repository, lawHub: null })
+  const out = await service.trackSignupConversion({
+    userId: 'user-return',
+    email: 'return@example.com',
+    authCreatedAt: '2026-01-01T00:00:00Z',
+  })
+  assertEquals(out.tracked, false)
+  assertEquals(out.ineligible, true)
 })
