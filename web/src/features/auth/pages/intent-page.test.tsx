@@ -109,7 +109,7 @@ describe("IntentPage", () => {
     )
 
     expect(screen.getByRole("link", { name: "Upgrade now" })).toBeInTheDocument()
-    expect(screen.queryByRole("link", { name: /\$99/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole("link", { name: /\$124/i })).not.toBeInTheDocument()
   })
 
   it("opens pricing modal when authenticated free user clicks Upgrade now", async () => {
