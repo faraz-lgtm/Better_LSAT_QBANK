@@ -215,10 +215,10 @@ function StudentAppHeader({ onOpenMobileNav, headerActions }: StudentAppHeaderPr
         className={cn(
           STUDENT_SHELL_GUTTER_CLASS,
           STUDENT_PAGE_CONTAINER_CLASS,
-          "student-shell-top-row flex w-full items-center justify-between gap-4",
+          "student-shell-top-row flex w-full items-center gap-2 sm:gap-3",
         )}
       >
-        <div className="flex min-w-0 items-center gap-3">
+        <div className="flex shrink-0 items-center">
           <button
             type="button"
             className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl border border-[color:var(--greyscale-100)] bg-[var(--primary-25)] text-[color:var(--primary)] lg:hidden"
@@ -229,15 +229,15 @@ function StudentAppHeader({ onOpenMobileNav, headerActions }: StudentAppHeaderPr
           </button>
         </div>
 
-        <div className="flex shrink-0 items-center gap-3">
+        <div className="ml-auto flex min-w-0 items-center justify-end gap-2 sm:gap-3">
           {isPremium ? null : headerActions}
 
           <ThemeToggleButton />
 
-          <div ref={profileTriggerRef} className="relative">
+          <div ref={profileTriggerRef} className="relative shrink-0">
             <button
               type="button"
-              className="flex h-[60px] items-center gap-3 overflow-hidden rounded-[20px] px-3 hover:bg-[color:var(--primary-25)]/60"
+              className="flex size-10 items-center justify-center overflow-hidden rounded-xl hover:bg-[color:var(--primary-25)]/60 lg:h-[60px] lg:w-auto lg:gap-3 lg:rounded-[20px] lg:px-3"
               aria-label="Open profile menu"
               aria-haspopup="menu"
               aria-expanded={openProfileMenu}
@@ -250,7 +250,7 @@ function StudentAppHeader({ onOpenMobileNav, headerActions }: StudentAppHeaderPr
                   initials
                 )}
               </span>
-              <span className="hidden min-w-0 flex-col items-start gap-0 text-left sm:flex">
+              <span className="hidden min-w-0 flex-col items-start gap-0 text-left lg:flex">
                 <span className="text-xs font-semibold leading-tight tracking-[0.24px] text-[color:var(--primary-800)]">
                   {displayName}
                 </span>
@@ -261,7 +261,7 @@ function StudentAppHeader({ onOpenMobileNav, headerActions }: StudentAppHeaderPr
               <FigmaIcon
                 name="chevron-down"
                 className={cn(
-                  "hidden size-6 shrink-0 text-[color:var(--primary-800)] sm:block",
+                  "hidden size-6 shrink-0 text-[color:var(--primary-800)] lg:block",
                   openProfileMenu && "rotate-180",
                 )}
                 aria-hidden
@@ -272,7 +272,7 @@ function StudentAppHeader({ onOpenMobileNav, headerActions }: StudentAppHeaderPr
                   <div
                     ref={profileMenuPanelRef}
                     role="menu"
-                    className="fixed z-50 flex w-[min(246px,calc(100vw-16px))] flex-col items-start rounded-[16px] border border-[color:var(--greyscale-100)] bg-[var(--primary-0)] p-3 shadow-[0px_4px_25px_rgba(0,0,0,0.25)]"
+                    className="fixed z-[60] flex w-[min(246px,calc(100vw-16px))] flex-col items-start rounded-[16px] border border-[color:var(--greyscale-100)] bg-[var(--primary-0)] p-3 shadow-[0px_4px_25px_rgba(0,0,0,0.25)]"
                     style={{ top: menuPosition.top, right: menuPosition.right }}
                   >
                     <Link
@@ -312,10 +312,7 @@ function StudentAppHeader({ onOpenMobileNav, headerActions }: StudentAppHeaderPr
           </div>
 
           <span
-            className={cn(
-              "inline-flex h-10 shrink-0 items-center justify-center rounded-[14px] bg-[var(--primary-25)] px-4 text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[color:var(--primary)]",
-              !isPremium && "hidden sm:inline-flex",
-            )}
+            className="hidden h-10 shrink-0 items-center justify-center rounded-[14px] bg-[var(--primary-25)] px-4 text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[color:var(--primary)] lg:inline-flex"
             aria-label={`Plan: ${planLabel}`}
           >
             {planLabel}

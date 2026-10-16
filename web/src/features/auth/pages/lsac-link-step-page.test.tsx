@@ -164,6 +164,48 @@ describe("LsacLinkStepPage", () => {
     expect(pollEntitlementMock).not.toHaveBeenCalled()
   })
 
+  it("shows pending LawHub setup UI for free accounts with preview=1", async () => {
+    getMyProfile.mockResolvedValue(baseProfile)
+    getEntitlementState.mockResolvedValue(unpaidEntitlement)
+
+    renderPage("/app/lsac-link-step?preview=1")
+
+    expect(await screen.findByRole("button", { name: "Activate LawHub" })).toBeInTheDocument()
+    expect(screen.getByText(/coach invite created/i)).toBeInTheDocument()
+    expect(screen.queryByText("App home")).not.toBeInTheDocument()
+  })
+
+  it("shows invite step UI for free accounts with preview=invite", async () => {
+    getMyProfile.mockResolvedValue(baseProfile)
+    getEntitlementState.mockResolvedValue(unpaidEntitlement)
+
+    renderPage("/app/lsac-link-step?preview=invite")
+
+    expect(await screen.findByText(/choose one path/i)).toBeInTheDocument()
+    expect(screen.queryByText("App home")).not.toBeInTheDocument()
+  })
+
+  it("shows pending LawHub setup UI for free accounts with preview=1", async () => {
+    getMyProfile.mockResolvedValue(baseProfile)
+    getEntitlementState.mockResolvedValue(unpaidEntitlement)
+
+    renderPage("/app/lsac-link-step?preview=1")
+
+    expect(await screen.findByRole("button", { name: "Activate LawHub" })).toBeInTheDocument()
+    expect(screen.getByText(/coach invite created/i)).toBeInTheDocument()
+    expect(screen.queryByText("App home")).not.toBeInTheDocument()
+  })
+
+  it("shows invite step UI for free accounts with preview=invite", async () => {
+    getMyProfile.mockResolvedValue(baseProfile)
+    getEntitlementState.mockResolvedValue(unpaidEntitlement)
+
+    renderPage("/app/lsac-link-step?preview=invite")
+
+    expect(await screen.findByText(/choose one path/i)).toBeInTheDocument()
+    expect(screen.queryByText("App home")).not.toBeInTheDocument()
+  })
+
   it("waits for webhook after checkout success before showing LawHub setup", async () => {
     getMyProfile.mockResolvedValue(baseProfile)
     getEntitlementState

@@ -93,13 +93,15 @@ function StatCell({
   value: string
 }) {
   return (
-    <div className="flex h-[36px] items-center gap-[8px]">
-      <span className="flex size-[32px] shrink-0 items-center justify-center rounded-[10px] bg-[var(--greyscale-100)] text-[var(--greyscale-500)]">
+    <div className="flex min-h-[36px] min-w-0 items-start gap-[8px]">
+      <span className="mt-[2px] flex size-[32px] shrink-0 items-center justify-center rounded-[10px] bg-[var(--greyscale-100)] text-[var(--greyscale-500)]">
         {icon}
       </span>
-      <div className="h-[36px]">
+      <div className="min-w-0">
         <p className="text-[12px] font-normal leading-[1.5] tracking-[0.24px] text-[var(--greyscale-500)]">{label}</p>
-        <p className="text-[14px] font-semibold leading-[1.5] tracking-[0.28px] text-[var(--color-student-heading)]">{value}</p>
+        <p className="whitespace-nowrap text-[14px] font-semibold leading-[1.5] tracking-[0.28px] text-[var(--color-student-heading)]">
+          {value}
+        </p>
       </div>
     </div>
   )
@@ -142,15 +144,17 @@ function ContinueDrillCard({
         </div>
 
         <div className="continue-drill-card__body min-w-0 flex-1">
-          <div className="continue-drill-card__title-row flex flex-wrap items-center gap-[12px]">
-            <div
-              className={`continue-drill-card__badge continue-drill-card__badge--inline flex items-center justify-center rounded-[12px] font-bold leading-[1.35] ${sectionBadgeTone(drill.section)}`}
-            >
-              {drill.section}
+          <div className="continue-drill-card__title-row">
+            <div className="continue-drill-card__title-heading">
+              <div
+                className={`continue-drill-card__badge continue-drill-card__badge--inline flex items-center justify-center rounded-[12px] font-bold leading-[1.35] ${sectionBadgeTone(drill.section)}`}
+              >
+                {drill.section}
+              </div>
+              <h3 className="continue-drill-card__title min-w-0 text-[18px] font-bold leading-[1.35] text-[var(--color-student-heading)] sm:text-[20px]">
+                {drill.title}
+              </h3>
             </div>
-            <h3 className="min-w-0 flex-1 text-[18px] font-bold leading-[1.35] text-[var(--color-student-heading)] sm:text-[20px]">
-              {drill.title}
-            </h3>
             <DrillDifficultyStatus
               label={difficultyLabelText}
               filledBars={difficultyFilledBars}
@@ -159,10 +163,12 @@ function ContinueDrillCard({
           </div>
 
           <div className="continue-drill-card__stats mt-[12px]">
-            <StatCell icon={<Target className="size-[16px]" />} label="Progress" value={`${drill.progressPct}%`} />
-            <StatCell icon={<BarChart2 className="size-[16px]" />} label="Questions" value={drill.questions} />
-            <StatCell icon={<Clock className="size-[16px]" />} label="Time" value={drill.timeLabel} />
-            <p className="text-[12px] font-normal leading-[1.5] tracking-[0.24px] text-[var(--greyscale-500)]">
+            <div className="continue-drill-card__metrics">
+              <StatCell icon={<Target className="size-[16px]" />} label="Progress" value={`${drill.progressPct}%`} />
+              <StatCell icon={<BarChart2 className="size-[16px]" />} label="Questions" value={drill.questions} />
+              <StatCell icon={<Clock className="size-[16px]" />} label="Time" value={drill.timeLabel} />
+            </div>
+            <p className="continue-drill-card__last-attempt text-[12px] font-normal leading-[1.5] tracking-[0.24px] text-[var(--greyscale-500)]">
               {lastAttemptPrefix}
               {drill.lastAttempt}
             </p>

@@ -50,8 +50,8 @@ function AuthSplitHeader({
           ) : null}
           {!hideIntentSignIn ? (
             <p className="auth-split-cta">
-              Already have an account?{" "}
-              <Link to="/login" className="font-semibold text-[var(--primary)]">
+              <span>Already have an account?</span>{" "}
+              <Link to="/login" className="auth-split-cta-link font-semibold text-[var(--primary)]">
                 Sign In
               </Link>
             </p>
@@ -80,8 +80,9 @@ function AuthSplitHeader({
         <img src="/betterLSAT_LOGO.png" alt="betterLSAT" className="auth-split-logo" />
       </Link>
       <p className="auth-split-cta">
-        {ctaPrompt}{" "}
-        <Link to={ctaHref!} className="font-semibold text-[#0d47a1]">
+        {ctaPrompt ? <span>{ctaPrompt}</span> : null}
+        {ctaPrompt ? " " : null}
+        <Link to={ctaHref!} className="auth-split-cta-link font-semibold text-[#0d47a1]">
           {ctaLabel}
         </Link>
       </p>

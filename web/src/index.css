@@ -911,11 +911,17 @@ html.student-shell-active #root {
 
 .auth-split-cta {
   margin: 0;
+  min-width: 0;
   font-size: 1rem;
   line-height: 1.5;
   letter-spacing: 0.02em;
   color: #666d80;
   text-align: right;
+  text-wrap: pretty;
+}
+
+.auth-split-cta-link {
+  white-space: nowrap;
 }
 
 .auth-split-main {
@@ -2757,9 +2763,13 @@ html.student-shell-active #root {
   .auth-split-header {
     height: auto;
     min-height: 72px;
+    gap: 0.75rem;
+    padding: 12px 16px;
   }
 
   .auth-split-cta {
+    flex: 1 1 auto;
+    max-width: 11.5rem;
     font-size: 0.875rem;
   }
 
@@ -4195,16 +4205,46 @@ select.ds-input option {
 }
 
 .continue-drill-card__title-row {
-  min-height: 0;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.continue-drill-card__title-heading {
+  display: flex;
+  min-width: 0;
+  width: 100%;
+  align-items: center;
   gap: 12px;
+}
+
+.continue-drill-card__title {
+  flex: 1 1 auto;
+  overflow-wrap: break-word;
 }
 
 .continue-drill-card__stats {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px 16px;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.continue-drill-card__metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 12px 16px;
+}
+
+/* Time (3rd metric) gets a full row so long values like "383h 13m" do not crush. */
+.continue-drill-card__metrics > :nth-child(3) {
+  grid-column: 1 / -1;
+}
+
+.continue-drill-card__last-attempt {
+  margin: 0;
 }
 
 .continue-drill-card__actions {
@@ -4273,11 +4313,28 @@ select.ds-input option {
 
   .continue-drill-card__title-row {
     min-height: 52px;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
     gap: 24px;
   }
 
-  .continue-drill-card__stats {
+  .continue-drill-card__title-heading {
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
+  }
+
+  .continue-drill-card__metrics {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-start;
     gap: 8px 24px;
+  }
+
+  .continue-drill-card__metrics > :nth-child(3) {
+    grid-column: auto;
   }
 
   .continue-drill-card__actions {
@@ -4293,7 +4350,7 @@ select.ds-input option {
 }
 
 @container drill-card (min-width: 48rem) {
-  .continue-drill-card__stats {
+  .continue-drill-card__metrics {
     flex-wrap: nowrap;
   }
 }
