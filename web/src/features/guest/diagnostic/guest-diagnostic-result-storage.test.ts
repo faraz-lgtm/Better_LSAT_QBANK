@@ -104,7 +104,7 @@ describe("guest diagnostic result storage", () => {
   })
 
   it("maps intent titles", () => {
-    expect(getDiagnosticIntentTitle("mini")).toBe("Quick Baseline")
+    expect(getDiagnosticIntentTitle("mini")).toBe("Mini")
     expect(getDiagnosticIntentTitle("quick")).toBe("Full Section")
     expect(getDiagnosticIntentTitle("full")).toBe("Full Section")
   })

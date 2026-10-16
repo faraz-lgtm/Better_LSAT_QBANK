@@ -11,6 +11,18 @@ vi.mock("@/lib/supabase/client", () => ({
   }),
 }))
 
+const { startProduktlyTour } = vi.hoisted(() => ({
+  startProduktlyTour: vi.fn(),
+}))
+
+vi.mock("@/lib/analytics/produktly", () => ({
+  startProduktlyTour: (...args: unknown[]) => startProduktlyTour(...args),
+}))
+
+vi.mock("@/lib/analytics/produktly-widgets", () => ({
+  PRODUKTLY_PRODUCT_TOUR_ID: 11289,
+}))
+
 describe("StudentAppSidebar", () => {
   it("shows premium navigation including diagnostic links", () => {
     render(
@@ -19,6 +31,7 @@ describe("StudentAppSidebar", () => {
       </MemoryRouter>,
     )
 
+    expect(screen.getByRole("button", { name: "Get Started" })).toBeInTheDocument()
     expect(screen.getByRole("link", { name: "Dashboard" })).toBeInTheDocument()
     expect(screen.getByText("DIAGNOSTIC")).toBeInTheDocument()
     expect(screen.getByRole("link", { name: "Diagnostic Test" })).toHaveAttribute("href", "/intent")
@@ -56,6 +69,34 @@ describe("StudentAppSidebar", () => {
     )
 
     expect(screen.getByRole("link", { name: "Dashboard" })).toHaveClass("student-sidebar-link--active")
+  })
+
+  it("places Get Started above MAIN and starts the Produktly tour", async () => {
+    const user = userEvent.setup()
+    const onMobileClose = vi.fn()
+    render(
+      <MemoryRouter initialEntries={["/app"]}>
+        <StudentAppSidebar mobileOpen={false} onMobileClose={onMobileClose} />
+      </MemoryRouter>,
+    )
+
+    const getStarted = screen.getByRole("button", { name: "Get Started" })
+    const mainHeading = screen.getByText("MAIN")
+    const dashboard = screen.getByRole("link", { name: "Dashboard" })
+    expect(
+      getStarted.compareDocumentPosition(mainHeading) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+    expect(
+      mainHeading.compareDocumentPosition(dashboard) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+    expect(getStarted.querySelector('img[src="/nav/rocket.svg"]')).toBeTruthy()
+
+    await user.click(getStarted)
+    expect(startProduktlyTour).toHaveBeenCalledWith({
+      tourId: 11289,
+      clearProgress: true,
+    })
+    expect(onMobileClose).toHaveBeenCalled()
   })
 
   it("marks Prep Course parent active and shows nested course links on prep-course routes", () => {
@@ -126,7 +167,7 @@ describe("StudentAppSidebar", () => {
     expect(screen.getByRole("img", { name: "betterLSAT" })).toHaveClass("dark:brightness-0", "dark:invert")
   })
 
-  it("expands Diagnostic Results to Quick Baseline and Full Section history links", async () => {
+  it("expands Diagnostic Results to Mini and Full Section history links", async () => {
     const user = userEvent.setup()
     render(
       <MemoryRouter initialEntries={["/app"]}>
@@ -134,9 +175,9 @@ describe("StudentAppSidebar", () => {
       </MemoryRouter>,
     )
 
-    expect(screen.queryByRole("link", { name: "Quick Baseline" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("link", { name: "Mini" })).not.toBeInTheDocument()
     await user.click(screen.getByRole("button", { name: /Diagnostic Results/i }))
-    expect(screen.getByRole("link", { name: "Quick Baseline" })).toHaveAttribute("href", "/app/diagnostic/results/mini")
+    expect(screen.getByRole("link", { name: "Mini" })).toHaveAttribute("href", "/app/diagnostic/results/mini")
     expect(screen.getByRole("link", { name: "Full Section" })).toHaveAttribute("href", "/app/diagnostic/results/full")
   })
 
@@ -162,9 +203,7 @@ describe("StudentAppSidebar", () => {
 
     expect(sidebar).toHaveClass("student-sidebar--collapsed")
     expect(screen.getByRole("button", { name: "Expand sidebar" })).toBeInTheDocument()
-    expect(screen.queryByRole("link", { name: "Quick Baseline" })).not.toBeInTheDocument()
-    expect(brandMark).toHaveClass("lg:block")
-    expect(brandLogo).toHaveClass("lg:hidden")
+    expect(screen.queryByRole("link", { name: "Mini" })).not.toBeInTheDocument()
 
     await user.click(screen.getByRole("button", { name: "Expand sidebar" }))
     expect(sidebar).not.toHaveClass("student-sidebar--collapsed")

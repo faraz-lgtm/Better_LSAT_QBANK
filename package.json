@@ -8,6 +8,7 @@
     "test:edge": "deno test supabase/functions --allow-env",
     "import:api-json": "deno run --allow-read --allow-env --allow-net scripts/import_api_json.ts",
     "import:explanations": "deno run --allow-read --allow-env --allow-net scripts/import_preptest_explanations.ts",
+    "export:explanations": "deno run --allow-read --allow-write --allow-env --allow-net --env-file=supabase/functions/.env scripts/export_preptest_explanations.ts",
     "import:rc-passage-explanations": "deno run --allow-read --allow-env --allow-net scripts/import_rc_passage_explanations.ts",
     "seed:mini-diagnostic": "deno run --allow-read --allow-env --allow-net scripts/seed_mini_diagnostic.ts",
     "seed:section-diagnostic": "deno run --allow-read --allow-env --allow-net scripts/seed_section_diagnostic.ts",

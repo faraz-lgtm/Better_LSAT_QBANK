@@ -5,7 +5,7 @@ import { getStartLabel } from "@/features/guest/pages/guest-diagnostic-intent-pa
 describe("getStartLabel", () => {
   it("returns the selected diagnostic CTA label", () => {
     expect(getStartLabel("quick")).toBe("Start Full Section")
-    expect(getStartLabel("mini")).toBe("Start Quick Baseline")
+    expect(getStartLabel("mini")).toBe("Start Mini")
     expect(getStartLabel("full")).toBe("Start Full Section")
   })
 })

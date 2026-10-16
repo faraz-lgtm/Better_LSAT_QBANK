@@ -1,15 +1,26 @@
 import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { MemoryRouter } from "react-router-dom"
-import { describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { PrepTestPoolsPage } from "@/features/account/pages/prep-test-pools-page"
 import { ThemeProvider } from "@/features/theme/theme-provider"
 
-const { listPrepTestPoolSettings, updatePrepTestPoolSettings, resetPrepTestPoolSettings } = vi.hoisted(() => ({
+const {
+  listPrepTestPoolSettings,
+  updatePrepTestPoolSettings,
+  resetPrepTestPoolSettings,
+  getBillingStatus,
+  useStudentEntitlementMock,
+} = vi.hoisted(() => ({
   listPrepTestPoolSettings: vi.fn(),
   updatePrepTestPoolSettings: vi.fn(),
   resetPrepTestPoolSettings: vi.fn(),
+  getBillingStatus: vi.fn(),
+  useStudentEntitlementMock: vi.fn(() => ({
+    entitlement: { hasActiveCore: false, accessState: "LIMITED" },
+    loading: false,
+  })),
 }))
 
 vi.mock("@/lib/supabase/client", () => ({
@@ -24,6 +35,12 @@ vi.mock("@/lib/api/practice", () => ({
   }),
 }))
 
+vi.mock("@/lib/api/billing", () => ({
+  createBillingApi: () => ({
+    getStatus: getBillingStatus,
+  }),
+}))
+
 vi.mock("@/features/student/accommodations/accommodations-context", () => ({
   useAccommodations: () => ({
     extraTimeSetting: "none",
@@ -35,10 +52,7 @@ vi.mock("@/features/student/accommodations/accommodations-context", () => ({
 }))
 
 vi.mock("@/features/app-shell/student-entitlement-context", () => ({
-  useStudentEntitlement: () => ({
-    entitlement: { hasActiveCore: false, accessState: "LIMITED" },
-    loading: false,
-  }),
+  useStudentEntitlement: () => useStudentEntitlementMock(),
 }))
 
 vi.mock("@/features/guest/pricing/guest-pricing-modal-provider", () => ({
@@ -57,41 +71,36 @@ function renderPage() {
   )
 }
 
+const emptyPoolPayload = {
+  prepTests: [
+    {
+      prepTestId: "pt-120",
+      moduleId: "LSAC120",
+      prepTestNumber: "120",
+      title: null,
+      inDrills: true,
+      inSections: false,
+      inTests: false,
+      freshnessPercent: 88,
+      isDefault: true,
+    },
+  ],
+  counts: { drills: 1, sections: 0, tests: 0 },
+}
+
 describe("PrepTestPoolsPage", () => {
+  beforeEach(() => {
+    useStudentEntitlementMock.mockReturnValue({
+      entitlement: { hasActiveCore: false, accessState: "LIMITED" },
+      loading: false,
+    })
+    getBillingStatus.mockReset()
+    listPrepTestPoolSettings.mockResolvedValue(emptyPoolPayload)
+  })
+
   it("renders pool toggles and resets to defaults", async () => {
     const user = userEvent.setup()
-    listPrepTestPoolSettings.mockResolvedValue({
-      prepTests: [
-        {
-          prepTestId: "pt-120",
-          moduleId: "LSAC120",
-          prepTestNumber: "120",
-          title: null,
-          inDrills: true,
-          inSections: false,
-          inTests: false,
-          freshnessPercent: 88,
-          isDefault: true,
-        },
-      ],
-      counts: { drills: 1, sections: 0, tests: 0 },
-    })
-    resetPrepTestPoolSettings.mockResolvedValue({
-      prepTests: [
-        {
-          prepTestId: "pt-120",
-          moduleId: "LSAC120",
-          prepTestNumber: "120",
-          title: null,
-          inDrills: true,
-          inSections: false,
-          inTests: false,
-          freshnessPercent: 88,
-          isDefault: true,
-        },
-      ],
-      counts: { drills: 1, sections: 0, tests: 0 },
-    })
+    resetPrepTestPoolSettings.mockResolvedValue(emptyPoolPayload)
 
     renderPage()
 
@@ -111,6 +120,7 @@ describe("PrepTestPoolsPage", () => {
     expect(screen.getByRole("switch", { name: "PT120 drills" })).toBeChecked()
     expect(screen.getByRole("switch", { name: "PT120 sections" })).not.toBeChecked()
     expect(screen.queryByText("Saving…")).not.toBeInTheDocument()
+    expect(getBillingStatus).not.toHaveBeenCalled()
 
     await user.click(screen.getByRole("button", { name: "Reset to defaults" }))
     await waitFor(() => {
@@ -119,25 +129,27 @@ describe("PrepTestPoolsPage", () => {
     expect(await screen.findByText("Allocation updated.")).toBeInTheDocument()
   })
 
+  it("shows the Stripe checkout interval on the Current Plan card", async () => {
+    useStudentEntitlementMock.mockReturnValue({
+      entitlement: { hasActiveCore: true, accessState: "FULL_ACCESS" },
+      loading: false,
+    })
+    getBillingStatus.mockResolvedValue({
+      checkoutPlan: "yearly",
+      subscription: { checkoutPlan: "yearly" },
+    })
+
+    renderPage()
+
+    expect(await screen.findByRole("heading", { name: "12 Months" })).toBeInTheDocument()
+    expect(screen.getByText("Renews at $624 every 12 months.")).toBeInTheDocument()
+    expect(screen.queryByRole("heading", { name: "Monthly" })).not.toBeInTheDocument()
+    expect(getBillingStatus).toHaveBeenCalled()
+  })
+
   it("shows Allocation updated toast after toggle save", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
-    listPrepTestPoolSettings.mockResolvedValue({
-      prepTests: [
-        {
-          prepTestId: "pt-120",
-          moduleId: "LSAC120",
-          prepTestNumber: "120",
-          title: null,
-          inDrills: true,
-          inSections: false,
-          inTests: false,
-          freshnessPercent: 88,
-          isDefault: true,
-        },
-      ],
-      counts: { drills: 1, sections: 0, tests: 0 },
-    })
     updatePrepTestPoolSettings.mockResolvedValue({
       prepTests: [
         {

@@ -1,6 +1,14 @@
 /** Produktly dashboard → Feedback collectors → edit/2722 */
 export const PRODUKTLY_FEEDBACK_WIDGET_ID = 2722
 
+/** Produktly dashboard → Product tours → edit/11289 */
+const DEFAULT_PRODUCT_TOUR_ID = 11289
+const envTourId = Number(
+  (import.meta.env.VITE_PRODUKTLY_PRODUCT_TOUR_ID as string | undefined)?.trim() ?? "",
+)
+export const PRODUKTLY_PRODUCT_TOUR_ID =
+  Number.isFinite(envTourId) && envTourId > 0 ? envTourId : DEFAULT_PRODUCT_TOUR_ID
+
 /** Produktly dashboard → Roadmaps → edit/2445 */
 export const PRODUKTLY_ROADMAP_EDIT_ID = 2445
 

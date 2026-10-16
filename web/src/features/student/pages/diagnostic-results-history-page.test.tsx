@@ -11,15 +11,15 @@ describe("DiagnosticResultsHistoryPage", () => {
     localStorage.clear()
   })
 
-  it("shows an empty Quick Baseline history state", () => {
+  it("shows an empty Mini history state", () => {
     render(
       <MemoryRouter>
         <DiagnosticResultsHistoryPage section="mini" />
       </MemoryRouter>,
     )
-    expect(screen.getByRole("heading", { name: "Quick Baseline History" })).toBeInTheDocument()
-    expect(screen.getByText(/No Quick Baseline diagnostics yet/i)).toBeInTheDocument()
-    expect(screen.getByRole("link", { name: "Start Quick Baseline" })).toHaveAttribute(
+    expect(screen.getByRole("heading", { name: "Mini History" })).toBeInTheDocument()
+    expect(screen.getByText(/No Mini diagnostics yet/i)).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "Start Mini" })).toHaveAttribute(
       "href",
       "/diagnostic/start?intent=mini",
     )

@@ -1,12 +1,18 @@
 import { describe, expect, it } from "vitest"
 
 import {
+  STUDENT_GET_STARTED_ICON,
+  STUDENT_NAV_ITEM_ICON_SRC,
   getActiveSectionKey,
   getStudentPageTitle,
   isNavItemActive,
 } from "@/features/app-shell/student-nav-config"
 
 describe("student-nav-config", () => {
+  it("uses a rocket icon for Get Started", () => {
+    expect(STUDENT_NAV_ITEM_ICON_SRC[STUDENT_GET_STARTED_ICON]).toBe("/nav/rocket.svg")
+  })
+
   it("titles the premium home page Dashboard", () => {
     expect(getStudentPageTitle("/app")).toBe("Dashboard")
   })
@@ -70,7 +76,7 @@ describe("student-nav-config", () => {
   })
 
   it("titles diagnostic results history", () => {
-    expect(getStudentPageTitle("/app/diagnostic/results/mini")).toBe("Quick Baseline History")
+    expect(getStudentPageTitle("/app/diagnostic/results/mini")).toBe("Mini History")
     expect(getStudentPageTitle("/app/diagnostic/results/full/attempt-1")).toBe("Diagnostic Results")
   })
 

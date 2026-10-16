@@ -101,7 +101,7 @@ function StudentAppHeader({ onOpenMobileNav, headerActions }: StudentAppHeaderPr
       accessState: entitlement?.accessState ?? null,
       hasGuestPremiumAccount: Boolean(premiumAccount),
     }) === "premium"
-  const planLabel = isPremium ? "Paid" : "Free"
+  const planLabel = isPremium ? "Premium" : "Free"
   const [email, setEmail] = useState<string | null>(null)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [openProfileMenu, setOpenProfileMenu] = useState(false)

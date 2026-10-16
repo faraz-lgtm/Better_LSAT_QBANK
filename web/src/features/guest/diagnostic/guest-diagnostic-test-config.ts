@@ -14,7 +14,7 @@ const DIAGNOSTIC_TEST_INSTRUCTIONS =
 const GUEST_DIAGNOSTIC_TEST_CONFIG: Record<GuestDiagnosticIntentId, GuestDiagnosticTestConfig> = {
   mini: {
     intentId: "mini",
-    title: "Quick Baseline - Test Instructions",
+    title: "Mini - Test Instructions",
     questionCount: 10,
     timeMinutes: 13,
     instructions: DIAGNOSTIC_TEST_INSTRUCTIONS,

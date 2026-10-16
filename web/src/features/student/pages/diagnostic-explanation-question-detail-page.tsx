@@ -160,7 +160,7 @@ function DiagnosticExplanationQuestionDetailPage() {
               <p className="m-0 text-sm font-semibold">Explanation locked on the free plan</p>
             </div>
             <p className="m-0 text-sm text-[var(--greyscale-500)]">
-              Free accounts can open the first 5 Quick Baseline explanations and the first 10 Full
+              Free accounts can open the first 5 Mini explanations and the first 10 Full
               Section explanations. Upgrade to unlock every written explanation and video.
             </p>
             <Button type="button" onClick={openPricingModal}>

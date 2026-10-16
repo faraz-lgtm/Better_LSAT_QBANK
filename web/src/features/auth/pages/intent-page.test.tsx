@@ -123,7 +123,9 @@ describe("IntentPage", () => {
 
     await user.click(screen.getByRole("button", { name: "Upgrade now" }))
 
-    expect(screen.getByRole("dialog", { name: /pricing/i })).toBeInTheDocument()
+    expect(
+      screen.getByRole("dialog", { name: /Every Paid Plan Includes the Full Platform/i }),
+    ).toBeInTheDocument()
   })
 
   it("hides Upgrade CTA for paid accounts", () => {
@@ -170,14 +172,14 @@ describe("IntentPage", () => {
     )
   })
 
-  it("offers Quick Baseline and Full Section cards without the 115-question exam", () => {
+  it("offers Mini and Full Section cards without the 115-question exam", () => {
     render(
       <MemoryRouter>
         <IntentPage isAuthenticated={false} />
       </MemoryRouter>,
     )
 
-    expect(screen.getByText("Quick Baseline", { selector: ".intent-card__name" })).toBeInTheDocument()
+    expect(screen.getByText("Mini", { selector: ".intent-card__name" })).toBeInTheDocument()
     expect(screen.getByText("Full Section", { selector: ".intent-card__name" })).toBeInTheDocument()
     expect(screen.queryByText("Full", { selector: ".intent-card__name" })).not.toBeInTheDocument()
   })

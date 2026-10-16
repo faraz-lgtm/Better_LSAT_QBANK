@@ -21,10 +21,10 @@ type DiagnosticResultsHistoryPageProps = {
 function sectionCopy(section: DiagnosticResultsSection) {
   if (section === "mini") {
     return {
-      title: "Quick Baseline History",
-      empty: "No Quick Baseline diagnostics yet. Take the 10-question Quick Baseline to see your score history here.",
+      title: "Mini History",
+      empty: "No Mini diagnostics yet. Take the 10-question Mini to see your score history here.",
       startHref: "/diagnostic/start?intent=mini",
-      startLabel: "Start Quick Baseline",
+      startLabel: "Start Mini",
     }
   }
   return {

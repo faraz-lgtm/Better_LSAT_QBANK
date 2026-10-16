@@ -108,7 +108,7 @@ function listItemFromTree(
   }
 }
 
-/** Catalog trees for Quick Baseline + Full Section diagnostic question banks. */
+/** Catalog trees for Mini + Full Section diagnostic question banks. */
 export function buildDiagnosticExplanationTrees(
   progress?: DiagnosticExplanationProgressMap,
   videoUrlByQuestionId?: ReadonlyMap<string, string>,
@@ -117,8 +117,8 @@ export function buildDiagnosticExplanationTrees(
     buildSetTree({
       id: DIAGNOSTIC_EXPLANATION_SET_IDS.mini,
       prepTestNumber: "QB",
-      rowSubtitle: "Quick Baseline",
-      title: "Quick Baseline",
+      rowSubtitle: "Mini",
+      title: "Mini",
       questions: MINI_DIAGNOSTIC_MARKETING_SET.questions,
       progress,
       videoUrlByQuestionId,
@@ -141,7 +141,7 @@ export function buildDiagnosticExplanationListItems(
 ): ExplanationPrepTestListItem[] {
   const [mini, section] = buildDiagnosticExplanationTrees(progress, videoUrlByQuestionId)
   return [
-    listItemFromTree(mini!, "Quick Baseline", MINI_DIAGNOSTIC_MARKETING_SET.moduleId),
+    listItemFromTree(mini!, "Mini", MINI_DIAGNOSTIC_MARKETING_SET.moduleId),
     listItemFromTree(section!, "Full Section", SECTION_DIAGNOSTIC_MARKETING_SET.moduleId),
   ]
 }

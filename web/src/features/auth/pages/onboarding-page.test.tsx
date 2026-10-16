@@ -219,4 +219,27 @@ describe("OnboardingPage password setup", () => {
     expect(saveOnboarding).toHaveBeenCalled()
     expect(completeFirstLogin).toHaveBeenCalled()
   })
+
+  it("saves onboarding before starting the diagnostic from step 8", async () => {
+    updatePassword.mockResolvedValue(undefined)
+    const user = userEvent.setup()
+
+    renderOnboarding()
+
+    expect(await screen.findByRole("heading", { name: /welcome to betterlsat/i })).toBeInTheDocument()
+    await fillWelcomeAndContinue(user)
+    await waitFor(() => expect(updatePassword).toHaveBeenCalledTimes(1))
+
+    await advanceToStartingScore(user)
+    // Default starting score is "I haven't taken an LSAT yet" → step 8
+    await user.click(screen.getByRole("button", { name: /^continue$/i }))
+
+    expect(await screen.findByRole("heading", { name: /so you're a first-timer/i })).toBeInTheDocument()
+    await user.click(screen.getByRole("button", { name: /start diagnostic/i }))
+
+    expect(await screen.findByText(/diagnostic start/i)).toBeInTheDocument()
+    expect(saveOnboarding).toHaveBeenCalled()
+    expect(completeFirstLogin).toHaveBeenCalled()
+    expect(updatePassword).toHaveBeenCalledTimes(1)
+  })
 })

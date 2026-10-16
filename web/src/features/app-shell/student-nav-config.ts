@@ -9,6 +9,7 @@ export type StudentNavSectionKey = "academy" | "prep" | "insights" | "community"
 
 /** Per-item icons from Figma sidebar node `19640:23125`. */
 export type StudentNavItemIconKey =
+  | "get-started"
   | "dashboard"
   | "diagnostic"
   | "prep-course"
@@ -24,6 +25,7 @@ export type StudentNavItemIconKey =
   | "roadmap"
 
 export const STUDENT_NAV_ITEM_ICON_SRC: Record<StudentNavItemIconKey, string> = {
+  "get-started": "/nav/rocket.svg",
   dashboard: "/nav/dashboard.svg",
   diagnostic: "/nav/test.svg",
   "prep-course": "/nav/prep-course.svg",
@@ -60,6 +62,10 @@ export const STUDENT_MAIN_NAV_SECTION = {
 export const STUDENT_DIAGNOSTIC_NAV_SECTION = {
   label: "DIAGNOSTIC",
 }
+
+export const STUDENT_GET_STARTED_LABEL = "Get Started"
+
+export const STUDENT_GET_STARTED_ICON: StudentNavItemIconKey = "get-started"
 
 export const STUDENT_DASHBOARD_HREF = "/app"
 
@@ -175,7 +181,7 @@ function sectionLabel(label: string): string {
 
 export function getStudentPageTitle(pathname: string, search = ""): string | null {
   if (isDashboardActive(pathname)) return "Dashboard"
-  if (pathname === DIAGNOSTIC_RESULTS_MINI_HREF) return "Quick Baseline History"
+  if (pathname === DIAGNOSTIC_RESULTS_MINI_HREF) return "Mini History"
   if (pathname === DIAGNOSTIC_RESULTS_FULL_HREF) return "Full Section History"
   if (pathname.startsWith("/app/diagnostic/results/")) return "Diagnostic Results"
   if (pathname === "/app/account") return "Account"
