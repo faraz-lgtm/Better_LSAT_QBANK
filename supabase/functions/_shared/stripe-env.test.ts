@@ -1,5 +1,7 @@
 import { assertEquals } from 'jsr:@std/assert@1'
 import {
+  checkoutPlanFromMetadata,
+  checkoutPlanFromRecurringPrice,
   isLocalSupabaseHost,
   parseStripeEnv,
   resolveCheckoutPlanFromPriceId,
@@ -155,6 +157,55 @@ Deno.test('storedPlanTierFromMetadata maps new checkout ids onto core', () => {
   assertEquals(storedPlanTierFromMetadata('core'), 'core')
   assertEquals(storedPlanTierFromMetadata('live'), 'live')
   assertEquals(storedPlanTierFromMetadata(undefined), null)
+})
+
+Deno.test('checkoutPlanFromMetadata maps interval ids and rejects tier-only values', () => {
+  assertEquals(checkoutPlanFromMetadata('monthly'), 'monthly')
+  assertEquals(checkoutPlanFromMetadata('three_month'), 'three_month')
+  assertEquals(checkoutPlanFromMetadata('six_month'), 'six_month')
+  assertEquals(checkoutPlanFromMetadata('yearly'), 'yearly')
+  assertEquals(checkoutPlanFromMetadata('core'), null)
+  assertEquals(checkoutPlanFromMetadata('live'), null)
+  assertEquals(checkoutPlanFromMetadata(undefined), null)
+})
+
+Deno.test('checkoutPlanFromRecurringPrice maps month interval counts', () => {
+  assertEquals(
+    checkoutPlanFromRecurringPrice({
+      type: 'recurring',
+      recurring: { interval: 'month', interval_count: 1 },
+    }),
+    'monthly',
+  )
+  assertEquals(
+    checkoutPlanFromRecurringPrice({
+      type: 'recurring',
+      recurring: { interval: 'month', interval_count: 3 },
+    }),
+    'three_month',
+  )
+  assertEquals(
+    checkoutPlanFromRecurringPrice({
+      type: 'recurring',
+      recurring: { interval: 'month', interval_count: 6 },
+    }),
+    'six_month',
+  )
+  assertEquals(
+    checkoutPlanFromRecurringPrice({
+      type: 'recurring',
+      recurring: { interval: 'month', interval_count: 12 },
+    }),
+    'yearly',
+  )
+  assertEquals(
+    checkoutPlanFromRecurringPrice({
+      type: 'recurring',
+      recurring: { interval: 'year', interval_count: 1 },
+    }),
+    null,
+  )
+  assertEquals(checkoutPlanFromRecurringPrice({ type: 'one_time', recurring: null }), null)
 })
 
 Deno.test('parseStripeEnv returns null when credentials missing', () => {

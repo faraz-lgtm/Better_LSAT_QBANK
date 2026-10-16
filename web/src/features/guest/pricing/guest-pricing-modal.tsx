@@ -151,7 +151,7 @@ function GuestPricingModal({
             <div className="pricing-page__alt-link">
               {includeLawHub ? (
                 <button type="button" onClick={() => setIncludeLawHub(false)}>
-                  I already have LawHub PrepPlus — pay for Core only
+                  I already have LawHub PrepPlus — Pay for BetterLSAT Only
                 </button>
               ) : (
                 <button type="button" onClick={() => setIncludeLawHub(true)}>

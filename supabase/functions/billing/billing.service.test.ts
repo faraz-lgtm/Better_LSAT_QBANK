@@ -102,7 +102,14 @@ Deno.test('billing service createCheckoutSession creates customer and returns ur
               'Better LSAT Monthly',
             )
             assertEquals((lineItems[1]?.price_data as Record<string, unknown>)?.unit_amount, 12400)
-            assertEquals((params.metadata as Record<string, string>).plan, 'monthly')
+            const metadata = params.metadata as Record<string, string>
+            assertEquals(metadata.plan, 'monthly')
+            assertEquals(metadata.user_id, 'u-1')
+            const subscriptionData = params.subscription_data as {
+              metadata: Record<string, string>
+            }
+            assertEquals(subscriptionData.metadata.user_id, 'u-1')
+            assertEquals(subscriptionData.metadata.plan, 'monthly')
             return { url: 'https://checkout.stripe.test/session' }
           },
         },
@@ -205,12 +212,11 @@ Deno.test('billing service createCheckoutSession skips LawHub when includeLawHub
             const lineItems = params.line_items as Array<Record<string, unknown>>
             assertEquals(lineItems.length, 1)
             const priceData = lineItems[0]?.price_data as Record<string, unknown>
-            assertEquals(priceData?.unit_amount, 6900)
-            assertEquals(priceData?.recurring, { interval: 'month', interval_count: 1 })
             assertEquals(
               (priceData?.product_data as Record<string, string>)?.name,
               'Better LSAT Monthly',
             )
+            assertEquals(priceData?.unit_amount, 6900)
             assertEquals((params.metadata as Record<string, string>).include_lawhub, 'false')
             assertEquals(
               (params.custom_text as Record<string, Record<string, string>>)?.submit?.message,
@@ -296,7 +302,7 @@ Deno.test('billing service createCheckoutSession uses the 3-month Core price', a
   assertEquals(out.url, 'https://checkout.stripe.test/three-month')
 })
 
-Deno.test('billing service copies interval_count when LawHub is excluded', async () => {
+Deno.test('billing service uses inline price_data with catalog name when LawHub is excluded', async () => {
   const service = createBillingService({
     getEnv: () => env,
     getAppBaseUrl: () => 'http://localhost:5173',
@@ -324,6 +330,10 @@ Deno.test('billing service copies interval_count when LawHub is excluded', async
           create: async (params: Record<string, unknown>) => {
             const lineItems = params.line_items as Array<Record<string, unknown>>
             const priceData = lineItems[0]?.price_data as Record<string, unknown>
+            assertEquals(
+              (priceData?.product_data as Record<string, string>)?.name,
+              'Better LSAT 6 Months',
+            )
             assertEquals(priceData?.unit_amount, 35400)
             assertEquals(priceData?.recurring, { interval: 'month', interval_count: 6 })
             return { url: 'https://checkout.stripe.test/six-month' }
@@ -1171,6 +1181,191 @@ Deno.test('getStatus reports the current plan and Stripe-backed pending plan sep
   assertEquals(status.checkoutPlan, 'monthly')
   assertEquals(status.pendingChange?.plan, 'yearly')
   assertEquals(status.pendingChange?.effectiveAt, '2026-10-22T14:13:20.000Z')
+})
+
+Deno.test('getStatus resolves three_month from the live subscription price', async () => {
+  const service = createBillingService({
+    getEnv: () => env,
+    getAppBaseUrl: () => 'http://localhost:5173',
+    repository: makeRepo({
+      async getLatestSubscriptionByUserId() {
+        return activeSubscriptionRow(env.priceIds.threeMonth)
+      },
+    }),
+    stripe: {
+      subscriptions: {
+        retrieve: async () => activeSubscription(env.priceIds.threeMonth),
+      },
+    } as unknown as import('npm:stripe@17.7.0').default,
+  })
+
+  const status = await service.getStatus('u-1')
+  assertEquals(status.checkoutPlan, 'three_month')
+})
+
+Deno.test('getStatus resolves checkoutPlan when subscription item price is a string id', async () => {
+  const subscription = {
+    ...activeSubscription(env.priceIds.threeMonth),
+    items: {
+      data: [
+        { id: 'si_core', price: env.priceIds.threeMonth, quantity: 1 },
+        { id: 'si_other', price: 'price_unrelated', quantity: 2 },
+      ],
+    },
+  }
+  const service = createBillingService({
+    getEnv: () => env,
+    getAppBaseUrl: () => 'http://localhost:5173',
+    repository: makeRepo({
+      async getLatestSubscriptionByUserId() {
+        return { ...activeSubscriptionRow(), stripe_price_id: '' }
+      },
+    }),
+    stripe: {
+      subscriptions: { retrieve: async () => subscription },
+    } as unknown as import('npm:stripe@17.7.0').default,
+  })
+
+  const status = await service.getStatus('u-1')
+  assertEquals(status.checkoutPlan, 'three_month')
+})
+
+Deno.test('getStatus falls back to subscription metadata.plan when price ids are unknown', async () => {
+  const subscription = activeSubscription('price_ephemeral_unknown')
+  subscription.metadata = { plan: 'three_month' }
+  const service = createBillingService({
+    getEnv: () => env,
+    getAppBaseUrl: () => 'http://localhost:5173',
+    repository: makeRepo({
+      async getLatestSubscriptionByUserId() {
+        return { ...activeSubscriptionRow(), stripe_price_id: 'price_ephemeral_unknown' }
+      },
+    }),
+    stripe: {
+      subscriptions: { retrieve: async () => subscription },
+    } as unknown as import('npm:stripe@17.7.0').default,
+  })
+
+  const status = await service.getStatus('u-1')
+  assertEquals(status.checkoutPlan, 'three_month')
+})
+
+Deno.test('getStatus prefers Stripe interval_count over a mismatched catalog price id', async () => {
+  const subscription = {
+    ...activeSubscription(env.priceIds.monthly),
+    items: {
+      data: [
+        {
+          id: 'si_core',
+          price: {
+            id: env.priceIds.monthly,
+            type: 'recurring',
+            recurring: { interval: 'month', interval_count: 3 },
+          },
+          quantity: 1,
+        },
+      ],
+    },
+  }
+  const service = createBillingService({
+    getEnv: () => env,
+    getAppBaseUrl: () => 'http://localhost:5173',
+    repository: makeRepo({
+      async getLatestSubscriptionByUserId() {
+        return activeSubscriptionRow(env.priceIds.monthly)
+      },
+    }),
+    stripe: {
+      subscriptions: { retrieve: async () => subscription },
+    } as unknown as import('npm:stripe@17.7.0').default,
+  })
+
+  const status = await service.getStatus('u-1')
+  assertEquals(status.checkoutPlan, 'three_month')
+})
+
+Deno.test('getStatus falls back to the latest paid invoice like billing history', async () => {
+  const subscription = activeSubscription('price_ephemeral_unknown')
+  const service = createBillingService({
+    getEnv: () => env,
+    getAppBaseUrl: () => 'http://localhost:5173',
+    repository: makeRepo({
+      async getLatestSubscriptionByUserId() {
+        return { ...activeSubscriptionRow(), stripe_price_id: '' }
+      },
+    }),
+    stripe: {
+      subscriptions: { retrieve: async () => subscription },
+      invoices: {
+        list: async () => ({
+          data: [
+            {
+              id: 'in_1',
+              lines: {
+                data: [
+                  { price: { id: env.priceIds.threeMonth } },
+                  { price: { id: env.priceIds.lsacYearly } },
+                ],
+              },
+            },
+          ],
+        }),
+      },
+    } as unknown as import('npm:stripe@17.7.0').default,
+  })
+
+  const status = await service.getStatus('u-1')
+  assertEquals(status.checkoutPlan, 'three_month')
+})
+
+Deno.test('syncSubscription backfills catalog price id from metadata when item price is missing', async () => {
+  let upsertedPriceId: string | null = null
+  const service = createBillingService({
+    getEnv: () => env,
+    getAppBaseUrl: () => 'http://localhost:5173',
+    repository: makeRepo({
+      async upsertSubscription(input) {
+        upsertedPriceId = input.stripePriceId
+        assertEquals(input.planTier, 'core')
+      },
+      async setPrepPlusSource() {},
+    }),
+    stripe: {
+      subscriptions: {
+        retrieve: async () => ({
+          id: 'sub_1',
+          status: 'active',
+          livemode: false,
+          cancel_at_period_end: false,
+          current_period_start: 1_700_000_000,
+          current_period_end: 1_700_086_400,
+          customer: 'cus_1',
+          metadata: { plan: 'three_month' },
+          items: { data: [{ price: { id: 'price_unrelated' } }] },
+        }),
+      },
+    } as unknown as import('npm:stripe@17.7.0').default,
+  })
+
+  await service.handleWebhookEvent({
+    id: 'evt_meta_price',
+    type: 'customer.subscription.updated',
+    data: {
+      object: {
+        id: 'sub_1',
+        status: 'active',
+        livemode: false,
+        cancel_at_period_end: false,
+        current_period_start: 1_700_000_000,
+        current_period_end: 1_700_086_400,
+        customer: 'cus_1',
+        metadata: { plan: 'three_month' },
+        items: { data: [{ price: { id: 'price_unrelated' } }] },
+      },
+    },
+  } as unknown as import('npm:stripe@17.7.0').default.Event)
+
+  assertEquals(upsertedPriceId, env.priceIds.threeMonth)
 })
 
 Deno.test('schedulePlanChange rejects users without an active subscription', async () => {

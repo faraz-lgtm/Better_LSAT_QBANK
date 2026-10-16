@@ -11,6 +11,8 @@ import {
   type BillingPlanId,
   type CheckoutPlanId,
   checkoutPlanFromId,
+  checkoutPlanFromMetadata,
+  checkoutPlanFromRecurringPrice,
   priceIdForCheckoutPlan,
   resolveCheckoutPlanFromPriceId,
   resolveCheckoutPlanFromRecurring,
@@ -124,7 +126,34 @@ async function maybeDetachReplacedPaymentMethod(
 }
 
 function subscriptionItemPriceId(item: Stripe.SubscriptionItem): string {
-  return item.price?.id ?? ''
+  const price = item.price as string | Stripe.Price | null | undefined
+  if (!price) return ''
+  return typeof price === 'string' ? price : price.id ?? ''
+}
+
+function invoiceLinePriceId(line: Stripe.InvoiceLineItem): string | null {
+  const price = line.price
+  if (!price) return null
+  if (typeof price === 'string') return price
+  return price.id ?? null
+}
+
+function checkoutPlanFromInvoiceLines(
+  lines: Stripe.InvoiceLineItem[],
+  env: StripeRuntimeEnv,
+): CheckoutPlanId | null {
+  for (const line of lines) {
+    const price = line.price
+    if (price && typeof price === 'object') {
+      const fromRecurring = checkoutPlanFromRecurringPrice(price)
+      if (fromRecurring) return fromRecurring
+    }
+    const priceId = invoiceLinePriceId(line)
+    if (!priceId) continue
+    const fromId = resolveCheckoutPlanFromPriceId(env.priceIds, priceId)
+    if (fromId) return fromId
+  }
+  return null
 }
 
 function subscriptionScheduleId(subscription: Stripe.Subscription): string | null {
@@ -138,10 +167,16 @@ function resolveItemCheckoutPlan(
   item: Pick<Stripe.SubscriptionItem, 'price'>,
   env: StripeRuntimeEnv,
 ): CheckoutPlanId | null {
-  return (
-    resolveCheckoutPlanFromPriceId(env.priceIds, item.price?.id ?? '') ??
-    resolveCheckoutPlanFromRecurring(item.price?.recurring)
-  )
+  const price = item.price as string | Stripe.Price | null | undefined
+  const priceId = !price ? '' : typeof price === 'string' ? price : price.id ?? ''
+  // Prefer real Stripe interval over env price-ID match when those disagree.
+  if (price && typeof price === 'object') {
+    const fromRecurring =
+      checkoutPlanFromRecurringPrice(price) ??
+      resolveCheckoutPlanFromRecurring(price.recurring)
+    if (fromRecurring) return fromRecurring
+  }
+  return priceId ? resolveCheckoutPlanFromPriceId(env.priceIds, priceId) : null
 }
 
 function coreSubscriptionItem(
@@ -159,7 +194,7 @@ function billingSubscriptionItem(
     subscription.items.data.find((item) => {
       if (resolvePlanFromPriceId(env.priceIds, subscriptionItemPriceId(item)) != null) return true
       // Inline Checkout price_data creates ad-hoc Core prices outside STRIPE_PRICE_ID_*.
-      return resolveCheckoutPlanFromRecurring(item.price?.recurring) != null
+      return resolveItemCheckoutPlan(item, env) != null
     }) ?? null
   )
 }
@@ -263,6 +298,7 @@ const BETTERLSAT_PLAN_CHANGE_SCHEDULE = 'betterlsat_plan_change'
 /**
  * Always use inline product copy so Checkout shows catalog names
  * (`Better LSAT 6 Months`, etc.) instead of the shared Stripe product name (`Core`).
+ * Interval is recovered later via recurring.interval_count / metadata / invoice lines.
  */
 async function buildSubscriptionCheckoutLineItem(
   stripe: Stripe,
@@ -342,13 +378,22 @@ export function createBillingService(deps: BillingServiceDeps) {
   ): Promise<void> {
     const env = deps.getEnv()
     const billingItem = billingSubscriptionItem(subscription, env)
-    const stripePriceId = billingItem ? subscriptionItemPriceId(billingItem) : ''
+    const metadataCheckoutPlan = checkoutPlanFromMetadata(subscription.metadata?.plan)
+    const checkoutPlanFromItem = billingItem
+      ? resolveItemCheckoutPlan(billingItem, env)
+      : null
+    let stripePriceId = billingItem ? subscriptionItemPriceId(billingItem) : ''
+    if (!stripePriceId) {
+      const planForPrice = checkoutPlanFromItem ?? metadataCheckoutPlan
+      if (planForPrice) {
+        stripePriceId = priceIdForCheckoutPlan(env.priceIds, planForPrice)
+      }
+    }
     const planTier =
       planHint ??
       resolvePlanFromPriceId(env.priceIds, stripePriceId) ??
-      (billingItem && resolveCheckoutPlanFromRecurring(billingItem.price?.recurring)
-        ? 'core'
-        : null)
+      (checkoutPlanFromItem ? 'core' : null) ??
+      (metadataCheckoutPlan ? storedPlanTierFromMetadata(metadataCheckoutPlan) : null)
     await deps.repository.upsertSubscription({
       userId,
       stripeSubscriptionId: subscription.id,
@@ -414,11 +459,28 @@ export function createBillingService(deps: BillingServiceDeps) {
       const currentItem = stripeSubscription
         ? coreSubscriptionItem(stripeSubscription, env)
         : null
-      const checkoutPlan = currentItem
+      const checkoutPlanFromLiveItem = currentItem
         ? resolveItemCheckoutPlan(currentItem, env)
-        : storedSubscription
+        : null
+      const checkoutPlanFromStored = storedSubscription?.stripe_price_id
         ? resolveCheckoutPlanFromPriceId(env.priceIds, storedSubscription.stripe_price_id)
         : null
+      let checkoutPlan =
+        checkoutPlanFromLiveItem ??
+        checkoutPlanFromMetadata(stripeSubscription?.metadata?.plan) ??
+        checkoutPlanFromStored ??
+        null
+      if (!checkoutPlan && stripeSubscription) {
+        const latestInvoices = await deps.stripe.invoices.list({
+          subscription: stripeSubscription.id,
+          limit: 1,
+          status: 'paid',
+        })
+        checkoutPlan = checkoutPlanFromInvoiceLines(
+          latestInvoices.data[0]?.lines?.data ?? [],
+          env,
+        )
+      }
       const pendingChange = stripeSubscription
         ? await pendingPlanChange(deps.stripe, stripeSubscription, env)
         : null
@@ -636,15 +698,8 @@ export function createBillingService(deps: BillingServiceDeps) {
           return ''
         })
 
-        let checkoutPlanHint: CheckoutPlanId | null = null
-        for (const line of lines) {
-          const price = line.price
-          const priceId = typeof price === 'string' ? price : price?.id
-          if (!priceId) continue
-          checkoutPlanHint = resolveCheckoutPlanFromPriceId(env.priceIds, priceId)
-          if (checkoutPlanHint) break
-        }
-        if (!checkoutPlanHint) checkoutPlanHint = subscriptionCheckoutPlan
+        const checkoutPlanHint =
+          checkoutPlanFromInvoiceLines(lines, env) ?? subscriptionCheckoutPlan
 
         return mapStripeInvoice({
           id: invoice.id,

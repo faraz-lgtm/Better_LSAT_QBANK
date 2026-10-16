@@ -1,4 +1,15 @@
-import type { BillingInvoice, BillingPaymentMethod } from '@/lib/api/billing'
+import type { BillingInvoice, BillingPaymentMethod, CheckoutPlanId } from '@/lib/api/billing'
+
+/** Map billing-history invoice titles onto checkout intervals (same labels as Current Plan). */
+export function checkoutPlanFromInvoiceTitle(title: string | null | undefined): CheckoutPlanId | null {
+  const normalized = title?.trim() ?? ''
+  if (!normalized) return null
+  if (/^3\s*Months\b/i.test(normalized)) return 'three_month'
+  if (/^6\s*Months\b/i.test(normalized)) return 'six_month'
+  if (/^12\s*Months\b/i.test(normalized) || /^Yearly\b/i.test(normalized)) return 'yearly'
+  if (/^Monthly\b/i.test(normalized)) return 'monthly'
+  return null
+}
 
 export function formatMaskedCardNumber(last4: string): string {
   const digits = last4.replace(/\D/g, '').slice(-4)

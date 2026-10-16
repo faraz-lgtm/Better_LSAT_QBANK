@@ -6,15 +6,10 @@ export type PaidPricingPlan = {
   headline: string
   description: string
   priceUsd: number
+  /** Pre-discount list price shown struck through next to priceUsd. */
+  listPriceUsd?: number
   equivalentMonthlyUsd: number | null
   discountLabel: string | null
-  /** Callout under features for multi-month plans (continue at discounted monthly rate). */
-  continueDiscountNote?: {
-    title: string
-    bodyBefore: string
-    amountLabel: string
-    bodyAfter: string
-  }
   badge?: string
   featured?: boolean
   /** Show due-today line under price (featured plan in Figma). */
@@ -85,14 +80,9 @@ const PAID_PRICING_PLANS: PaidPricingPlan[] = [
     headline: "A Focused 3-Month Prep Plan.",
     description: "Full platform access for a defined prep window—with a lower monthly equivalent.",
     priceUsd: 192,
+    listPriceUsd: 207,
     equivalentMonthlyUsd: 64,
-    discountLabel: "7% Ongoing Discount",
-    continueDiscountNote: {
-      title: "Need more time? Keep your discount.",
-      bodyBefore: "After your first 3 months, continue month-to-month at ",
-      amountLabel: "$64/month",
-      bodyAfter: ".",
-    },
+    discountLabel: "Save $15 vs. Paying $69/month",
     features: [
       "Everything in Full Access",
       "Built for a focused prep block",
@@ -109,17 +99,12 @@ const PAID_PRICING_PLANS: PaidPricingPlan[] = [
     headline: "More Time. Better Monthly Value.",
     description: "Give yourself more runway while lowering the monthly equivalent.",
     priceUsd: 354,
+    listPriceUsd: 414,
     equivalentMonthlyUsd: 59,
-    discountLabel: "15% Ongoing Discount",
+    discountLabel: "Save $60 vs. Paying $69/month",
     badge: "Most Popular",
     featured: true,
     showDueToday: true,
-    continueDiscountNote: {
-      title: "Need more time? Keep your discount.",
-      bodyBefore: "After your first 6 months, continue month-to-month at ",
-      amountLabel: "$59/month",
-      bodyAfter: ".",
-    },
     features: [
       "Everything in Full Access",
       "Built for a longer prep timeline",
@@ -136,14 +121,9 @@ const PAID_PRICING_PLANS: PaidPricingPlan[] = [
     headline: "The Best Value for a Full Year.",
     description: "Get a full year of BetterLSAT access at the lowest monthly equivalent.",
     priceUsd: 624,
+    listPriceUsd: 828,
     equivalentMonthlyUsd: 52,
-    discountLabel: "25% Ongoing Discount",
-    continueDiscountNote: {
-      title: "Need more time? Keep your discount.",
-      bodyBefore: "After your first 12 months, continue month-to-month at ",
-      amountLabel: "$52/month",
-      bodyAfter: ".",
-    },
+    discountLabel: "Save $204 vs. Paying $69/month",
     features: [
       "Everything in Full Access",
       "Best monthly value",
@@ -157,6 +137,27 @@ const PAID_PRICING_PLANS: PaidPricingPlan[] = [
 ]
 
 const PRICING_PLANS: PricingPlan[] = [FREE_PRICING_PLAN, ...PAID_PRICING_PLANS]
+
+/** Paid access when Stripe interval is unknown — do not claim Monthly / $69 renewal. */
+const FULL_ACCESS_FALLBACK_PLAN: PaidPricingPlan = {
+  id: "monthly",
+  name: "Full Access",
+  headline: "Full Access.",
+  description: "Full BetterLSAT platform access with your active subscription.",
+  priceUsd: 69,
+  equivalentMonthlyUsd: null,
+  discountLabel: null,
+  features: [
+    "Structured courses + explanations",
+    "Drills, sections and full PrepTests",
+    "Blind Review for deeper review",
+    "Weak-area and performance analytics",
+    "Cancel anytime",
+  ],
+  renewalNote: "",
+  ctaLabel: "Manage Plan",
+  lawHubNote: LAWHUB_REQUIRED_NOTE,
+}
 
 const GUEST_PRICING_TRUST_ITEMS = [
   {
@@ -189,8 +190,8 @@ function resolveCurrentPricingPlan(options: {
 }): PricingPlan {
   if (!options.hasActiveCore) return FREE_PRICING_PLAN
   if (options.checkoutPlan) return getPricingPlanById(options.checkoutPlan)
-  // Paid access without a known checkout interval — show Full Access (monthly) package.
-  return getPricingPlanById("monthly")
+  // Paid access without a known checkout interval — avoid mislabeling as Monthly.
+  return FULL_ACCESS_FALLBACK_PLAN
 }
 
 export {
