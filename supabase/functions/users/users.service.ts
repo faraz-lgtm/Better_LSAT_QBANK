@@ -16,6 +16,13 @@ import {
 } from '../_shared/lawhub-student-identity.ts'
 import { capturePostHogEvent } from '../_shared/posthog.ts'
 import { sendMetaCompleteRegistration } from '../_shared/meta-capi.ts'
+import {
+  formatSignupCountry,
+  formatSignupIntent,
+  formatSignupLandingPage,
+  formatSignupUtms,
+  notifySlackSignup,
+} from '../_shared/slack-signup.ts'
 import { parseStripeEnv } from '../_shared/stripe-env.ts'
 import type { LsacStudentPayload } from './users.mapper.ts'
 import type { SignupAttribution } from './users.repository.ts'
@@ -89,6 +96,8 @@ export type UsersServiceDeps = {
   fetchImpl?: typeof fetch
   /** Omit to build from `Deno.env`; pass a mock in tests. */
   lawHub?: LawHubClient | null
+  /** Injected in tests; defaults to shared Slack webhook helper. */
+  notifySlackSignup?: typeof notifySlackSignup
 }
 
 export type AccessState = 'AUTH_REQUIRED' | 'PAYMENT_REQUIRED' | 'LSAC_REQUIRED' | 'FULL_ACCESS'
@@ -120,11 +129,33 @@ export type TrackSignupConversionInput = {
   attribution?: SignupAttribution | null
   /** Auth user_metadata.attribution (cross-browser magic-link path). */
   userMetadataAttribution?: SignupAttribution | null
+  /** Checkout intent from callback body (localStorage). */
+  checkoutPlan?: string | null
+  /** Auth user_metadata.checkout_plan (stamped at magic-link / OAuth). */
+  userMetadataCheckoutPlan?: string | null
   /** Prefer auth.users.created_at when JWT omits it. */
   authCreatedAt?: string | null
   eventSourceUrl?: string | null
   clientUserAgent?: string | null
   clientIpAddress?: string | null
+  /** ISO country from CF-IPCountry. */
+  clientCountry?: string | null
+  provider?: string | null
+}
+
+const CHECKOUT_PLAN_IDS = new Set(['free', 'monthly', 'three_month', 'six_month', 'yearly'])
+
+/** Body plan wins over metadata; invalid/missing → free. */
+export function resolveSignupCheckoutPlan(
+  bodyPlan: string | null | undefined,
+  metadataPlan: string | null | undefined,
+): string {
+  for (const candidate of [bodyPlan, metadataPlan]) {
+    if (typeof candidate !== 'string') continue
+    const trimmed = candidate.trim().toLowerCase()
+    if (CHECKOUT_PLAN_IDS.has(trimmed)) return trimmed
+  }
+  return 'free'
 }
 
 export type TrackSignupConversionResult = {
@@ -412,14 +443,25 @@ export function createUsersService(deps: UsersServiceDeps) {
         }
       }
 
-      const attribution = mergeSignupAttribution(
+      const checkoutPlan = resolveSignupCheckoutPlan(
+        input.checkoutPlan,
+        input.userMetadataCheckoutPlan,
+      )
+      const country = formatSignupCountry(input.clientCountry)
+      let attribution = mergeSignupAttribution(
         input.attribution,
         input.userMetadataAttribution,
       )
+      attribution = {
+        ...(attribution ?? {}),
+        checkout_plan: checkoutPlan,
+        ...(country !== 'unknown' ? { country } : {}),
+      }
+
       const trackedAt = new Date().toISOString()
       const email = input.email?.trim() || existing?.email || null
 
-      const claimed = await deps.repository.claimSignupConversion({
+      const { profile: claimed, won } = await deps.repository.claimSignupConversion({
         userId: input.userId,
         email,
         attribution,
@@ -427,7 +469,7 @@ export function createUsersService(deps: UsersServiceDeps) {
       })
 
       // Another request claimed first (conditional update matched 0 rows).
-      if (claimed.signup_conversion_tracked_at !== trackedAt) {
+      if (!won) {
         return {
           tracked: false,
           alreadyTracked: true,
@@ -457,6 +499,23 @@ export function createUsersService(deps: UsersServiceDeps) {
           email: email ?? undefined,
         },
       })
+
+      const notify = deps.notifySlackSignup ?? notifySlackSignup
+      try {
+        await notify({
+          email: claimed.email ?? email ?? '',
+          userId: input.userId,
+          provider: input.provider ?? undefined,
+          createdAt: authCreatedAt ?? undefined,
+          landingPage: formatSignupLandingPage(attribution),
+          utms: formatSignupUtms(attribution),
+          intent: formatSignupIntent(checkoutPlan),
+          country,
+          fetchImpl: deps.fetchImpl,
+        })
+      } catch (error) {
+        console.warn('Slack signup notify failed:', error)
+      }
 
       return {
         tracked: true,

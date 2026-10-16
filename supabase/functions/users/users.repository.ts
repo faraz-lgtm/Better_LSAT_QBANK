@@ -201,12 +201,18 @@ export function createUsersRepository(client: SupabaseClient) {
       return data.user?.created_at ?? null
     },
 
+    /**
+     * Atomically claim signup conversion. `won` is true only when this request
+     * performed the write (conditional update matched / insert succeeded).
+     * Do not compare returned timestamps to the input ISO string — PostgREST
+     * often reformats `Z` as `+00:00`, which falsely looks like a lost race.
+     */
     async claimSignupConversion(input: {
       userId: string
       email: string | null
       attribution: SignupAttribution | null
       trackedAt: string
-    }): Promise<ProfileRow> {
+    }): Promise<{ profile: ProfileRow; won: boolean }> {
       const existing = await this.getProfileById(input.userId)
       if (existing) {
         const { data, error } = await client
@@ -222,10 +228,10 @@ export function createUsersRepository(client: SupabaseClient) {
           .select()
           .maybeSingle()
         if (error) throw error
-        if (data) return data as ProfileRow
+        if (data) return { profile: data as ProfileRow, won: true }
         const refreshed = await this.getProfileById(input.userId)
         if (!refreshed) throw new Error('Profile missing after signup conversion claim')
-        return refreshed
+        return { profile: refreshed, won: false }
       }
 
       const { data, error } = await client
@@ -245,7 +251,7 @@ export function createUsersRepository(client: SupabaseClient) {
         .select()
         .single()
       if (error) throw error
-      return data as ProfileRow
+      return { profile: data as ProfileRow, won: true }
     },
 
     async listProfiles(limit = 200): Promise<ProfileRow[]> {

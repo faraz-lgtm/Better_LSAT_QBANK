@@ -12,6 +12,7 @@ import {
   createUsersService,
   isSignupConversionEligible,
   mergeSignupAttribution,
+  resolveSignupCheckoutPlan,
 } from './users.service.ts'
 
 /** Test doubles often only mock getStudentsByEmail; wire findStudentsByEmail for service code. */
@@ -134,11 +135,14 @@ function mockRepo(overrides: Record<string, unknown> = {}): UsersRepository {
     claimSignupConversion:
       (overrides.claimSignupConversion as UsersRepository['claimSignupConversion']) ??
       (async (input) => ({
-        ...baseRow,
-        id: input.userId,
-        email: input.email,
-        signup_conversion_tracked_at: input.trackedAt,
-        signup_attribution: input.attribution,
+        profile: {
+          ...baseRow,
+          id: input.userId,
+          email: input.email,
+          signup_conversion_tracked_at: input.trackedAt,
+          signup_attribution: input.attribution,
+        },
+        won: true,
       })),
     getStudyPreferencesByUserId:
       (overrides.getStudyPreferencesByUserId as UsersRepository['getStudyPreferencesByUserId']) ??
@@ -1757,6 +1761,13 @@ Deno.test('mergeSignupAttribution prefers cookie over metadata', () => {
   assertEquals(merged?.utm_source, 'google')
 })
 
+Deno.test('resolveSignupCheckoutPlan prefers body over metadata and defaults to free', () => {
+  assertEquals(resolveSignupCheckoutPlan('monthly', 'free'), 'monthly')
+  assertEquals(resolveSignupCheckoutPlan(null, 'three_month'), 'three_month')
+  assertEquals(resolveSignupCheckoutPlan('bogus', null), 'free')
+  assertEquals(resolveSignupCheckoutPlan(null, null), 'free')
+})
+
 Deno.test('isSignupConversionEligible accepts recent created_at', () => {
   const now = Date.parse('2026-10-17T12:00:00Z')
   assertEquals(
@@ -1812,6 +1823,142 @@ Deno.test('trackSignupConversion claims once and returns eventId', async () => {
     claimSignupConversion: async (input) => {
       claimed = true
       return {
+        // Simulate PostgREST reformatting Z → +00:00 (must not look like a lost race).
+        profile: {
+          id: input.userId,
+          email: input.email,
+          full_name: null,
+          first_name: null,
+          last_name: null,
+          phone: null,
+          avatar_url: null,
+          role: 'student',
+          student_coaching_id: null,
+          stripe_customer_id: null,
+          prep_plus_source: null,
+          lawhub_invite_status: null,
+          lawhub_invite_last_error: null,
+          lawhub_invited_at: null,
+          is_first_time_login: true,
+          signup_conversion_tracked_at: input.trackedAt.replace(/Z$/, '+00:00'),
+          signup_attribution: input.attribution,
+          created_at: '2026-10-17T00:00:00Z',
+          updated_at: input.trackedAt,
+        },
+        won: true,
+      }
+    },
+  })
+  let slackCalled = false
+  let slackIntent = ''
+  let slackCountry = ''
+  let slackLanding = ''
+  const service = createUsersService({
+    repository,
+    lawHub: null,
+    notifySlackSignup: async (input) => {
+      slackCalled = true
+      slackIntent = input.intent ?? ''
+      slackCountry = input.country ?? ''
+      slackLanding = input.landingPage ?? ''
+      return true
+    },
+  })
+  const out = await service.trackSignupConversion({
+    userId: 'user-new',
+    email: 'new@example.com',
+    attribution: {
+      gclid: 'g-1',
+      landing_page: 'https://app.betterlsat.com/signup?utm_source=ads',
+      utm_source: 'ads',
+    },
+    userMetadataAttribution: { fbclid: 'f-1' },
+    checkoutPlan: 'monthly',
+    clientCountry: 'us',
+    provider: 'google',
+    authCreatedAt: new Date().toISOString(),
+  })
+  assertEquals(claimed, true)
+  assertEquals(out.tracked, true)
+  assertEquals(out.eventId, 'signup:user-new')
+  assertEquals(out.email, 'new@example.com')
+  assertEquals(out.attribution?.gclid, 'g-1')
+  assertEquals(out.attribution?.fbclid, 'f-1')
+  assertEquals(out.attribution?.checkout_plan, 'monthly')
+  assertEquals(out.attribution?.country, 'US')
+  assertEquals(slackCalled, true)
+  assertEquals(slackIntent, 'Paid (monthly)')
+  assertEquals(slackCountry, 'US')
+  assertEquals(slackLanding, 'https://app.betterlsat.com/signup?utm_source=ads')
+})
+
+Deno.test('trackSignupConversion does not Slack when alreadyTracked', async () => {
+  let slackCalled = false
+  const repository = mockRepo({
+    getProfileById: async (id) => ({
+      id,
+      email: 'old@example.com',
+      full_name: null,
+      first_name: null,
+      last_name: null,
+      phone: null,
+      avatar_url: null,
+      role: 'student',
+      student_coaching_id: null,
+      stripe_customer_id: null,
+      prep_plus_source: null,
+      lawhub_invite_status: null,
+      lawhub_invite_last_error: null,
+      lawhub_invited_at: null,
+      is_first_time_login: false,
+      signup_conversion_tracked_at: '2026-01-01T00:00:00Z',
+      signup_attribution: { utm_source: 'ads' },
+      created_at: '2026-01-01T00:00:00Z',
+      updated_at: '2026-01-01T00:00:00Z',
+    }),
+  })
+  const service = createUsersService({
+    repository,
+    lawHub: null,
+    notifySlackSignup: async () => {
+      slackCalled = true
+      return true
+    },
+  })
+  const out = await service.trackSignupConversion({
+    userId: 'user-old',
+    email: 'old@example.com',
+  })
+  assertEquals(out.tracked, false)
+  assertEquals(out.alreadyTracked, true)
+  assertEquals(slackCalled, false)
+})
+
+Deno.test('trackSignupConversion continues when Slack throws', async () => {
+  const repository = mockRepo({
+    getProfileById: async (id) => ({
+      id,
+      email: null,
+      full_name: null,
+      first_name: null,
+      last_name: null,
+      phone: null,
+      avatar_url: null,
+      role: 'student',
+      student_coaching_id: null,
+      stripe_customer_id: null,
+      prep_plus_source: null,
+      lawhub_invite_status: null,
+      lawhub_invite_last_error: null,
+      lawhub_invited_at: null,
+      is_first_time_login: true,
+      signup_conversion_tracked_at: null,
+      signup_attribution: null,
+      created_at: '2026-10-17T00:00:00Z',
+      updated_at: '2026-10-17T00:00:00Z',
+    }),
+    claimSignupConversion: async (input) => ({
+      profile: {
         id: input.userId,
         email: input.email,
         full_name: null,
@@ -1827,27 +1974,28 @@ Deno.test('trackSignupConversion claims once and returns eventId', async () => {
         lawhub_invite_last_error: null,
         lawhub_invited_at: null,
         is_first_time_login: true,
-        signup_conversion_tracked_at: input.trackedAt,
+        signup_conversion_tracked_at: input.trackedAt.replace(/Z$/, '+00:00'),
         signup_attribution: input.attribution,
         created_at: '2026-10-17T00:00:00Z',
         updated_at: input.trackedAt,
-      }
+      },
+      won: true,
+    }),
+  })
+  const service = createUsersService({
+    repository,
+    lawHub: null,
+    notifySlackSignup: async () => {
+      throw new Error('slack down')
     },
   })
-  const service = createUsersService({ repository, lawHub: null })
   const out = await service.trackSignupConversion({
-    userId: 'user-new',
-    email: 'new@example.com',
-    attribution: { gclid: 'g-1' },
-    userMetadataAttribution: { fbclid: 'f-1' },
+    userId: 'user-slack-fail',
+    email: 's@example.com',
     authCreatedAt: new Date().toISOString(),
   })
-  assertEquals(claimed, true)
   assertEquals(out.tracked, true)
-  assertEquals(out.eventId, 'signup:user-new')
-  assertEquals(out.email, 'new@example.com')
-  assertEquals(out.attribution?.gclid, 'g-1')
-  assertEquals(out.attribution?.fbclid, 'f-1')
+  assertEquals(out.attribution?.checkout_plan, 'free')
 })
 
 Deno.test('trackSignupConversion returns alreadyTracked when claimed', async () => {

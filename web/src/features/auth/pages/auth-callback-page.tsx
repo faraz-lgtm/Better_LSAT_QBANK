@@ -8,14 +8,30 @@ import { AnalyticsEvent, captureEvent } from "@/lib/analytics/posthog"
 import { createAuthApi } from "@/lib/api/auth"
 import { createUsersApi } from "@/lib/api/users"
 import { fetchPostAuthDestination } from "@/lib/auth/fetch-post-auth-destination"
-import { resolvePendingCheckoutDestination } from "@/lib/auth/pending-checkout-plan"
+import {
+  readPendingCheckoutPlan,
+  resolvePendingCheckoutDestination,
+} from "@/lib/auth/pending-checkout-plan"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { formatSupabaseCallError } from "@/lib/supabase/format-call-error"
 
 const PKCE_EXCHANGE_PREFIX = "betterlsat:pkce-exchanged:"
 const TOKEN_HASH_VERIFY_PREFIX = "betterlsat:token-hash-verified:"
+const SIGNUP_CONVERSION_PREFIX = "betterlsat:signup-conversion:"
+const SIGNUP_CONVERSION_PUSHED_PREFIX = "betterlsat:signup-conversion-pushed:"
 const inflightPkceExchanges = new Map<string, Promise<void>>()
 const inflightTokenHashVerifies = new Map<string, Promise<void>>()
+const inflightSignupConversions = new Map<
+  string,
+  Promise<{
+    tracked: boolean
+    alreadyTracked?: boolean
+    ineligible?: boolean
+    eventId: string
+    email: string | null
+    attribution: Record<string, unknown> | null
+  }>
+>()
 
 const EMAIL_OTP_TYPES = new Set<string>([
   "signup",
@@ -87,6 +103,45 @@ async function verifyTokenHashOnce(
   )
 }
 
+type SignupConversionResult = {
+  tracked: boolean
+  alreadyTracked?: boolean
+  ineligible?: boolean
+  eventId: string
+  email: string | null
+  attribution: Record<string, unknown> | null
+}
+
+/** Share one signup-conversion claim across StrictMode double-mounts. */
+async function trackSignupConversionOnce(
+  userId: string,
+  track: () => Promise<SignupConversionResult>,
+): Promise<SignupConversionResult> {
+  const storageKey = `${SIGNUP_CONVERSION_PREFIX}${userId}`
+  const cached = sessionStorage.getItem(storageKey)
+  if (cached) {
+    try {
+      return JSON.parse(cached) as SignupConversionResult
+    } catch {
+      // Fall through and re-run.
+    }
+  }
+
+  let inflight = inflightSignupConversions.get(userId)
+  if (!inflight) {
+    inflight = track()
+      .then((result) => {
+        sessionStorage.setItem(storageKey, JSON.stringify(result))
+        return result
+      })
+      .finally(() => {
+        inflightSignupConversions.delete(userId)
+      })
+    inflightSignupConversions.set(userId, inflight)
+  }
+  return await inflight
+}
+
 function AuthCallbackPage() {
   const navigate = useNavigate()
   const [error, setError] = useState<string | null>(null)
@@ -151,11 +206,16 @@ function AuthCallbackPage() {
 
         let conversionWait: Promise<void> = Promise.resolve()
         try {
-          const conversion = await usersApi.trackSignupConversion({
-            attribution: readAttribution(),
-            eventSourceUrl: window.location.href,
-          })
-          if (conversion.tracked) {
+          const conversion = await trackSignupConversionOnce(session.user.id, () =>
+            usersApi.trackSignupConversion({
+              attribution: readAttribution(),
+              checkoutPlan: readPendingCheckoutPlan() ?? "free",
+              eventSourceUrl: window.location.href,
+            }),
+          )
+          const pushKey = `${SIGNUP_CONVERSION_PUSHED_PREFIX}${session.user.id}`
+          if (conversion.tracked && sessionStorage.getItem(pushKey) !== "1") {
+            sessionStorage.setItem(pushKey, "1")
             const payload = {
               user_email: conversion.email ?? session.user.email ?? null,
               user_id: session.user.id,
@@ -165,8 +225,9 @@ function AuthCallbackPage() {
             captureEvent(AnalyticsEvent.freeDiagnosticSignup, payload)
             conversionWait = trackFreeDiagnosticSignupAndWait(payload, 300)
           }
-        } catch {
+        } catch (conversionError) {
           // Conversion tracking must not block auth completion.
+          console.warn("Signup conversion tracking failed:", conversionError)
         }
 
         const destination = resolvePendingCheckoutDestination(
