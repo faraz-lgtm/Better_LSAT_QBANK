@@ -5,6 +5,8 @@ type DrillDifficultyStatusProps = {
   layout?: "inline" | "stacked"
   /** Same chip surface as continue-row difficulty labels. */
   surface?: "white" | "muted"
+  /** Produktly tour hook (e.g. dashboard Step 16). */
+  tourTarget?: string
 }
 
 function DifficultyBars({ filledBars, color }: { filledBars: number; color: string }) {
@@ -27,12 +29,16 @@ function DrillDifficultyStatus({
   color,
   layout = "inline",
   surface = "white",
+  tourTarget,
 }: DrillDifficultyStatusProps) {
   const surfaceClass = surface === "muted" ? "bg-[var(--primary-0)]" : "bg-[var(--greyscale-0)]"
 
   if (layout === "stacked") {
     return (
-      <div className={`shrink-0 rounded-[10px] px-[10px] py-[8px] ${surfaceClass}`}>
+      <div
+        className={`shrink-0 rounded-[10px] px-[10px] py-[8px] ${surfaceClass}`}
+        data-tour-target={tourTarget}
+      >
         <p className="text-[12px] font-semibold leading-[1.5] tracking-[0.24px]" style={{ color }}>
           {label}
         </p>
@@ -46,6 +52,7 @@ function DrillDifficultyStatus({
   return (
     <div
       className={`flex h-[32px] shrink-0 items-center gap-[10px] rounded-[10px] px-[10px] ${surfaceClass}`}
+      data-tour-target={tourTarget}
     >
       <DifficultyBars filledBars={filledBars} color={color} />
       <span className="text-[12px] font-semibold leading-[1.5] tracking-[0.24px]" style={{ color }}>

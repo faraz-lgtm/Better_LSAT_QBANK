@@ -341,7 +341,10 @@ function DashboardPage() {
         </div>
 
         <div className="dashboard-page__bottom">
-          <section className="min-w-0 rounded-[24px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-4 shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)] sm:p-6">
+          <section
+            className="min-w-0 rounded-[24px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-4 shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)] sm:p-6"
+            data-tour-target="dashboard-active-drills"
+          >
             <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
               <div className="min-w-0">
                 <h2 className="text-lg font-semibold tracking-[0.36px] text-[var(--color-student-heading)]">Active Drills</h2>

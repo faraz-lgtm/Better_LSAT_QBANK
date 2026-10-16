@@ -159,6 +159,7 @@ function ContinueDrillCard({
               label={difficultyLabelText}
               filledBars={difficultyFilledBars}
               color={difficultyColor}
+              tourTarget="dashboard-drill-difficulty"
             />
           </div>
 

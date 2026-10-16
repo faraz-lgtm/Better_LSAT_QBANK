@@ -4,10 +4,12 @@ export const PRODUKTLY_FEEDBACK_WIDGET_ID = 2722
 /**
  * Produktly dashboard → Product tours → edit/11289
  *
- * Sidebar CSS selectors (set these in the tour step editor after deploy):
- * - Step 1 (logo):     [data-tour-target="sidebar-brand"]
- * - Step 2 (menu):     [data-tour-target="sidebar-menu"]
- * - Step 7 (Explanations): [data-tour-target="nav-explanations"]
+ * CSS selectors (set these in the tour step editor after deploy):
+ * - Step 1 (logo):            [data-tour-target="sidebar-brand"]
+ * - Step 2 (menu):            [data-tour-target="sidebar-menu"]
+ * - Step 7 (Explanations):    [data-tour-target="nav-explanations"]
+ * - Step 15 (Active Drills):  [data-tour-target="dashboard-active-drills"]
+ * - Step 16 (drill difficulty): [data-tour-target="dashboard-drill-difficulty"]
  *
  * Do not use full Tailwind class chains (e.g. border-[color:var(...)]) — they break
  * the spotlight and can cover half the viewport.

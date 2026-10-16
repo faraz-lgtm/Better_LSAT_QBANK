@@ -73,6 +73,7 @@ vi.mock("@/lib/supabase/client", () => ({
 
 vi.mock("@/features/app-shell/student-entitlement-context", () => ({
   useStudentEntitlement: () => mocks.entitlement,
+  useStudentEntitlementOptional: () => mocks.entitlement,
 }))
 
 vi.mock("@/lib/api/users", () => ({
@@ -315,6 +316,9 @@ describe("DashboardPage", () => {
       expect(screen.queryByLabelText("Loading stats")).not.toBeInTheDocument()
       expect(screen.getByText(/No drills in progress/)).toBeInTheDocument()
     })
+    expect(
+      screen.getByRole("heading", { name: "Active Drills" }).closest("[data-tour-target]"),
+    ).toHaveAttribute("data-tour-target", "dashboard-active-drills")
   })
 
   it("updates the welcome name as soon as profile resolves, even if study context is slow", async () => {
