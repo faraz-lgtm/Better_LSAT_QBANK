@@ -151,6 +151,7 @@ site_url = "http://localhost:5173"
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
 additional_redirect_urls = [
   "http://localhost:5173",
+  "https://app.betterlsat.com/",
   "https://better-lsat-qbank.vercel.app/",
   "http://127.0.0.1:5173/auth/callback",
   "http://localhost:5173/auth/callback",
@@ -158,6 +159,8 @@ additional_redirect_urls = [
   "http://localhost:3000/auth/callback",
   "http://127.0.0.1:5173/auth/callback?type=recovery",
   "http://localhost:5173/auth/callback?type=recovery",
+  "https://app.betterlsat.com/auth/callback",
+  "https://app.betterlsat.com/auth/callback?type=recovery",
   "https://better-lsat-qbank.vercel.app/auth/callback",
   "https://better-lsat-qbank.vercel.app/auth/callback?type=recovery",
 ]

@@ -89,7 +89,8 @@ export const BILLING_PLAN_CATALOG = {
   },
   lsacYearly: {
     name: 'LawHub Advantage',
-    description: 'Official LSAT PrepPlus via LawHub. Fee goes to LSAC, not Better LSAT. First year billed once at checkout.',
+    description:
+      'Official LSAT Prep® PrepPlus via LawHub®. Fee goes to LSAC®, not Better LSAT. First year billed once at checkout.',
     yearlyUsd: 124,
   },
 } as const satisfies {

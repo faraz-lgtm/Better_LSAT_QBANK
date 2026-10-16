@@ -1,6 +1,6 @@
 /** Default LSAC coach-activation / confirm-email endpoint (vendor invite accept). */
 export const DEFAULT_LSAC_CONFIRM_EMAIL_BASE_URL =
-  'https://lawpath.azurewebsites.net/confirm_email'
+  'https://app.lawhub.org/confirm_email'
 
 export type BuildLsacConfirmEmailUrlInput = {
   studentCoachingId: string

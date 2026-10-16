@@ -357,7 +357,7 @@ async function validatePlanPrice(
 }
 
 const EXISTING_LSAC_CHECKOUT_NOTE =
-  'Better LSAT membership only. You keep your existing LawHub PrepPlus through LSAC — no LawHub fee from Better LSAT.'
+  'Better LSAT membership only. You keep your existing LawHub® PrepPlus through LSAC® — no LawHub® fee from Better LSAT.'
 const BETTERLSAT_PLAN_CHANGE_SCHEDULE = 'betterlsat_plan_change'
 
 /**

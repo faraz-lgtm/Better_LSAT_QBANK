@@ -223,7 +223,7 @@ Deno.test('billing service createCheckoutSession skips LawHub when includeLawHub
             assertEquals((params.metadata as Record<string, string>).include_lawhub, 'false')
             assertEquals(
               (params.custom_text as Record<string, Record<string, string>>)?.submit?.message,
-              'Better LSAT membership only. You keep your existing LawHub PrepPlus through LSAC — no LawHub fee from Better LSAT.',
+              'Better LSAT membership only. You keep your existing LawHub® PrepPlus through LSAC® — no LawHub® fee from Better LSAT.',
             )
             return { url: 'https://checkout.stripe.test/no-lsac' }
           },
