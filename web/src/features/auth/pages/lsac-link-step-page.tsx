@@ -2,6 +2,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
+import {
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogRoot,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { pollEntitlementAfterCheckoutSuccess } from "@/features/app-shell/poll-entitlement-after-checkout"
 import { useStudentEntitlementOptional } from "@/features/app-shell/student-entitlement-context"
@@ -18,6 +25,7 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
 const PENDING_POLL_MS = 15_000
 const PENDING_POLL_MAX_MS = 120_000
+const LINKED_HARD_REFRESH_MS = 10_000
 
 function LsacLinkStepPage() {
   const navigate = useNavigate()
@@ -48,7 +56,27 @@ function LsacLinkStepPage() {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
+  const [linkedSuccessOpen, setLinkedSuccessOpen] = useState(false)
   const pendingPollStartedAt = useRef<number | null>(null)
+  const linkedRefreshTimerRef = useRef<number | null>(null)
+  const linkedSuccessScheduledRef = useRef(false)
+
+  const announceLinkedAndHardRefresh = useCallback(() => {
+    if (linkedSuccessScheduledRef.current) return
+    linkedSuccessScheduledRef.current = true
+    setLinkedSuccessOpen(true)
+    linkedRefreshTimerRef.current = window.setTimeout(() => {
+      window.location.assign("/app")
+    }, LINKED_HARD_REFRESH_MS)
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      if (linkedRefreshTimerRef.current != null) {
+        window.clearTimeout(linkedRefreshTimerRef.current)
+      }
+    }
+  }, [])
 
   const refreshState = useCallback(async (): Promise<{
     profile: UserProfile | null
@@ -202,13 +230,14 @@ function LsacLinkStepPage() {
       }
       void refreshState().then(({ entitlement: next }) => {
         if (next?.isLsacEligible) {
-          navigate("/app", { replace: true })
+          window.clearInterval(interval)
+          announceLinkedAndHardRefresh()
         }
       })
     }, PENDING_POLL_MS)
 
     return () => window.clearInterval(interval)
-  }, [navigate, pendingActivation, refreshState, usersApi])
+  }, [announceLinkedAndHardRefresh, pendingActivation, refreshState, usersApi])
 
   function validateNames(): boolean {
     if (!firstName.trim() || !lastName.trim()) {
@@ -232,7 +261,7 @@ function LsacLinkStepPage() {
     }
     const { entitlement: nextEntitlement } = await refreshState()
     if (nextEntitlement?.isLsacEligible) {
-      navigate("/app", { replace: true })
+      announceLinkedAndHardRefresh()
     }
   }
 
@@ -311,7 +340,7 @@ function LsacLinkStepPage() {
     try {
       const { entitlement: next } = await refreshState()
       if (next?.isLsacEligible) {
-        navigate("/app", { replace: true })
+        announceLinkedAndHardRefresh()
         return
       }
       setStatusMessage("Still waiting on LawHub. Finish activation, then check again.")
@@ -350,6 +379,22 @@ function LsacLinkStepPage() {
   return (
     <StudentMain>
       <CheckoutPaymentSuccessDialog confirmLabel="Continue to LawHub setup" />
+      <DialogRoot open={linkedSuccessOpen} onOpenChange={() => {}}>
+        <DialogContent
+          className="sm:max-w-md"
+          aria-describedby="lsac-linked-success-desc"
+          onPointerDownOutside={(event) => event.preventDefault()}
+          onEscapeKeyDown={(event) => event.preventDefault()}
+        >
+          <DialogHeader>
+            <DialogTitle>You&apos;re linked</DialogTitle>
+            <DialogDescription id="lsac-linked-success-desc">
+              Your LawHub account is connected. We&apos;ll refresh the app in a few seconds so your
+              PrepPlus access is ready.
+            </DialogDescription>
+          </DialogHeader>
+        </DialogContent>
+      </DialogRoot>
       <div className="mx-auto w-full max-w-3xl rounded-xl border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6 shadow-[0_1px_3px_rgba(15,23,42,0.04)] sm:p-8 dark:shadow-[0_1px_3px_rgba(0,0,0,0.35)]">
         <div className="border-b border-[var(--greyscale-100)] pb-5">
           <p className="text-xs font-semibold uppercase tracking-wide text-[var(--greyscale-500)]">

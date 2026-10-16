@@ -74,7 +74,7 @@ Quick reference:
 | `LSAC_SCOPE` | Optional override; otherwise derived from `LAWHUB_SANDBOX` |
 | `LSAC_VENDOR_SYSTEM` | Optional label for the required **logging** API |
 | `LSAC_DEEPLINK_BASE_URL` | Optional override for deep link host (default: `https://lawhub.org`) |
-| `LSAC_CONFIRM_EMAIL_BASE_URL` | Optional confirm_email activation host (default: `https://lawpath.azurewebsites.net/confirm_email`) |
+| `LSAC_CONFIRM_EMAIL_BASE_URL` | Optional confirm_email activation host (default: `https://app.lawhub.org/confirm_email`; sandbox: `https://lawpath.azurewebsites.net/confirm_email`) |
 | `LSAC_SYNC_KEY` | Required shared secret header (`x-lsac-sync-key`) for `lsac-sync` |
 | `PREP_COURSE_ENFORCE_ENTITLEMENT` | When `true`, prep-course requires linked + eligible LSAC subscription |
 
@@ -136,7 +136,7 @@ After signup and onboarding, students land on the free dashboard; paid upgrade o
 | `STRIPE_PRICE_ID_LSAC_YEARLY_TEST` / `STRIPE_PRICE_ID_LSAC_YEARLY_LIVE` | LawHub Advantage (~$124/year). If stored as yearly recurring in Stripe, checkout bills year one as a **one-time** line item (Stripe cannot mix a subscription interval with a yearly price on one Checkout session). |
 | `STRIPE_PRICE_ID_TEST` / `STRIPE_PRICE_ID_LIVE` | Legacy fallback for the Core monthly price only |
 | `STRIPE_PUBLISHABLE_KEY_TEST` / `STRIPE_PUBLISHABLE_KEY_LIVE` | Returned by `billing-get-public-config`; optional `VITE_STRIPE_PUBLISHABLE_KEY` for local web |
-| `APP_BASE_URL` | Stripe Checkout success/cancel redirect base. Set to `https://better-lsat-qbank.vercel.app` on hosted Supabase. If unset/invalid, checkout uses the browser `Origin` from the pricing page (localhost or Vercel). Do **not** use `SUPABASE_PUBLIC_URL` — that is the API host, not the web app. |
+| `APP_BASE_URL` | Stripe Checkout success/cancel redirect base. Set to `https://app.betterlsat.com` on hosted Supabase. If unset/invalid, checkout uses the browser `Origin` from the pricing page (localhost, custom domain, or Vercel). Do **not** use `SUPABASE_PUBLIC_URL` — that is the API host, not the web app. |
 
 Edge functions: `billing-create-checkout-session`, `billing-get-plans`, `billing-get-status`, `billing-get-public-config`, `stripe-webhook` (no JWT — Stripe signature only).
 

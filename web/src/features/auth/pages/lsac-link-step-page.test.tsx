@@ -1,9 +1,12 @@
-import { render, screen, waitFor } from "@testing-library/react"
+import { act, render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { MemoryRouter, Route, Routes } from "react-router-dom"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { LsacLinkStepPage } from "./lsac-link-step-page"
+
+const PROD_CONFIRM_URL =
+  "https://app.lawhub.org/confirm_email?StudentCoachingId=coach-1&VendorId=BET2026"
 
 const getMyProfile = vi.fn()
 const getEntitlementState = vi.fn()
@@ -86,6 +89,15 @@ describe("LsacLinkStepPage", () => {
     pollEntitlementMock.mockReset()
     pollEntitlementMock.mockResolvedValue(false)
     vi.stubGlobal("open", vi.fn())
+    vi.stubGlobal("location", {
+      ...window.location,
+      assign: vi.fn(),
+    })
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.unstubAllGlobals()
   })
 
   it("shows path instructions and labels on the invite step", async () => {
@@ -113,9 +125,7 @@ describe("LsacLinkStepPage", () => {
       isLsacLinked: true,
       accessState: "FULL_ACCESS",
     })
-    lawHubConfirmUrl.mockResolvedValue(
-      "https://lawpath.azurewebsites.net/confirm_email?StudentCoachingId=coach-1&VendorId=BET2026",
-    )
+    lawHubConfirmUrl.mockResolvedValue(PROD_CONFIRM_URL)
 
     renderPage()
 
@@ -125,11 +135,44 @@ describe("LsacLinkStepPage", () => {
     expect(screen.getByText(/open LSAC in a new tab/i)).toBeInTheDocument()
 
     await userEvent.click(screen.getByRole("button", { name: "Activate LawHub" }))
-    expect(window.open).toHaveBeenCalledWith(
-      "https://lawpath.azurewebsites.net/confirm_email?StudentCoachingId=coach-1&VendorId=BET2026",
-      "_blank",
-      "noopener,noreferrer",
-    )
+    expect(window.open).toHaveBeenCalledWith(PROD_CONFIRM_URL, "_blank", "noopener,noreferrer")
+  })
+
+  it("shows linked popup and hard-refreshes to /app after 10s when LawHub becomes eligible", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    getMyProfile.mockResolvedValue({
+      ...baseProfile,
+      student_coaching_id: "coach-1",
+    })
+    getEntitlementState
+      .mockResolvedValueOnce({
+        ...paidNeedsLsacEntitlement,
+        isLsacLinked: true,
+        accessState: "FULL_ACCESS",
+      })
+      .mockResolvedValue({
+        isAuthenticated: true,
+        isLsacLinked: true,
+        isLsacEligible: true,
+        hasActiveCore: true,
+        accessState: "FULL_ACCESS",
+      })
+    lawHubConfirmUrl.mockResolvedValue(PROD_CONFIRM_URL)
+    lawHubRefresh.mockResolvedValue(undefined)
+
+    renderPage()
+
+    expect(await screen.findByRole("button", { name: "I've finished on LawHub" })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole("button", { name: "I've finished on LawHub" }))
+
+    expect(await screen.findByRole("heading", { name: /you're linked/i })).toBeInTheDocument()
+    expect(window.location.assign).not.toHaveBeenCalled()
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10_000)
+    })
+
+    expect(window.location.assign).toHaveBeenCalledWith("/app")
   })
 
   it("redirects to app when already LawHub eligible", async () => {
