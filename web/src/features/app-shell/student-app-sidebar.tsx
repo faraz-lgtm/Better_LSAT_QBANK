@@ -40,6 +40,37 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
 const PREP_COURSE_HREF = "/app/prep-course"
 
+/** Stable Produktly CSS selectors: `[data-tour-target="…"]` (tour 11289). */
+const TOUR_TARGET = {
+  sidebarBrand: "sidebar-brand",
+  sidebarMenu: "sidebar-menu",
+  getStarted: "nav-get-started",
+  dashboard: "nav-dashboard",
+  diagnosticTest: "nav-diagnostic-test",
+  diagnosticExplanation: "nav-diagnostic-explanation",
+} as const
+
+const NAV_HREF_TOUR_TARGETS: Record<string, string> = {
+  [PREP_COURSE_HREF]: "nav-prep-course",
+  "/app/learn/explanations": "nav-explanations",
+  "/app/practice/drills": "nav-drills",
+  "/app/practice/sections": "nav-sections",
+  [PREPTEST_LIST_HREF]: "nav-preptest",
+  "/app/analytics": "nav-overview",
+  "/app/analytics/drills": "nav-insights-drills",
+  "/app/analytics/sections": "nav-insights-sections",
+  "/app/analytics/preptests": "nav-insights-preptest",
+  "/app/feedback": "nav-feedback",
+  "/app/roadmap": "nav-roadmap",
+}
+
+function tourTargetForNavHref(href: string): string {
+  return (
+    NAV_HREF_TOUR_TARGETS[href] ??
+    `nav-${href.replace(/^\/app\//, "").replace(/\//g, "-")}`
+  )
+}
+
 type StudentAppSidebarProps = {
   mobileOpen: boolean
   onMobileClose: () => void
@@ -109,6 +140,7 @@ function PrepCourseNavItem({
     <div className="student-sidebar-expandable">
       <button
         type="button"
+        data-tour-target={tourTargetForNavHref(item.href)}
         className={cn(
           "student-sidebar-link student-sidebar-link--with-trailing w-full justify-between",
           parentActive && "student-sidebar-link--active",
@@ -189,6 +221,7 @@ function LockedPremiumNavItem({ item, onLockedClick }: { item: StudentNavItem; o
   return (
     <button
       type="button"
+      data-tour-target={tourTargetForNavHref(item.href)}
       aria-label={`${label} (locked)`}
       title={`${label} (locked)`}
       onClick={onLockedClick}
@@ -255,7 +288,10 @@ function StudentAppSidebar({
         )}
         aria-label="Main navigation"
       >
-        <div className="student-shell-top-row student-sidebar-brand-row flex shrink-0 items-center border-b border-[color:var(--greyscale-100)] px-5">
+        <div
+          className="student-shell-top-row student-sidebar-brand-row flex shrink-0 items-center border-b border-[color:var(--greyscale-100)] px-5"
+          data-tour-target={TOUR_TARGET.sidebarBrand}
+        >
           <Link
             to={STUDENT_DASHBOARD_HREF}
             className="student-sidebar-brand-link flex min-w-0 flex-1 items-center"
@@ -295,10 +331,11 @@ function StudentAppSidebar({
         </div>
 
         <nav className="student-sidebar-nav flex min-h-0 flex-1 flex-col overflow-y-auto">
-          <div className="student-sidebar-menu shrink-0">
+          <div className="student-sidebar-menu shrink-0" data-tour-target={TOUR_TARGET.sidebarMenu}>
             {PRODUKTLY_PRODUCT_TOUR_ID > 0 ? (
               <button
                 type="button"
+                data-tour-target={TOUR_TARGET.getStarted}
                 className="student-sidebar-link w-full"
                 aria-label={STUDENT_GET_STARTED_LABEL}
                 title={STUDENT_GET_STARTED_LABEL}
@@ -317,6 +354,7 @@ function StudentAppSidebar({
             <p className="student-sidebar-heading">{STUDENT_MAIN_NAV_SECTION.label}</p>
             <Link
               to={dashboardHref}
+              data-tour-target={TOUR_TARGET.dashboard}
               className={cn("student-sidebar-link", dashboardActive && "student-sidebar-link--active")}
               aria-label="Dashboard"
               title="Dashboard"
@@ -330,6 +368,7 @@ function StudentAppSidebar({
                 <p className="student-sidebar-heading">{STUDENT_DIAGNOSTIC_NAV_SECTION.label}</p>
                 <Link
                   to={STUDENT_DIAGNOSTIC_HREF}
+                  data-tour-target={TOUR_TARGET.diagnosticTest}
                   className="student-sidebar-link"
                   aria-label="Diagnostic Test"
                   title="Diagnostic Test"
@@ -344,6 +383,7 @@ function StudentAppSidebar({
                 />
                 <Link
                   to={DIAGNOSTIC_EXPLANATIONS_HREF}
+                  data-tour-target={TOUR_TARGET.diagnosticExplanation}
                   className={cn(
                     "student-sidebar-link",
                     isDiagnosticExplanationsPath(pathname) && "student-sidebar-link--active",
@@ -361,6 +401,8 @@ function StudentAppSidebar({
               <div key={section.key} className="student-sidebar-section">
                 <p className="student-sidebar-heading">{section.label}</p>
                 {section.items.map((item) => {
+                  const tourTarget = tourTargetForNavHref(item.href)
+
                   if (lockPremiumNav && !isUnlockedOnFreePlan(item)) {
                     return <LockedPremiumNavItem key={item.href} item={item} onLockedClick={handleLockedContentClick} />
                   }
@@ -387,6 +429,7 @@ function StudentAppSidebar({
                       <button
                         key={item.href}
                         type="button"
+                        data-tour-target={tourTarget}
                         aria-disabled="true"
                         aria-label={item.label}
                         title="Link your LawHub coach to unlock"
@@ -406,6 +449,7 @@ function StudentAppSidebar({
                     <Link
                       key={item.href}
                       to={item.href}
+                      data-tour-target={tourTarget}
                       className={cn("student-sidebar-link", active && "student-sidebar-link--active")}
                       aria-label={item.label}
                       title={item.label}

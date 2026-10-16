@@ -71,6 +71,47 @@ describe("StudentAppSidebar", () => {
     expect(screen.getByRole("link", { name: "Dashboard" })).toHaveClass("student-sidebar-link--active")
   })
 
+  it("exposes stable Produktly data-tour-target hooks on brand, menu, and Explanations", () => {
+    const { container } = render(
+      <MemoryRouter initialEntries={["/app"]}>
+        <StudentAppSidebar mobileOpen={false} onMobileClose={() => {}} />
+      </MemoryRouter>,
+    )
+
+    expect(container.querySelector('[data-tour-target="sidebar-brand"]')).toHaveClass(
+      "student-sidebar-brand-row",
+    )
+    expect(container.querySelector('[data-tour-target="sidebar-menu"]')).toHaveClass(
+      "student-sidebar-menu",
+    )
+    expect(screen.getByRole("link", { name: "Explanations" })).toHaveAttribute(
+      "data-tour-target",
+      "nav-explanations",
+    )
+    expect(container.querySelector('[data-tour-target="nav-preptest"]')).toHaveAttribute(
+      "href",
+      "/app/preptest",
+    )
+    expect(container.querySelector('[data-tour-target="nav-insights-preptest"]')).toHaveAttribute(
+      "href",
+      "/app/analytics/preptests",
+    )
+  })
+
+  it("keeps nav-explanations on the locked free-plan Explanations button", () => {
+    render(
+      <MemoryRouter initialEntries={["/app"]}>
+        <StudentAppSidebar mobileOpen={false} onMobileClose={() => {}} lockPremiumNav />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByRole("button", { name: "Explanations (locked)" })).toHaveAttribute(
+      "data-tour-target",
+      "nav-explanations",
+    )
+    expect(screen.queryByRole("link", { name: "Explanations" })).not.toBeInTheDocument()
+  })
+
   it("places Get Started above MAIN and starts the Produktly tour", async () => {
     const user = userEvent.setup()
     const onMobileClose = vi.fn()
