@@ -8,6 +8,7 @@ import { PasswordInput } from "@/components/ui/password-input"
 import { SocialButton } from "@/components/ui/social-button"
 import { AuthCard } from "@/features/auth/components/auth-card"
 import { AuthLayout } from "@/features/auth/components/auth-layout"
+import { readAttribution } from "@/lib/analytics/attribution"
 import { AnalyticsEvent, captureEvent } from "@/lib/analytics/posthog"
 import { createAuthApi, getAuthCallbackUrl } from "@/lib/api/auth"
 import { createUsersApi } from "@/lib/api/users"
@@ -15,8 +16,10 @@ import { fetchPostAuthDestination } from "@/lib/auth/fetch-post-auth-destination
 import { saveDiagnosticIntent, markDiagnosticFunnelActive, type DiagnosticIntentTier } from "@/lib/auth/diagnostic-intent"
 import {
   parseSignupPlan,
+  readPendingCheckoutPlan,
   resolvePendingCheckoutDestination,
   savePendingCheckoutPlan,
+  type SignupPlanId,
 } from "@/lib/auth/pending-checkout-plan"
 import { isGuestDiagnosticIntentId } from "@/features/guest/diagnostic/guest-diagnostic-test-config"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
@@ -73,6 +76,17 @@ function LoginPage() {
     if (selectedPlan) savePendingCheckoutPlan(selectedPlan)
   }
 
+  function resolveCheckoutPlanIntent(): SignupPlanId {
+    return selectedPlan ?? readPendingCheckoutPlan() ?? "free"
+  }
+
+  function signupAuthData() {
+    return {
+      attribution: readAttribution(),
+      checkout_plan: resolveCheckoutPlanIntent(),
+    }
+  }
+
   async function withSubmitLock(
     lockRef: MutableRefObject<boolean>,
     setLoading: (loading: boolean) => void,
@@ -102,7 +116,7 @@ function LoginPage() {
         const normalizedEmail = magicEmail.trim()
         persistDiagnosticIntent()
         persistSelectedPlan()
-        await authApi.sendMagicLink(normalizedEmail, getAuthCallbackUrl())
+        await authApi.sendMagicLink(normalizedEmail, getAuthCallbackUrl(), signupAuthData())
         navigate("/login/email-check", {
           replace: true,
           state: { email: normalizedEmail, from: locationState?.from, intent: locationState?.intent },
@@ -152,7 +166,7 @@ function LoginPage() {
       persistDiagnosticIntent()
       persistSelectedPlan()
       captureEvent(AnalyticsEvent.userLoggedIn, { method: "google" })
-      await authApi.signInWithGoogle(getAuthCallbackUrl())
+      await authApi.signInWithGoogle(getAuthCallbackUrl(), signupAuthData())
     } catch (authError) {
       setError(authError instanceof Error ? formatSupabaseCallError(authError) : "Unable to continue with Google.")
       setGoogleLoading(false)

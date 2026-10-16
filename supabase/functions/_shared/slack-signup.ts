@@ -3,9 +3,16 @@ export type SlackSignupNotifyInput = {
   userId?: string
   provider?: string
   createdAt?: string
+  /** First-touch landing URL (may include UTMs). */
+  landingPage?: string | null
+  /** Pre-formatted UTM summary, or null/empty to show unknown. */
+  utms?: string | null
+  /** Free / Paid (plan) intent label. */
+  intent?: string | null
+  /** ISO country code. */
+  country?: string | null
 
   fetchImpl?: typeof fetch
-  
   getEnv?: (key: string) => string | undefined
 }
 
@@ -24,6 +31,93 @@ export type ParsedSignupInsert = {
   createdAt: string | null
 }
 
+const PLAN_LABELS: Record<string, string> = {
+  free: 'Free',
+  monthly: 'Paid (monthly)',
+  three_month: 'Paid (3 months)',
+  six_month: 'Paid (6 months)',
+  yearly: 'Paid (yearly)',
+}
+
+/** Maps checkout plan id → Slack intent line. Defaults to Free. */
+export function formatSignupIntent(plan: string | null | undefined): string {
+  const key = typeof plan === 'string' ? plan.trim().toLowerCase() : ''
+  if (!key) return 'Free'
+  return PLAN_LABELS[key] ?? (key === 'free' ? 'Free' : `Paid (${key})`)
+}
+
+/** Compact UTM / click-id summary for Slack. */
+export function formatSignupUtms(attr: Record<string, unknown> | null | undefined): string {
+  if (!attr || typeof attr !== 'object') return 'unknown'
+  const parts: string[] = []
+  const pairs: Array<[string, string]> = [
+    ['source', 'utm_source'],
+    ['medium', 'utm_medium'],
+    ['campaign', 'utm_campaign'],
+    ['term', 'utm_term'],
+    ['content', 'utm_content'],
+    ['gclid', 'gclid'],
+    ['fbclid', 'fbclid'],
+  ]
+  for (const [label, key] of pairs) {
+    const value = attr[key]
+    if (typeof value === 'string' && value.trim()) {
+      parts.push(`${label}=${value.trim()}`)
+    }
+  }
+  return parts.length > 0 ? parts.join(' · ') : 'unknown'
+}
+
+export function formatSignupLandingPage(attr: Record<string, unknown> | null | undefined): string {
+  if (!attr || typeof attr !== 'object') return 'unknown'
+  const landing = attr.landing_page
+  if (typeof landing === 'string' && landing.trim()) return landing.trim()
+  return 'unknown'
+}
+
+export function formatSignupCountry(country: string | null | undefined): string {
+  const trimmed = typeof country === 'string' ? country.trim().toUpperCase() : ''
+  if (!trimmed || trimmed === 'XX' || trimmed === 'T1') return 'unknown'
+  return trimmed
+}
+
+/** Formats an ISO timestamp in America/Toronto for Slack (e.g. "Fri Oct 17, 2026 · 3:42 PM EDT"). */
+export function formatSignupCreatedAtToronto(iso: string | null | undefined): string | null {
+  const raw = typeof iso === 'string' ? iso.trim() : ''
+  if (!raw) return null
+  const date = new Date(raw)
+  if (Number.isNaN(date.getTime())) return raw
+
+  try {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Toronto',
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+      timeZoneName: 'short',
+    }).formatToParts(date)
+
+    const get = (type: Intl.DateTimeFormatPartTypes) =>
+      parts.find((part) => part.type === type)?.value ?? ''
+
+    const weekday = get('weekday')
+    const month = get('month')
+    const day = get('day')
+    const year = get('year')
+    const hour = get('hour')
+    const minute = get('minute')
+    const dayPeriod = get('dayPeriod')
+    const timeZoneName = get('timeZoneName')
+
+    return `${weekday} ${month} ${day}, ${year} · ${hour}:${minute} ${dayPeriod} ${timeZoneName}`
+  } catch {
+    return raw
+  }
+}
 
 export async function notifySlackSignup(input: SlackSignupNotifyInput): Promise<boolean> {
   const getEnv = input.getEnv ?? ((key: string) => Deno.env.get(key) ?? undefined)
@@ -32,13 +126,19 @@ export async function notifySlackSignup(input: SlackSignupNotifyInput): Promise<
   if (!webhookUrl || !email) return false
 
   const fetchImpl = input.fetchImpl ?? fetch
+  const created = formatSignupCreatedAtToronto(input.createdAt)
   const lines = [
     '🎉 *New LSAT signup*',
-    `• Email: \`${email}\``,
-    `• Provider: ${input.provider?.trim() || 'unknown'}`,
+    '',
+    `• *Email:* \`${email}\``,
+    `• *Intent:* ${input.intent?.trim() || 'Free'}`,
+    `• *Location:* ${formatSignupCountry(input.country)}`,
+    `• *Provider:* ${input.provider?.trim() || 'unknown'}`,
+    `• *Link:* ${input.landingPage?.trim() || 'unknown'}`,
+    `• *UTMs:* ${input.utms?.trim() || 'unknown'}`,
   ]
-  if (input.userId?.trim()) lines.push(`• User ID: \`${input.userId.trim()}\``)
-  if (input.createdAt?.trim()) lines.push(`• Created: ${input.createdAt.trim()}`)
+  if (created) lines.push(`• *Created:* ${created} (Toronto)`)
+  if (input.userId?.trim()) lines.push(`• *User ID:* \`${input.userId.trim()}\``)
 
   try {
     const response = await fetchImpl(webhookUrl, {
@@ -153,4 +253,3 @@ export function parseAuthUsersSignupCreated(body: unknown): ParsedSignupInsert |
   if (payload.type !== 'INSERT') return null
   return parseAuthUsersRecord(body)
 }
-

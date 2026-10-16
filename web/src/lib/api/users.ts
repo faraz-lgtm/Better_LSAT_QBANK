@@ -283,6 +283,7 @@ export function createUsersApi(supabase: SupabaseClient) {
 
     async trackSignupConversion(input?: {
       attribution?: Record<string, unknown> | null
+      checkoutPlan?: string | null
       eventSourceUrl?: string | null
     }): Promise<{
       tracked: boolean
@@ -301,6 +302,7 @@ export function createUsersApi(supabase: SupabaseClient) {
         attribution: Record<string, unknown> | null
       }>('users-track-signup-conversion', {
         attribution: input?.attribution ?? null,
+        checkoutPlan: input?.checkoutPlan ?? null,
         eventSourceUrl: input?.eventSourceUrl ?? null,
       })
       if (error) throw error

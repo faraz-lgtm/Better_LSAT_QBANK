@@ -41,11 +41,23 @@ export async function handleUsersRequest(req: Request): Promise<Response> {
           meta?.attribution && typeof meta.attribution === 'object' && !Array.isArray(meta.attribution)
             ? (meta.attribution as Record<string, unknown>)
             : null
+        const appMeta = auth.user.app_metadata as Record<string, unknown> | undefined
+        const providerFromApp =
+          typeof appMeta?.provider === 'string' && appMeta.provider.trim()
+            ? appMeta.provider.trim()
+            : Array.isArray(appMeta?.providers) &&
+                typeof appMeta.providers[0] === 'string' &&
+                appMeta.providers[0].trim()
+              ? appMeta.providers[0].trim()
+              : null
         const result = await service.trackSignupConversion({
           userId: auth.user.id,
           email: auth.user.email ?? null,
           attribution,
           userMetadataAttribution,
+          checkoutPlan: typeof body.checkoutPlan === 'string' ? body.checkoutPlan : null,
+          userMetadataCheckoutPlan:
+            typeof meta?.checkout_plan === 'string' ? meta.checkout_plan : null,
           authCreatedAt: auth.user.created_at || null,
           eventSourceUrl:
             typeof body.eventSourceUrl === 'string' ? body.eventSourceUrl : null,
@@ -54,6 +66,8 @@ export async function handleUsersRequest(req: Request): Promise<Response> {
             req.headers.get('cf-connecting-ip') ??
             req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
             null,
+          clientCountry: req.headers.get('cf-ipcountry'),
+          provider: providerFromApp,
         })
         return json(result, {}, corsHeaders)
       }

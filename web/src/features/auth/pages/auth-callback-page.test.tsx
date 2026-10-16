@@ -7,9 +7,11 @@ import { resetEnsureStudentSessionInflight } from "@/features/student-session/en
 import { resetStudentSession } from "@/features/student-session/studentSessionSlice"
 import { AuthCallbackPage } from "./auth-callback-page"
 
-const trackFreeDiagnosticSignupAndWaitMock = vi.fn(
-  async (_payload?: unknown, _timeoutMs?: number) => {},
-)
+const { trackFreeDiagnosticSignupAndWaitMock } = vi.hoisted(() => ({
+  trackFreeDiagnosticSignupAndWaitMock: vi.fn(
+    async (_payload?: unknown, _timeoutMs?: number) => {},
+  ),
+}))
 
 vi.mock("@/lib/analytics/gtm", async () => {
   const actual = await vi.importActual<typeof import("@/lib/analytics/gtm")>("@/lib/analytics/gtm")
@@ -81,9 +83,12 @@ describe("AuthCallbackPage", () => {
   }) {
     const tracked = options?.tracked ?? false
     const profile = options?.profile === undefined ? null : options.profile
-    invokeMock.mockImplementation((_functionName: string, invokeOptions?: { body?: Record<string, unknown>; method?: string }) => {
+    invokeMock.mockImplementation((functionName: string, invokeOptions?: { body?: Record<string, unknown>; method?: string }) => {
       const action = invokeOptions?.body?.action
-      if (action === "users-track-signup-conversion") {
+      const isSignupConversion =
+        functionName === "users-track-signup-conversion" ||
+        action === "users-track-signup-conversion"
+      if (isSignupConversion) {
         return Promise.resolve({
           data: {
             tracked,
@@ -136,7 +141,10 @@ describe("AuthCallbackPage", () => {
       error: null,
     })
     invokeMock.mockImplementation((functionName: string, invokeOptions?: { body?: Record<string, unknown> }) => {
-      if (invokeOptions?.body?.action === "users-track-signup-conversion") {
+      if (
+        functionName === "users-track-signup-conversion" ||
+        invokeOptions?.body?.action === "users-track-signup-conversion"
+      ) {
         return Promise.resolve({
           data: {
             tracked: false,
@@ -179,6 +187,14 @@ describe("AuthCallbackPage", () => {
     renderCallback("/auth/callback?code=paid-code")
 
     expect(await screen.findByText(/checkout view/i)).toBeInTheDocument()
+    expect(invokeMock).toHaveBeenCalledWith(
+      "users-track-signup-conversion",
+      expect.objectContaining({
+        body: expect.objectContaining({
+          checkoutPlan: "three_month",
+        }),
+      }),
+    )
   })
 
   it("completes auth under React StrictMode with a single PKCE exchange", async () => {

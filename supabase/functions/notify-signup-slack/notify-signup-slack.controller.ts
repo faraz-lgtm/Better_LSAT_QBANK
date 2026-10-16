@@ -1,6 +1,5 @@
 import {
   authorizeSignupWebhook,
-  notifySlackSignup,
   parseAuthUsersConfirmedSignup,
 } from '../_shared/slack-signup.ts'
 import { json } from '../_shared/edge-http.ts'
@@ -13,11 +12,14 @@ const corsHeaders: Record<string, string> = {
 
 export type NotifySignupSlackDeps = {
   authorize?: (req: Request) => boolean
-  notify?: typeof notifySlackSignup
   getEnv?: (key: string) => string | undefined
 }
 
-/** Database Webhook target for auth.users INSERT/UPDATE → Slack after email confirm. */
+/**
+ * Database Webhook target for auth.users INSERT/UPDATE.
+ * Slack notify moved to users.trackSignupConversion (has UTMs / intent / country).
+ * Handler remains for webhook health checks and to avoid broken webhook configs.
+ */
 export async function handleNotifySignupSlack(
   req: Request,
   deps: NotifySignupSlackDeps = {},
@@ -48,14 +50,9 @@ export async function handleNotifySignupSlack(
     return json({ received: true, notified: false, reason: 'ignored' }, { status: 200 }, corsHeaders)
   }
 
-  const notify = deps.notify ?? notifySlackSignup
-  const notified = await notify({
-    email: parsed.email,
-    userId: parsed.userId,
-    provider: parsed.provider,
-    createdAt: parsed.createdAt ?? undefined,
-    getEnv,
-  })
-
-  return json({ received: true, notified }, { status: 200 }, corsHeaders)
+  return json(
+    { received: true, notified: false, reason: 'moved_to_conversion' },
+    { status: 200 },
+    corsHeaders,
+  )
 }

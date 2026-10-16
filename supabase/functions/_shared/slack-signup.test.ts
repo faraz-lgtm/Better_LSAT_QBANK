@@ -1,6 +1,11 @@
 import { assertEquals } from 'jsr:@std/assert@1'
 import {
   authorizeSignupWebhook,
+  formatSignupCountry,
+  formatSignupCreatedAtToronto,
+  formatSignupIntent,
+  formatSignupLandingPage,
+  formatSignupUtms,
   notifySlackSignup,
   parseAuthUsersConfirmedSignup,
 } from './slack-signup.ts'
@@ -19,7 +24,7 @@ Deno.test('notifySlackSignup no-ops when webhook URL missing', async () => {
   assertEquals(called, false)
 })
 
-Deno.test('notifySlackSignup posts Slack message', async () => {
+Deno.test('notifySlackSignup posts Slack message with enrichment fields', async () => {
   let url = ''
   let body: Record<string, unknown> = {}
   const ok = await notifySlackSignup({
@@ -27,6 +32,10 @@ Deno.test('notifySlackSignup posts Slack message', async () => {
     userId: 'u-1',
     provider: 'email',
     createdAt: '2026-10-08T10:00:00Z',
+    landingPage: 'https://app.betterlsat.com/signup?utm_source=google&plan=monthly',
+    utms: 'source=google · medium=cpc',
+    intent: 'Paid (monthly)',
+    country: 'US',
     getEnv: (key) => (key === 'SLACK_SIGNUP_WEBHOOK_URL' ? 'https://hooks.slack.com/services/x' : undefined),
     fetchImpl: async (input, init) => {
       url = String(input)
@@ -40,6 +49,38 @@ Deno.test('notifySlackSignup posts Slack message', async () => {
   assertEquals(text.includes('student@example.com'), true)
   assertEquals(text.includes('email'), true)
   assertEquals(text.includes('u-1'), true)
+  assertEquals(text.includes('*Link:* https://app.betterlsat.com/signup?utm_source=google&plan=monthly'), true)
+  assertEquals(text.includes('*UTMs:* source=google · medium=cpc'), true)
+  assertEquals(text.includes('*Intent:* Paid (monthly)'), true)
+  assertEquals(text.includes('*Location:* US'), true)
+  assertEquals(text.includes('(Toronto)'), true)
+  assertEquals(text.includes('2026-10-08T10:00:00Z'), false)
+})
+
+Deno.test('notifySlackSignup degrades missing enrichment fields', async () => {
+  let body: Record<string, unknown> = {}
+  await notifySlackSignup({
+    email: 'a@example.com',
+    getEnv: (key) => (key === 'SLACK_SIGNUP_WEBHOOK_URL' ? 'https://hooks.slack.com/services/x' : undefined),
+    fetchImpl: async (_input, init) => {
+      body = JSON.parse((init as { body?: string } | undefined)?.body ?? '{}') as Record<string, unknown>
+      return new Response('ok', { status: 200 })
+    },
+  })
+  const text = String(body.text ?? '')
+  assertEquals(text.includes('*Link:* unknown'), true)
+  assertEquals(text.includes('*UTMs:* unknown'), true)
+  assertEquals(text.includes('*Intent:* Free'), true)
+  assertEquals(text.includes('*Location:* unknown'), true)
+})
+
+Deno.test('formatSignupCreatedAtToronto formats America/Toronto time', () => {
+  const formatted = formatSignupCreatedAtToronto('2026-10-08T16:00:00.000Z')
+  assertEquals(typeof formatted, 'string')
+  assertEquals(Boolean(formatted && formatted.includes('2026')), true)
+  assertEquals(Boolean(formatted && (formatted.includes('EDT') || formatted.includes('EST'))), true)
+  assertEquals(formatSignupCreatedAtToronto(null), null)
+  assertEquals(formatSignupCreatedAtToronto('not-a-date'), 'not-a-date')
 })
 
 Deno.test('notifySlackSignup returns false on fetch failure', async () => {
@@ -51,6 +92,30 @@ Deno.test('notifySlackSignup returns false on fetch failure', async () => {
     },
   })
   assertEquals(ok, false)
+})
+
+Deno.test('formatSignupIntent maps plan ids', () => {
+  assertEquals(formatSignupIntent('free'), 'Free')
+  assertEquals(formatSignupIntent('monthly'), 'Paid (monthly)')
+  assertEquals(formatSignupIntent('three_month'), 'Paid (3 months)')
+  assertEquals(formatSignupIntent(null), 'Free')
+  assertEquals(formatSignupIntent('custom_plan'), 'Paid (custom_plan)')
+})
+
+Deno.test('formatSignupUtms and landing page helpers', () => {
+  assertEquals(formatSignupUtms(null), 'unknown')
+  assertEquals(
+    formatSignupUtms({ utm_source: 'google', utm_medium: 'cpc', gclid: 'g1' }),
+    'source=google · medium=cpc · gclid=g1',
+  )
+  assertEquals(formatSignupLandingPage(null), 'unknown')
+  assertEquals(
+    formatSignupLandingPage({ landing_page: 'https://app.betterlsat.com/signup' }),
+    'https://app.betterlsat.com/signup',
+  )
+  assertEquals(formatSignupCountry('us'), 'US')
+  assertEquals(formatSignupCountry('XX'), 'unknown')
+  assertEquals(formatSignupCountry(null), 'unknown')
 })
 
 Deno.test('authorizeSignupWebhook accepts x-signup-webhook-secret', () => {

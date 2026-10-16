@@ -44,57 +44,39 @@ Deno.test('handleNotifySignupSlack rejects unauthorized', async () => {
   assertEquals(res.status, 401)
 })
 
-Deno.test('handleNotifySignupSlack notifies on confirmed INSERT', async () => {
-  let notifiedEmail = ''
-  let notifiedProvider = ''
+Deno.test('handleNotifySignupSlack no longer notifies on confirmed INSERT', async () => {
   const res = await handleNotifySignupSlack(
     new Request('https://example.com', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(confirmedInsertBody),
     }),
-    {
-      authorize: () => true,
-      notify: async (input) => {
-        notifiedEmail = input.email
-        notifiedProvider = input.provider ?? ''
-        return true
-      },
-    },
+    { authorize: () => true },
   )
   assertEquals(res.status, 200)
-  const data = (await res.json()) as { received: boolean; notified: boolean }
+  const data = (await res.json()) as { received: boolean; notified: boolean; reason?: string }
   assertEquals(data.received, true)
-  assertEquals(data.notified, true)
-  assertEquals(notifiedEmail, 'new@example.com')
-  assertEquals(notifiedProvider, 'google')
+  assertEquals(data.notified, false)
+  assertEquals(data.reason, 'moved_to_conversion')
 })
 
-Deno.test('handleNotifySignupSlack notifies on email confirmation UPDATE', async () => {
-  let notifiedEmail = ''
+Deno.test('handleNotifySignupSlack no longer notifies on email confirmation UPDATE', async () => {
   const res = await handleNotifySignupSlack(
     new Request('https://example.com', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(confirmUpdateBody),
     }),
-    {
-      authorize: () => true,
-      notify: async (input) => {
-        notifiedEmail = input.email
-        return true
-      },
-    },
+    { authorize: () => true },
   )
   assertEquals(res.status, 200)
-  const data = (await res.json()) as { received: boolean; notified: boolean }
+  const data = (await res.json()) as { received: boolean; notified: boolean; reason?: string }
   assertEquals(data.received, true)
-  assertEquals(data.notified, true)
-  assertEquals(notifiedEmail, 'confirm@example.com')
+  assertEquals(data.notified, false)
+  assertEquals(data.reason, 'moved_to_conversion')
 })
 
 Deno.test('handleNotifySignupSlack ignores unconfirmed INSERT', async () => {
-  let notifyCalled = false
   const res = await handleNotifySignupSlack(
     new Request('https://example.com', {
       method: 'POST',
@@ -110,19 +92,12 @@ Deno.test('handleNotifySignupSlack ignores unconfirmed INSERT', async () => {
         },
       }),
     }),
-    {
-      authorize: () => true,
-      notify: async () => {
-        notifyCalled = true
-        return true
-      },
-    },
+    { authorize: () => true },
   )
   assertEquals(res.status, 200)
   const data = (await res.json()) as { notified: boolean; reason?: string }
   assertEquals(data.notified, false)
   assertEquals(data.reason, 'ignored')
-  assertEquals(notifyCalled, false)
 })
 
 Deno.test('handleNotifySignupSlack rejects non-POST', async () => {

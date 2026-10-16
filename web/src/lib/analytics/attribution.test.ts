@@ -19,6 +19,8 @@ describe("attribution helpers", () => {
     vi.stubGlobal("location", {
       hostname: "app.betterlsat.com",
       protocol: "https:",
+      origin: "https://app.betterlsat.com",
+      pathname: "/signup",
       search: "",
     })
   })
@@ -54,6 +56,29 @@ describe("attribution helpers", () => {
     const again = captureAttributionFromUrl("?utm_source=bing&gclid=xyz")
     expect(again?.utm_source).toBe("google")
     expect(again?.gclid).toBe("abc")
+  })
+
+  it("captureAttributionFromUrl first-touch landing_page even without UTMs", () => {
+    vi.stubGlobal("location", {
+      hostname: "app.betterlsat.com",
+      protocol: "https:",
+      origin: "https://app.betterlsat.com",
+      pathname: "/signup",
+      search: "?plan=monthly",
+    })
+    const first = captureAttributionFromUrl("?plan=monthly")
+    expect(first?.landing_page).toBe("https://app.betterlsat.com/signup?plan=monthly")
+
+    vi.stubGlobal("location", {
+      hostname: "app.betterlsat.com",
+      protocol: "https:",
+      origin: "https://app.betterlsat.com",
+      pathname: "/pricing",
+      search: "?utm_source=bing",
+    })
+    const again = captureAttributionFromUrl("?utm_source=bing")
+    expect(again?.landing_page).toBe("https://app.betterlsat.com/signup?plan=monthly")
+    expect(again?.utm_source).toBe("bing")
   })
 
   it("readAttribution merges click cookies", () => {

@@ -13,7 +13,9 @@ import { createAuthApi, getAuthCallbackUrl } from "@/lib/api/auth"
 import { saveDiagnosticIntent, markDiagnosticFunnelActive } from "@/lib/auth/diagnostic-intent"
 import {
   parseSignupPlan,
+  readPendingCheckoutPlan,
   savePendingCheckoutPlan,
+  type SignupPlanId,
 } from "@/lib/auth/pending-checkout-plan"
 import type { GuestDiagnosticIntentId } from "@/features/guest/diagnostic/guest-diagnostic-intent-types"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
@@ -61,6 +63,17 @@ function SignupPage() {
     if (selectedPlan) savePendingCheckoutPlan(selectedPlan)
   }
 
+  function resolveCheckoutPlanIntent(): SignupPlanId {
+    return selectedPlan ?? readPendingCheckoutPlan() ?? "free"
+  }
+
+  function signupAuthData() {
+    return {
+      attribution: readAttribution(),
+      checkout_plan: resolveCheckoutPlanIntent(),
+    }
+  }
+
   async function withSubmitLock(task: () => Promise<void>): Promise<boolean> {
     if (submitLockRef.current) return false
     submitLockRef.current = true
@@ -100,9 +113,7 @@ function SignupPage() {
         }
         persistDiagnosticIntent()
         persistSelectedPlan()
-        await authApi.sendMagicLink(normalizedEmail, getAuthCallbackUrl(), {
-          attribution: readAttribution(),
-        })
+        await authApi.sendMagicLink(normalizedEmail, getAuthCallbackUrl(), signupAuthData())
         captureEvent(AnalyticsEvent.signupStarted, { method: "magic_link" })
         navigate("/signup/check-email", {
           replace: true,
@@ -133,9 +144,7 @@ function SignupPage() {
       persistDiagnosticIntent()
       persistSelectedPlan()
       captureEvent(AnalyticsEvent.signupStarted, { method: "google" })
-      await authApi.signInWithGoogle(getAuthCallbackUrl(), {
-        attribution: readAttribution(),
-      })
+      await authApi.signInWithGoogle(getAuthCallbackUrl(), signupAuthData())
     } catch (authError) {
       setError(authError instanceof Error ? formatSupabaseCallError(authError) : "Unable to continue with Google.")
       setGoogleLoading(false)

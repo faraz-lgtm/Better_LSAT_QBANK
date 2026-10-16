@@ -20,6 +20,10 @@ export type SignupAttribution = {
   fbp?: string
   fbc?: string
   gcl_aw?: string
+  /** First-touch landing URL (origin + pathname + search). */
+  landing_page?: string
+  /** ISO country code from conversion request (server-set). */
+  country?: string
   captured_at?: string
 }
 
@@ -35,6 +39,10 @@ function cookieDomain(): string | undefined {
   if (host === "localhost" || host === "127.0.0.1") return undefined
   if (host.endsWith(".betterlsat.com") || host === "betterlsat.com") return ".betterlsat.com"
   return undefined
+}
+
+function currentLandingPage(): string {
+  return `${window.location.origin}${window.location.pathname}${window.location.search}`
 }
 
 export function parseCookieValue(cookieHeader: string, name: string): string | null {
@@ -112,15 +120,22 @@ export function mergeFirstTouch(
 
 /**
  * Capture URL params into `bl_attr` (first-touch). Call once on app boot.
+ * Always first-touch `landing_page` when missing so organic `/signup?plan=` still has a link.
  */
 export function captureAttributionFromUrl(search = isBrowser() ? window.location.search : ""): SignupAttribution | null {
   if (!isBrowser()) return null
   const fromUrl = pickParams(search)
-  if (Object.keys(fromUrl).length === 0) {
-    return parseBlAttrCookie(readCookie(BL_ATTR_COOKIE))
-  }
   const existing = parseBlAttrCookie(readCookie(BL_ATTR_COOKIE))
-  const merged = mergeFirstTouch(existing, fromUrl)
+  const landingPatch: Partial<SignupAttribution> = {}
+  if (!existing?.landing_page) {
+    landingPatch.landing_page = currentLandingPage()
+  }
+  const hasUrlParams = Object.keys(fromUrl).length > 0
+  const needsLandingWrite = Boolean(landingPatch.landing_page)
+  if (!hasUrlParams && !needsLandingWrite) {
+    return existing
+  }
+  const merged = mergeFirstTouch(existing, { ...fromUrl, ...landingPatch })
   writeCookie(BL_ATTR_COOKIE, JSON.stringify(merged), BL_ATTR_MAX_AGE_SECONDS)
   return merged
 }
