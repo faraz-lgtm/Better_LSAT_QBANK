@@ -1163,8 +1163,91 @@ html.student-shell-active #root {
   color: #0b2d63;
 }
 
+.pricing-page__lsac-checkbox {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  margin: 1.25rem auto 0;
+  max-width: 34rem;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.85rem 1rem;
+  border: 1.5px solid #9db4d6;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #ffffff 0%, #eef4fc 100%);
+  box-shadow: 0 1px 2px rgba(11, 45, 99, 0.06);
+  cursor: pointer;
+  text-align: left;
+  color: #0b2d63;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.pricing-page__lsac-checkbox:hover {
+  border-color: #17408b;
+  box-shadow: 0 2px 8px rgba(23, 64, 139, 0.12);
+}
+
+.pricing-page__lsac-checkbox--active {
+  border-color: #17408b;
+  background: linear-gradient(180deg, #e8f0fb 0%, #dce8f8 100%);
+  box-shadow: 0 2px 8px rgba(23, 64, 139, 0.14);
+}
+
+.pricing-page__lsac-checkbox-control {
+  margin-top: 1px;
+  border-width: 2px !important;
+  border-color: #17408b !important;
+  background: #fff !important;
+  color: #17408b !important;
+  box-shadow: inset 0 0 0 1px rgba(23, 64, 139, 0.08);
+}
+
+.pricing-page__lsac-checkbox input:checked + .pricing-page__lsac-checkbox-control {
+  border-color: #17408b !important;
+  background: #17408b !important;
+  color: #fff !important;
+  box-shadow: none;
+}
+
+.pricing-page__lsac-checkbox input:checked + .pricing-page__lsac-checkbox-control > svg {
+  opacity: 1 !important;
+}
+
+.pricing-page__lsac-checkbox-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.15rem;
+  text-wrap: balance;
+}
+
+.pricing-page__lsac-checkbox-title {
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: 0.01em;
+  color: #0b2d63;
+}
+
+.pricing-page__lsac-checkbox-detail {
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+  letter-spacing: 0.01em;
+  color: #35507a;
+}
+
+.pricing-page__lsac-checkbox:has(input:disabled) {
+  cursor: not-allowed;
+  opacity: 0.65;
+  box-shadow: none;
+}
+
 .pricing-page__subtitle {
-  margin: 14px 0 0;
+  margin: 1.1rem 0 0;
   font-size: clamp(13px, 2vw, 14px);
   font-weight: 400;
   line-height: 1.5;
@@ -1271,15 +1354,20 @@ html.student-shell-active #root {
     padding-inline: 0.25rem;
   }
 
+  .pricing-modal .pricing-page__lsac-checkbox {
+    margin-top: 1rem;
+    padding: 0.75rem 0.85rem;
+  }
+
   .pricing-modal .pricing-page__subtitle {
-    margin-top: 6px;
+    margin-top: 0.85rem;
     font-size: 12px;
     line-height: 1.45;
   }
 
   .pricing-modal .pricing-page__stack {
     gap: 12px;
-    padding-top: 14px;
+    padding-top: 1.1rem;
   }
 
   .pricing-modal .pricing-page__plans {
@@ -1387,8 +1475,12 @@ html.student-shell-active #root {
   }
 }
 
+.pricing-modal .pricing-page__lsac-checkbox {
+  margin-top: 1.35rem;
+}
+
 .pricing-modal .pricing-page__subtitle {
-  margin-top: 8px;
+  margin-top: 1.15rem;
 }
 
 .pricing-modal .pricing-page__stack {
@@ -1396,7 +1488,7 @@ html.student-shell-active #root {
   min-height: 0;
   flex-direction: column;
   gap: 10px;
-  padding-top: 12px;
+  padding-top: 1.35rem;
 }
 
 .pricing-modal .pricing-page__stack > .pricing-card--featured {
@@ -1530,14 +1622,19 @@ html.student-shell-active #root {
     font-size: 16px;
   }
 
+  .pricing-modal .pricing-page__lsac-checkbox {
+    margin-top: 0.9rem;
+    padding: 0.7rem 0.85rem;
+  }
+
   .pricing-modal .pricing-page__subtitle {
-    margin-top: 4px;
+    margin-top: 0.75rem;
     font-size: 12px;
   }
 
   .pricing-modal .pricing-page__stack {
     gap: 8px;
-    padding-top: 8px;
+    padding-top: 1rem;
   }
 
   .pricing-modal .pricing-page__plans {

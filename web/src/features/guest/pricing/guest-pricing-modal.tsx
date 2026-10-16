@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 
 import pricingModalCloseIcon from "@/assets/pricing-modal-close.svg"
+import { Checkbox } from "@/components/ui/checkbox"
 import { PricingPlanCard } from "@/features/billing/pricing-plan-card"
 import {
   LAWHUB_ADVANTAGE_BILLING_NOTE,
@@ -100,6 +101,31 @@ function GuestPricingModal({
               <h1 id="guest-pricing-modal-title" className="pricing-page__title">
                 Every Paid Plan Includes the Full Platform.
               </h1>
+              <label
+                className={
+                  includeLawHub
+                    ? "pricing-page__lsac-checkbox"
+                    : "pricing-page__lsac-checkbox pricing-page__lsac-checkbox--active"
+                }
+              >
+                <Checkbox
+                  size="md"
+                  className="pricing-page__lsac-checkbox-control"
+                  checked={!includeLawHub}
+                  disabled={checkoutPlan !== null}
+                  onChange={(event) => setIncludeLawHub(!event.target.checked)}
+                  aria-label="I already have LSAC PrepPlus to link"
+                />
+                <span className="pricing-page__lsac-checkbox-copy">
+                  <span className="pricing-page__lsac-checkbox-title">
+                    Already have LawHub PrepPlus?
+                  </span>
+                  <span className="pricing-page__lsac-checkbox-detail">
+                    Check this to pay for BetterLSAT only — you&apos;ll link your existing LSAC account
+                    after checkout.
+                  </span>
+                </span>
+              </label>
               <p className="pricing-page__subtitle">
                 {includeLawHub
                   ? "Choose the access period that fits your prep timeline. Your tools stay the same."
@@ -150,11 +176,19 @@ function GuestPricingModal({
 
             <div className="pricing-page__alt-link">
               {includeLawHub ? (
-                <button type="button" onClick={() => setIncludeLawHub(false)}>
+                <button
+                  type="button"
+                  disabled={checkoutPlan !== null}
+                  onClick={() => setIncludeLawHub(false)}
+                >
                   I already have LawHub PrepPlus — Pay for BetterLSAT Only
                 </button>
               ) : (
-                <button type="button" onClick={() => setIncludeLawHub(true)}>
+                <button
+                  type="button"
+                  disabled={checkoutPlan !== null}
+                  onClick={() => setIncludeLawHub(true)}
+                >
                   Need LawHub PrepPlus included? View standard pricing
                 </button>
               )}

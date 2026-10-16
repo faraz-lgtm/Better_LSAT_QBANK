@@ -81,7 +81,7 @@ describe("GuestDiagnosticResultsView Section diagnostic", () => {
 
     expect(screen.getByLabelText(/Full Section question 11/i)).toBeInTheDocument()
     expect(screen.queryByTestId("diagnostic-locked-question-row")).toBeNull()
-    expect(screen.queryByText("Take your first full exam to track progress")).not.toBeInTheDocument()
+    expect(screen.queryByText("Take your first full preptest to track progress")).not.toBeInTheDocument()
     expect(screen.queryByRole("button", { name: "Unlock my full report" })).not.toBeInTheDocument()
     expect(screen.queryByTestId("guest-free-analytics-limit-cta")).not.toBeInTheDocument()
     expect(screen.getByRole("link", { name: "See less" })).toBeInTheDocument()
