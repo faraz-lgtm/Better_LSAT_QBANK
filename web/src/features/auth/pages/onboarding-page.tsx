@@ -17,6 +17,7 @@ import {
   useTrackCheckoutPurchase,
 } from "@/lib/analytics/track-checkout-purchase"
 import { AnalyticsEvent, captureEvent, resetUser } from "@/lib/analytics/posthog"
+import { syncDiagnosticMailerliteIfAuthenticated } from "@/lib/analytics/sync-diagnostic-mailerlite"
 import { createAuthApi } from "@/lib/api/auth"
 import { createUsersApi } from "@/lib/api/users"
 import { getAppStore } from "@/app/store-ref"
@@ -104,6 +105,9 @@ function OnboardingPage() {
         if (!alive) return
         if (!user) return navigate("/login", { replace: true })
         if (profile) hydrateSessionProfile(profile)
+        if (hasCompletedDiagnostic()) {
+          void syncDiagnosticMailerliteIfAuthenticated(getSupabaseBrowserClient())
+        }
         const needsPassword = userNeedsPasswordSetup(user, session)
         // Already finished welcome prefs (or diagnostic) — leave onboarding even if
         // is_first_time_login was left true after a partial prior save.

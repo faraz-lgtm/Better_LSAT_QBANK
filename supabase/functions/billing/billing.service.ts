@@ -20,6 +20,10 @@ import {
   storedPlanTierFromMetadata,
   type StripeRuntimeEnv,
 } from '../_shared/stripe-env.ts'
+import {
+  mailerLitePackageFromCheckoutPlan,
+  notifyMailerLiteSubscription,
+} from '../_shared/mailerlite-signup.ts'
 import type { BillingRepository } from './billing.repository.ts'
 import { isActiveSubscriptionStatus } from './billing.repository.ts'
 import {
@@ -42,6 +46,8 @@ export type BillingServiceDeps = {
   repository: BillingRepository
   getAppBaseUrl: () => string
   onCheckoutCompleted?: (ctx: CheckoutCompletedContext) => Promise<void>
+  /** Injected for tests; defaults to MailerLite subscription field sync. */
+  notifyMailerLiteSubscription?: typeof notifyMailerLiteSubscription
 }
 
 /** Query param used when returning from a Replace payment-method portal flow. */
@@ -405,11 +411,22 @@ export function createBillingService(deps: BillingServiceDeps) {
       livemode: subscription.livemode,
       planTier,
     })
+    const profile = await deps.repository.getProfileBillingFields(userId)
     if (isActiveSubscriptionStatus(subscription.status)) {
-      const profile = await deps.repository.getProfileBillingFields(userId)
       if (profile?.prep_plus_source !== 'existing_lsac') {
         await deps.repository.setPrepPlusSource(userId, 'vendor_subscription')
       }
+    }
+    const email = profile?.email?.trim()
+    if (email) {
+      const isPaid = isActiveSubscriptionStatus(subscription.status)
+      const checkoutPlan = checkoutPlanFromItem ?? metadataCheckoutPlan
+      const notify = deps.notifyMailerLiteSubscription ?? notifyMailerLiteSubscription
+      await notify({
+        email,
+        subscriptionStatus: isPaid ? 'paid' : 'free',
+        subscriptionPackage: mailerLitePackageFromCheckoutPlan(checkoutPlan, isPaid),
+      })
     }
   }
 

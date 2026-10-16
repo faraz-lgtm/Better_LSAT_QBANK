@@ -3410,18 +3410,10 @@ select.ds-input option {
 }
 
 .student-sidebar-brand-mark {
-  display: none;
   width: 32px;
   height: 32px;
   flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  border-radius: 12px;
-  background: var(--primary);
-  color: #ffffff;
-  font-size: 16px;
-  font-weight: 700;
-  letter-spacing: 0;
+  object-fit: contain;
 }
 
 .student-sidebar-collapse-toggle {
@@ -3646,14 +3638,6 @@ select.ds-input option {
   .student-sidebar--collapsed .student-sidebar-brand-link {
     flex: 0 0 auto;
     justify-content: center;
-  }
-
-  .student-sidebar--collapsed .student-sidebar-brand-link img {
-    display: none;
-  }
-
-  .student-sidebar--collapsed .student-sidebar-brand-mark {
-    display: inline-flex;
   }
 
   .student-sidebar--collapsed .student-sidebar-collapse-toggle {

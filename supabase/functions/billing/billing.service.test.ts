@@ -1330,6 +1330,7 @@ Deno.test('syncSubscription backfills catalog price id from metadata when item p
       },
       async setPrepPlusSource() {},
     }),
+    notifyMailerLiteSubscription: async () => true,
     stripe: {
       subscriptions: {
         retrieve: async () => ({
@@ -1366,6 +1367,111 @@ Deno.test('syncSubscription backfills catalog price id from metadata when item p
   } as unknown as import('npm:stripe@17.7.0').default.Event)
 
   assertEquals(upsertedPriceId, env.priceIds.threeMonth)
+})
+
+Deno.test('syncSubscription notifies MailerLite with paid package from pricing page', async () => {
+  let mailerLite: {
+    email: string
+    subscriptionStatus: string
+    subscriptionPackage: string
+  } | null = null
+  const service = createBillingService({
+    getEnv: () => env,
+    getAppBaseUrl: () => 'http://localhost:5173',
+    repository: makeRepo(),
+    notifyMailerLiteSubscription: async (input) => {
+      mailerLite = {
+        email: input.email,
+        subscriptionStatus: input.subscriptionStatus,
+        subscriptionPackage: input.subscriptionPackage,
+      }
+      return true
+    },
+    stripe: {} as unknown as import('npm:stripe@17.7.0').default,
+  })
+
+  await service.handleWebhookEvent({
+    id: 'evt_mailerlite_paid',
+    type: 'customer.subscription.updated',
+    data: {
+      object: {
+        id: 'sub_1',
+        status: 'active',
+        livemode: false,
+        cancel_at_period_end: false,
+        current_period_start: 1_700_000_000,
+        current_period_end: 1_700_086_400,
+        customer: 'cus_1',
+        metadata: { plan: 'six_month' },
+        items: {
+          data: [{
+            price: {
+              id: env.priceIds.sixMonth,
+              type: 'recurring',
+              recurring: { interval: 'month', interval_count: 6 },
+            },
+          }],
+        },
+      },
+    },
+  } as unknown as import('npm:stripe@17.7.0').default.Event)
+
+  assertEquals(mailerLite, {
+    email: 'a@b.com',
+    subscriptionStatus: 'paid',
+    subscriptionPackage: '6 Months',
+  })
+})
+
+Deno.test('syncSubscription notifies MailerLite free package when subscription inactive', async () => {
+  let mailerLite: {
+    subscriptionStatus: string
+    subscriptionPackage: string
+  } | null = null
+  const service = createBillingService({
+    getEnv: () => env,
+    getAppBaseUrl: () => 'http://localhost:5173',
+    repository: makeRepo(),
+    notifyMailerLiteSubscription: async (input) => {
+      mailerLite = {
+        subscriptionStatus: input.subscriptionStatus,
+        subscriptionPackage: input.subscriptionPackage,
+      }
+      return true
+    },
+    stripe: {} as unknown as import('npm:stripe@17.7.0').default,
+  })
+
+  await service.handleWebhookEvent({
+    id: 'evt_mailerlite_canceled',
+    type: 'customer.subscription.deleted',
+    data: {
+      object: {
+        id: 'sub_1',
+        status: 'canceled',
+        livemode: false,
+        cancel_at_period_end: false,
+        current_period_start: 1_700_000_000,
+        current_period_end: 1_700_086_400,
+        customer: 'cus_1',
+        metadata: { plan: 'monthly' },
+        items: {
+          data: [{
+            price: {
+              id: env.priceIds.monthly,
+              type: 'recurring',
+              recurring: { interval: 'month', interval_count: 1 },
+            },
+          }],
+        },
+      },
+    },
+  } as unknown as import('npm:stripe@17.7.0').default.Event)
+
+  assertEquals(mailerLite, {
+    subscriptionStatus: 'free',
+    subscriptionPackage: 'Free Access',
+  })
 })
 
 Deno.test('schedulePlanChange rejects users without an active subscription', async () => {

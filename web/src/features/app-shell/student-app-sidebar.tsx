@@ -265,11 +265,22 @@ function StudentAppSidebar({
             <img
               src="/betterLSAT_LOGO.png"
               alt="betterLSAT"
-              className="h-auto w-[140px] object-contain dark:brightness-0 dark:invert"
+              className={cn(
+                "h-auto w-[140px] object-contain dark:brightness-0 dark:invert",
+                collapsed && "lg:hidden",
+              )}
             />
-            <span className="student-sidebar-brand-mark" aria-hidden>
-              B
-            </span>
+            <img
+              src="/betterLSAT_icon.png"
+              alt=""
+              width={32}
+              height={32}
+              className={cn(
+                "student-sidebar-brand-mark",
+                collapsed ? "hidden lg:block" : "hidden",
+              )}
+              aria-hidden
+            />
           </Link>
           <button
             type="button"

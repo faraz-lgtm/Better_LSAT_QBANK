@@ -106,18 +106,12 @@ function isEmailConfirmationEvent(payload: AuthUsersWebhookPayload): boolean {
   return false
 }
 
-/**
- * Parses auth.users Database Webhook payloads for confirmed signups only.
- * - INSERT: email_confirmed_at already set (OAuth / auto-confirm)
- * - UPDATE: email_confirmed_at newly set (email magic-link / confirm click)
- */
-export function parseAuthUsersConfirmedSignup(body: unknown): ParsedSignupInsert | null {
+function parseAuthUsersRecord(body: unknown): ParsedSignupInsert | null {
   if (!body || typeof body !== 'object' || Array.isArray(body)) return null
   const payload = body as AuthUsersWebhookPayload
   if (payload.table !== 'users') return null
   if (payload.schema !== 'auth') return null
   if (!payload.record || typeof payload.record !== 'object') return null
-  if (!isEmailConfirmationEvent(payload)) return null
 
   const record = payload.record
   const email = typeof record.email === 'string' ? record.email.trim().toLowerCase() : ''
@@ -135,5 +129,28 @@ export function parseAuthUsersConfirmedSignup(body: unknown): ParsedSignupInsert
     provider: readProvider(record),
     createdAt,
   }
+}
+
+/**
+ * Parses auth.users Database Webhook payloads for confirmed signups only.
+ * - INSERT: email_confirmed_at already set (OAuth / auto-confirm)
+ * - UPDATE: email_confirmed_at newly set (email magic-link / confirm click)
+ */
+export function parseAuthUsersConfirmedSignup(body: unknown): ParsedSignupInsert | null {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return null
+  const payload = body as AuthUsersWebhookPayload
+  if (!isEmailConfirmationEvent(payload)) return null
+  return parseAuthUsersRecord(body)
+}
+
+/**
+ * Parses auth.users Database Webhook payloads for account creation (INSERT only).
+ * Syncs immediately — does not wait for email confirmation.
+ */
+export function parseAuthUsersSignupCreated(body: unknown): ParsedSignupInsert | null {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return null
+  const payload = body as AuthUsersWebhookPayload
+  if (payload.type !== 'INSERT') return null
+  return parseAuthUsersRecord(body)
 }
 
