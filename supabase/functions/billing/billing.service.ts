@@ -52,6 +52,65 @@ function unixToIso(seconds: number | null | undefined): string | null {
   return new Date(seconds * 1000).toISOString()
 }
 
+type InvoiceWithParentSubscription = Stripe.Invoice & {
+  parent?: {
+    subscription_details?: {
+      subscription?: string | { id?: string } | null
+    } | null
+  } | null
+}
+
+/** Stripe may put the sub id on `invoice.subscription` or under `parent.subscription_details`. */
+function subscriptionIdFromInvoice(invoice: Stripe.Invoice): string | null {
+  const top = invoice.subscription
+  if (typeof top === 'string' && top.length > 0) return top
+  if (top && typeof top === 'object' && 'id' in top && typeof top.id === 'string') {
+    return top.id
+  }
+
+  const fromParent = (invoice as InvoiceWithParentSubscription).parent?.subscription_details
+    ?.subscription
+  if (typeof fromParent === 'string' && fromParent.length > 0) return fromParent
+  if (fromParent && typeof fromParent === 'object' && typeof fromParent.id === 'string') {
+    return fromParent.id
+  }
+  return null
+}
+
+type SubscriptionPeriodFields = {
+  current_period_start?: number | null
+  current_period_end?: number | null
+}
+
+/** Period fields may live on the subscription root or on items (newer Stripe payloads). */
+function subscriptionPeriodBounds(subscription: Stripe.Subscription): {
+  start: number | null
+  end: number | null
+} {
+  const root = subscription as Stripe.Subscription & SubscriptionPeriodFields
+  const topStart = root.current_period_start ?? null
+  const topEnd = root.current_period_end ?? null
+  if (topStart != null && topEnd != null) {
+    return { start: topStart, end: topEnd }
+  }
+
+  for (const item of subscription.items?.data ?? []) {
+    const periodItem = item as Stripe.SubscriptionItem & SubscriptionPeriodFields
+    const itemStart = periodItem.current_period_start ?? null
+    const itemEnd = periodItem.current_period_end ?? null
+    if (itemStart != null && itemEnd != null) {
+      return { start: itemStart, end: itemEnd }
+    }
+  }
+
+  return { start: topStart, end: topEnd }
+}
+
+function isIncompleteSubscriptionStatus(status: string): boolean {
+  const normalized = status.trim().toLowerCase()
+  return normalized === 'incomplete' || normalized === 'incomplete_expired'
+}
+
 function assertStripePaymentMethodId(paymentMethodId: string): void {
   if (!/^pm_[A-Za-z0-9]+$/.test(paymentMethodId)) {
     throw new Error('Invalid payment method id')
@@ -376,6 +435,17 @@ export function createBillingService(deps: BillingServiceDeps) {
     subscription: Stripe.Subscription,
     planHint: BillingPlanId | null = null,
   ): Promise<void> {
+    // Stale checkout/created webhooks can finish after subscription.updated(active)
+    // and would otherwise regress the row back to incomplete.
+    if (isIncompleteSubscriptionStatus(subscription.status)) {
+      const existing = await deps.repository.getSubscriptionByStripeSubscriptionId(
+        subscription.id,
+      )
+      if (existing && isActiveSubscriptionStatus(existing.status)) {
+        return
+      }
+    }
+
     const env = deps.getEnv()
     const billingItem = billingSubscriptionItem(subscription, env)
     const metadataCheckoutPlan = checkoutPlanFromMetadata(subscription.metadata?.plan)
@@ -394,13 +464,14 @@ export function createBillingService(deps: BillingServiceDeps) {
       resolvePlanFromPriceId(env.priceIds, stripePriceId) ??
       (checkoutPlanFromItem ? 'core' : null) ??
       (metadataCheckoutPlan ? storedPlanTierFromMetadata(metadataCheckoutPlan) : null)
+    const period = subscriptionPeriodBounds(subscription)
     await deps.repository.upsertSubscription({
       userId,
       stripeSubscriptionId: subscription.id,
       stripePriceId,
       status: subscription.status,
-      currentPeriodStart: unixToIso(subscription.current_period_start),
-      currentPeriodEnd: unixToIso(subscription.current_period_end),
+      currentPeriodStart: unixToIso(period.start),
+      currentPeriodEnd: unixToIso(period.end),
       cancelAtPeriodEnd: subscription.cancel_at_period_end,
       livemode: subscription.livemode,
       planTier,
@@ -940,10 +1011,7 @@ export function createBillingService(deps: BillingServiceDeps) {
         }
         case 'invoice.paid': {
           const invoice = event.data.object as Stripe.Invoice
-          const subscriptionId =
-            typeof invoice.subscription === 'string'
-              ? invoice.subscription
-              : invoice.subscription?.id
+          const subscriptionId = subscriptionIdFromInvoice(invoice)
           if (!subscriptionId) break
           const subscription = await deps.stripe.subscriptions.retrieve(subscriptionId)
           const customerId =
