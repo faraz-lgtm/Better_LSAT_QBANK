@@ -305,7 +305,7 @@ function DiagnosticPageHeader({
           <div className="hidden items-center gap-2 rounded-full border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-3 py-2 sm:flex">
             <span className="size-2 shrink-0 rounded-full bg-[var(--primary)]" />
             <span className="text-xs font-semibold leading-normal text-[var(--color-student-heading)]">
-              Take your first full exam to track progress
+              Take your first full preptest to track progress
             </span>
           </div>
           <button
