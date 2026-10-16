@@ -123,7 +123,12 @@ function PracticeSessionNotesPanel({
           </button>
         </div>
 
-        <div className={cn("flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto", examNotesChrome ? "p-6 pt-6" : "p-6 pt-0")}>
+        <div
+          className={cn(
+            "flex min-h-0 flex-1 flex-col gap-5 overflow-visible",
+            examNotesChrome ? "p-6 pt-6" : "p-6 pt-0",
+          )}
+        >
           <textarea
             value={draft}
             onChange={(e) => setDraft(e.target.value)}

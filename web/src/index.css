@@ -6143,6 +6143,21 @@ html.student-shell-immersive .practice-session-card--active-drill .practice-sess
   z-index: 1;
 }
 
+/** Review chrome — unified middle scroll on all viewports (header/footer stay put). */
+.practice-session-card--review .practice-session-body {
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.practice-session-card--review .practice-session-pane,
+.practice-session-card--review .practice-session-pane--review-column {
+  height: auto;
+  max-height: none;
+  overflow: visible;
+}
+
 /** Mobile review footer — wrap question pills; no horizontal scroll. */
 @media (max-width: 767px) {
   .practice-session-review-nav-row {
@@ -6155,20 +6170,6 @@ html.student-shell-immersive .practice-session-card--active-drill .practice-sess
 
   .practice-session-review-nav-row::before {
     display: none;
-  }
-
-  .practice-session-card--review .practice-session-body {
-    overflow-x: hidden;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .practice-session-card--review .practice-session-pane,
-  .practice-session-card--review .practice-session-pane--review-column {
-    height: auto;
-    max-height: none;
-    overflow: visible;
   }
 }
 
@@ -6323,16 +6324,28 @@ html.student-shell-immersive .practice-session-card--blind-review {
   }
 }
 
+/** Unified middle scroll — same model as results review chrome. */
 .practice-session-card--blind-review .practice-session-body {
-  overflow: visible;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .practice-session-card--blind-review .practice-session-body > div {
-  flex: 1 1 0;
-  height: 100%;
+  flex: 1 1 auto;
+  height: auto;
   min-height: 0;
-  grid-template-rows: minmax(0, 1fr);
-  align-content: stretch;
+  grid-template-rows: none;
+  align-content: start;
+  overflow: visible;
+}
+
+.practice-session-card--blind-review .practice-session-pane,
+.practice-session-card--blind-review .practice-session-pane--br-column,
+.practice-session-card--blind-review .practice-session-pane--br-question {
+  height: auto;
+  max-height: none;
   overflow: visible;
 }
 
@@ -6904,10 +6917,6 @@ html.student-shell-immersive .practice-session-card--blind-review {
 .dark .practice-session-body .lsat-html-content.passage-analysis-overall * {
   color: #ffffff !important;
   -webkit-text-fill-color: #ffffff !important;
-}
-
-.practice-session-card--blind-review .practice-session-pane--br-question {
-  overflow: hidden;
 }
 
 .practice-session-card--blind-review .practice-session-br-option {

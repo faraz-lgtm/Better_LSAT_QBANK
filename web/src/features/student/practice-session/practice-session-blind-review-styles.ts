@@ -22,37 +22,37 @@ const BLIND_REVIEW_HEADER_CLASS =
 const BLIND_REVIEW_CARD_CLASS =
   "practice-session-card practice-session-card--blind-review absolute inset-x-0 bottom-0 top-[100px] flex min-h-0 flex-col bg-[var(--greyscale-0)]"
 
-/** Figma `20645:49778` — body fills elevated surface */
+/** Figma `20645:49778` — unified body scroll (panes grow; no nested column clip). */
 const BLIND_REVIEW_BODY_CLASS =
-  "practice-session-body flex min-h-0 flex-1 flex-col overflow-hidden bg-[var(--greyscale-0)] text-[var(--color-student-heading)]"
+  "practice-session-body flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-y-contain bg-[var(--greyscale-0)] text-[var(--color-student-heading)]"
 
 /** Figma `20596:144371` — passage | question split with center divider */
 const BLIND_REVIEW_BODY_GRID_CLASS =
-  "grid min-h-0 min-w-0 flex-1 grid-cols-1 gap-0 px-10 pb-5 pt-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]"
+  "grid min-h-0 min-w-0 flex-1 auto-rows-min grid-cols-1 gap-0 px-10 pb-5 pt-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]"
 
 const BLIND_REVIEW_COLUMN_PANEL_BASE_CLASS =
   "practice-session-pane practice-session-pane--br-column min-h-0 bg-[var(--greyscale-0)]"
 
 const BLIND_REVIEW_PASSAGE_PANEL_CLASS =
-  `${BLIND_REVIEW_COLUMN_PANEL_BASE_CLASS} h-full overflow-y-auto py-2 pr-6 lg:border-r lg:border-[var(--greyscale-50)] dark:lg:border-[var(--greyscale-600)] lg:pr-10`
+  `${BLIND_REVIEW_COLUMN_PANEL_BASE_CLASS} h-auto overflow-visible py-2 pr-6 lg:border-r lg:border-[var(--greyscale-50)] dark:lg:border-[var(--greyscale-600)] lg:pr-10`
 
 const BLIND_REVIEW_QUESTION_PANEL_CLASS =
-  `${BLIND_REVIEW_COLUMN_PANEL_BASE_CLASS} practice-session-pane--br-question relative flex h-full flex-col overflow-visible py-2 pl-0 lg:pl-10`
+  `${BLIND_REVIEW_COLUMN_PANEL_BASE_CLASS} practice-session-pane--br-question relative flex h-auto flex-col overflow-visible py-2 pl-0 lg:pl-10`
 
 /** Notes open — Figma `20596:145049`: passage | question (+ side widget) | notes */
 const BLIND_REVIEW_NOTES_LAYOUT_CLASS =
-  "grid min-h-0 min-w-0 flex-1 grid-cols-1 gap-4 px-6 pb-5 pt-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)_minmax(300px,426px)] lg:gap-5 lg:overflow-hidden"
+  "grid min-h-0 min-w-0 flex-1 auto-rows-min grid-cols-1 gap-4 px-6 pb-5 pt-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)_minmax(300px,426px)] lg:gap-5"
 
 const BLIND_REVIEW_NOTES_STACK_CLASS = "practice-session-br-notes-stack"
 
 const BLIND_REVIEW_NOTES_PASSAGE_PANEL_CLASS =
-  `${BLIND_REVIEW_COLUMN_PANEL_BASE_CLASS} practice-session-br-notes-pane practice-session-scroll-hidden min-h-0 overflow-y-auto px-2 py-2 lg:pr-4`
+  `${BLIND_REVIEW_COLUMN_PANEL_BASE_CLASS} practice-session-br-notes-pane min-h-0 h-auto overflow-visible px-2 py-2 lg:pr-4`
 
 const BLIND_REVIEW_NOTES_QUESTION_PANEL_CLASS =
-  `${BLIND_REVIEW_COLUMN_PANEL_BASE_CLASS} practice-session-pane--br-question relative flex min-h-0 flex-col overflow-visible px-2 py-2 lg:pl-2 lg:pr-14`
+  `${BLIND_REVIEW_COLUMN_PANEL_BASE_CLASS} practice-session-pane--br-question relative flex h-auto min-h-0 flex-col overflow-visible px-2 py-2 lg:pl-2 lg:pr-14`
 
 const BLIND_REVIEW_NOTES_SIDEBAR_CLASS =
-  `${BLIND_REVIEW_COLUMN_PANEL_BASE_CLASS} flex h-full min-h-0 w-full shrink-0 flex-col overflow-hidden rounded-[18px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]`
+  `${BLIND_REVIEW_COLUMN_PANEL_BASE_CLASS} flex h-auto min-h-0 w-full shrink-0 flex-col overflow-visible rounded-[18px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]`
 
 const BLIND_REVIEW_PASSAGE_TEXT_CLASS =
   "text-base font-normal leading-[30px] tracking-[0.02em] text-[var(--color-student-heading)]"
@@ -71,7 +71,7 @@ const BLIND_REVIEW_RECOMMENDED_BADGE_CLASS =
   "inline-flex h-8 items-center text-xs font-bold tracking-[0.24px] text-[var(--blind-review-accent)]"
 
 const BLIND_REVIEW_OPTIONS_LIST_CLASS =
-  "practice-session-br-options flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-0 py-3"
+  "practice-session-br-options flex min-h-0 flex-col gap-3 overflow-visible px-0 py-3"
 
 /** Choice rows grow with wrapped copy; letter, text, and hide control stay vertically centered. */
 const BLIND_REVIEW_OPTION_ROW_INNER_CLASS =
@@ -147,30 +147,31 @@ const REVIEW_SHELL_CLASS = "relative h-full min-h-0 w-full flex-1 bg-[var(--back
 const REVIEW_CARD_CLASS =
   "practice-session-card practice-session-card--review absolute inset-x-0 bottom-0 top-[72px] flex min-h-0 flex-col bg-[var(--greyscale-0)] sm:top-[88px]"
 
+/** Unified body scroll (mobile + desktop) — panes grow with content; no nested column scroll. */
 const REVIEW_BODY_CLASS =
-  "practice-session-body flex min-h-0 flex-1 flex-col overflow-hidden bg-[var(--greyscale-0)] max-md:overflow-y-auto max-md:overscroll-y-contain"
+  "practice-session-body flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-y-contain bg-[var(--greyscale-0)]"
 
 const REVIEW_BODY_GRID_CLASS =
-  "grid min-h-0 min-w-0 flex-1 grid-cols-1 justify-center gap-4 px-4 pb-5 pt-6 max-md:auto-rows-min md:gap-[52px] md:px-[clamp(40px,10.25vw,197px)] md:pt-9 lg:grid-cols-[minmax(0,736px)_minmax(0,736px)]"
+  "grid min-h-0 min-w-0 flex-1 auto-rows-min grid-cols-1 justify-center gap-4 px-4 pb-5 pt-6 md:gap-[52px] md:px-[clamp(40px,10.25vw,197px)] md:pt-9 lg:grid-cols-[minmax(0,736px)_minmax(0,736px)]"
 
 /** Full-bleed review body (diagnostic review / tester). */
 const REVIEW_BODY_GRID_FULL_CLASS =
-  "grid min-h-0 min-w-0 flex-1 grid-cols-1 gap-4 px-4 pb-5 pt-6 max-md:auto-rows-min md:gap-6 md:px-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]"
+  "grid min-h-0 min-w-0 flex-1 auto-rows-min grid-cols-1 gap-4 px-4 pb-5 pt-6 md:gap-6 md:px-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]"
 
 const REVIEW_SIDE_PANEL_LAYOUT_FULL_CLASS =
-  "grid min-h-0 min-w-0 flex-1 grid-cols-1 gap-4 px-4 pb-5 pt-6 max-md:auto-rows-min md:gap-6 md:px-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(300px,424px)]"
+  "grid min-h-0 min-w-0 flex-1 auto-rows-min grid-cols-1 gap-4 px-4 pb-5 pt-6 md:gap-6 md:px-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(300px,424px)]"
 
 const REVIEW_SIDE_PANEL_LAYOUT_CLASS =
-  "grid min-h-0 min-w-0 flex-1 grid-cols-1 justify-center gap-4 px-4 pb-5 pt-6 max-md:auto-rows-min md:gap-[52px] md:px-10 md:pt-9 xl:grid-cols-[minmax(0,656px)_minmax(0,656px)_424px]"
+  "grid min-h-0 min-w-0 flex-1 auto-rows-min grid-cols-1 justify-center gap-4 px-4 pb-5 pt-6 md:gap-[52px] md:px-10 md:pt-9 xl:grid-cols-[minmax(0,656px)_minmax(0,656px)_424px]"
 
 const REVIEW_PASSAGE_PANEL_CLASS =
-  "practice-session-pane practice-session-pane--review-column min-h-0 rounded-[18px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-4 py-6 max-md:h-auto max-md:overflow-visible md:px-6 md:py-9"
+  "practice-session-pane practice-session-pane--review-column h-auto min-h-0 overflow-visible rounded-[18px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-4 py-6 md:px-6 md:py-9"
 
 const REVIEW_QUESTION_PANEL_CLASS =
-  "practice-session-pane practice-session-pane--review-column flex min-h-0 flex-col overflow-hidden rounded-[18px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-4 py-6 max-md:h-auto max-md:overflow-visible md:px-6 md:py-9"
+  "practice-session-pane practice-session-pane--review-column flex h-auto min-h-0 flex-col overflow-visible rounded-[18px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-4 py-6 md:px-6 md:py-9"
 
 const REVIEW_SIDEBAR_CLASS =
-  "practice-session-pane--review-column flex h-full min-h-0 w-full shrink-0 flex-col overflow-hidden rounded-[18px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] max-md:h-auto max-md:overflow-visible"
+  "practice-session-pane--review-column flex h-auto min-h-0 w-full shrink-0 flex-col overflow-visible rounded-[18px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)]"
 
 const REVIEW_FOOTER_CLASS =
   "practice-session-footer box-border flex min-h-[64px] shrink-0 items-center border-t border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-3 py-3 md:px-10"

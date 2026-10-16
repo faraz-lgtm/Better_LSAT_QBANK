@@ -630,10 +630,10 @@ function GuestDiagnosticExamLayout({
             {showInsightsPanel ? (
               <div className={REVIEW_SIDE_PANEL_LAYOUT_FULL_CLASS}>
                 <div className="contents">
-                  <div ref={passagePaneRef} className={cn(REVIEW_PASSAGE_PANEL_CLASS, "overflow-y-auto")}>
+                  <div ref={passagePaneRef} className={REVIEW_PASSAGE_PANEL_CLASS}>
                     {reviewLeftPaneContent}
                   </div>
-                  <div ref={questionPaneRef} className={cn(REVIEW_QUESTION_PANEL_CLASS, "overflow-y-auto")}>
+                  <div ref={questionPaneRef} className={REVIEW_QUESTION_PANEL_CLASS}>
                     {questionPanel}
                   </div>
                 </div>
@@ -645,14 +645,11 @@ function GuestDiagnosticExamLayout({
                 />
               </div>
             ) : (
-              <div
-                ref={sessionBodyRef}
-                className={cn("min-h-0 overflow-hidden", REVIEW_BODY_GRID_FULL_CLASS)}
-              >
-                <div ref={passagePaneRef} className={cn(REVIEW_PASSAGE_PANEL_CLASS, "overflow-y-auto")}>
+              <div ref={sessionBodyRef} className={REVIEW_BODY_GRID_FULL_CLASS}>
+                <div ref={passagePaneRef} className={REVIEW_PASSAGE_PANEL_CLASS}>
                   {reviewLeftPaneContent}
                 </div>
-                <div ref={questionPaneRef} className={cn(REVIEW_QUESTION_PANEL_CLASS, "overflow-y-auto")}>
+                <div ref={questionPaneRef} className={REVIEW_QUESTION_PANEL_CLASS}>
                   {questionPanel}
                 </div>
               </div>

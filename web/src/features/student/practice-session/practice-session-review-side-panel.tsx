@@ -556,7 +556,7 @@ function PracticeSessionReviewSidePanel({
           Close
         </button>
       </div>
-      <div className="practice-session-scroll-hidden min-h-0 flex-1 overflow-y-auto px-6 pb-6">
+      <div className="min-h-0 flex-1 overflow-visible px-6 pb-6">
         {useSeedAnalytics ? (
           insightsAnalytics ? <ReviewInsightsPanel analytics={insightsAnalytics} /> : null
         ) : loading ? (

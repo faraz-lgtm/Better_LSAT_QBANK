@@ -199,7 +199,7 @@ describe("PracticeBlindReviewQuestionPanel", () => {
     const list = copy.closest(".practice-session-br-options")
     expect(list).toBeTruthy()
     expect(list).not.toHaveClass("overflow-hidden")
-    expect(list).toHaveClass("overflow-y-auto")
+    expect(list).toHaveClass("overflow-visible")
   })
 
   it("masks a locked choice from the exam tools rail instead of selecting it", async () => {
