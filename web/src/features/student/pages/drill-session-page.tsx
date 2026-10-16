@@ -1207,7 +1207,7 @@ function DrillSessionPage() {
             className={cn(
               "min-h-0 min-w-0 flex-1 grid-cols-1",
                 useBlindReviewLayout
-                  ? cn("grid overflow-hidden", BLIND_REVIEW_BODY_GRID_CLASS)
+                  ? cn("grid", BLIND_REVIEW_BODY_GRID_CLASS)
                   : officialChrome
                     ? cn(
                         mobilePane === null ? OFFICIAL_BODY_GRID_MOBILE_STACKED_CLASS : "grid overflow-hidden",

@@ -249,7 +249,7 @@ function PracticeBlindReviewQuestionPanel({
       className={cn(
         "flex h-full min-h-0 flex-col",
         useSideWidget && ACTIVE_DRILL_QUESTION_PANEL_MAIN_CLASS,
-        reviewChrome ? "practice-session-scroll-hidden overflow-y-auto" : "overflow-hidden",
+        "overflow-visible",
       )}
     >
       <div className={cn("shrink-0", reviewChrome ? "bg-[var(--greyscale-0)]" : "bg-[var(--greyscale-0)] p-3")}>
