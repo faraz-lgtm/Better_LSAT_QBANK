@@ -36,6 +36,9 @@ function makeRepo(overrides: Partial<BillingRepository> = {}): BillingRepository
     async getLatestSubscriptionByUserId() {
       return null
     },
+    async getSubscriptionByStripeSubscriptionId() {
+      return null
+    },
     async getProfileIdByStripeCustomerId() {
       return 'u-1'
     },
@@ -500,6 +503,120 @@ Deno.test('billing service checkout.session.completed syncs subscription', async
 
   assertEquals(upserted, true)
   assertEquals(sourceSet, true)
+})
+
+Deno.test('billing service invoice.paid resolves subscription id from parent.subscription_details', async () => {
+  let upsertedStatus: string | null = null
+  let retrievedSubId: string | null = null
+  const service = createBillingService({
+    getEnv: () => env,
+    getAppBaseUrl: () => 'http://localhost:5173',
+    repository: makeRepo({
+      async upsertSubscription(input) {
+        upsertedStatus = input.status
+        assertEquals(input.stripeSubscriptionId, 'sub_parent')
+        assertEquals(input.currentPeriodStart, '2026-10-16T11:14:54.000Z')
+        assertEquals(input.currentPeriodEnd, '2027-01-16T11:14:54.000Z')
+      },
+      async setPrepPlusSource() {},
+    }),
+    stripe: {
+      subscriptions: {
+        retrieve: async (id: string) => {
+          retrievedSubId = id
+          return {
+            id: 'sub_parent',
+            status: 'active',
+            livemode: false,
+            cancel_at_period_end: false,
+            current_period_start: null,
+            current_period_end: null,
+            customer: 'cus_1',
+            metadata: { plan: 'three_month' },
+            items: {
+              data: [
+                {
+                  price: { id: 'price_core_3_month_test' },
+                  current_period_start: 1_792_149_294,
+                  current_period_end: 1_800_098_094,
+                },
+              ],
+            },
+          }
+        },
+      },
+    } as unknown as import('npm:stripe@17.7.0').default,
+  })
+
+  await service.handleWebhookEvent({
+    id: 'evt_invoice_paid_parent',
+    type: 'invoice.paid',
+    data: {
+      object: {
+        id: 'in_1',
+        subscription: null,
+        parent: {
+          type: 'subscription_details',
+          subscription_details: { subscription: 'sub_parent' },
+        },
+        customer: 'cus_1',
+      },
+    },
+  } as unknown as import('npm:stripe@17.7.0').default.Event)
+
+  assertEquals(retrievedSubId, 'sub_parent')
+  assertEquals(upsertedStatus, 'active')
+})
+
+Deno.test('billing service does not regress active subscription to incomplete', async () => {
+  let upsertCalls = 0
+  const service = createBillingService({
+    getEnv: () => env,
+    getAppBaseUrl: () => 'http://localhost:5173',
+    repository: makeRepo({
+      async getSubscriptionByStripeSubscriptionId(stripeSubscriptionId) {
+        assertEquals(stripeSubscriptionId, 'sub_1')
+        return {
+          id: 'row-1',
+          user_id: 'u-1',
+          stripe_subscription_id: 'sub_1',
+          stripe_price_id: 'price_core_test',
+          status: 'active',
+          current_period_start: '2026-10-16T11:14:54.000Z',
+          current_period_end: '2027-01-16T11:14:54.000Z',
+          cancel_at_period_end: false,
+          livemode: false,
+          plan_tier: 'core',
+          created_at: '2026-10-16T11:14:54.000Z',
+          updated_at: '2026-10-16T11:14:58.000Z',
+        }
+      },
+      async upsertSubscription() {
+        upsertCalls += 1
+      },
+    }),
+    stripe: {} as unknown as import('npm:stripe@17.7.0').default,
+  })
+
+  await service.handleWebhookEvent({
+    id: 'evt_stale_incomplete',
+    type: 'customer.subscription.updated',
+    data: {
+      object: {
+        id: 'sub_1',
+        status: 'incomplete',
+        livemode: false,
+        cancel_at_period_end: false,
+        current_period_start: 1_700_000_000,
+        current_period_end: 1_700_086_400,
+        customer: 'cus_1',
+        metadata: { plan: 'three_month' },
+        items: { data: [{ price: { id: 'price_core_test' } }] },
+      },
+    },
+  } as unknown as import('npm:stripe@17.7.0').default.Event)
+
+  assertEquals(upsertCalls, 0)
 })
 
 Deno.test('billing service skips duplicate webhook events', async () => {

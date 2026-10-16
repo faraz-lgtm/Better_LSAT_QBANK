@@ -78,6 +78,18 @@ export function createBillingRepository(client: SupabaseClient) {
       return data as BillingSubscriptionRow | null
     },
 
+    async getSubscriptionByStripeSubscriptionId(
+      stripeSubscriptionId: string,
+    ): Promise<BillingSubscriptionRow | null> {
+      const { data, error } = await client
+        .from('billing_subscriptions')
+        .select('*')
+        .eq('stripe_subscription_id', stripeSubscriptionId)
+        .maybeSingle()
+      if (error) throw error
+      return data as BillingSubscriptionRow | null
+    },
+
     async getProfileIdByStripeCustomerId(customerId: string): Promise<string | null> {
       const { data, error } = await client
         .from('profiles')
