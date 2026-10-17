@@ -64,6 +64,7 @@ describe('posthog analytics helper', () => {
     expect(init).toHaveBeenCalledWith('phc_test', {
       api_host: 'https://us.i.posthog.com',
       defaults: '2026-05-30',
+      person_profiles: 'identified_only',
     })
 
     captureEvent(AnalyticsEvent.intentSelected, { intent: 'mini' })

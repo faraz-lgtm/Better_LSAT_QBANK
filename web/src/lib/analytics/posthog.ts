@@ -38,7 +38,8 @@ export function initPostHog(): typeof posthog | null {
 
   posthog.init(token, {
     api_host: getHost(),
-    defaults: '2026-05-30',
+    defaults: '2026-05-30', // SPA $pageview via history_change
+    person_profiles: 'identified_only',
   })
   initialized = true
   return posthog

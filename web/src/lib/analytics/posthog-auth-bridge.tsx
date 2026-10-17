@@ -5,7 +5,7 @@ import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 
 /**
  * Keeps PostHog identity in sync with Supabase auth.
- * Identify on session; reset on sign-out.
+ * Identify on session; reset only on explicit sign-out (not on anonymous INITIAL_SESSION).
  */
 export function PostHogAuthBridge() {
   useEffect(() => {
@@ -16,11 +16,12 @@ export function PostHogAuthBridge() {
       const {
         data: { subscription },
       } = supabase.auth.onAuthStateChange((event, session) => {
-        if (event === 'SIGNED_OUT' || !session?.user) {
+        if (event === 'SIGNED_OUT') {
           resetUser()
           return
         }
-        const user = session.user
+        const user = session?.user
+        if (!user) return
         identifyUser(user.id, {
           email: user.email ?? undefined,
         })
