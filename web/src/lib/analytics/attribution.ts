@@ -118,16 +118,33 @@ export function mergeFirstTouch(
   return merged
 }
 
+/** True for auth callback paths that must not become first-touch landing pages. */
+export function isAuthCallbackPath(pathname: string): boolean {
+  const path = pathname.trim()
+  return path === "/auth/callback" || path.startsWith("/auth/callback/")
+}
+
+/** True when a stored landing URL points at the auth callback (often with token_hash). */
+export function isAuthCallbackLandingPage(url: string | null | undefined): boolean {
+  if (typeof url !== "string" || !url.trim()) return false
+  try {
+    return isAuthCallbackPath(new URL(url.trim()).pathname)
+  } catch {
+    return url.includes("/auth/callback")
+  }
+}
+
 /**
  * Capture URL params into `bl_attr` (first-touch). Call once on app boot.
  * Always first-touch `landing_page` when missing so organic `/signup?plan=` still has a link.
+ * Skips landing write on `/auth/callback` so cross-browser magic links do not pollute first-touch.
  */
 export function captureAttributionFromUrl(search = isBrowser() ? window.location.search : ""): SignupAttribution | null {
   if (!isBrowser()) return null
   const fromUrl = pickParams(search)
   const existing = parseBlAttrCookie(readCookie(BL_ATTR_COOKIE))
   const landingPatch: Partial<SignupAttribution> = {}
-  if (!existing?.landing_page) {
+  if (!existing?.landing_page && !isAuthCallbackPath(window.location.pathname)) {
     landingPatch.landing_page = currentLandingPage()
   }
   const hasUrlParams = Object.keys(fromUrl).length > 0
@@ -143,6 +160,7 @@ export function captureAttributionFromUrl(search = isBrowser() ? window.location
 /**
  * Full attribution for signup stamping / conversion push:
  * bl_attr plus Meta/Google click cookies when present.
+ * Strips auth-callback landing pages so they cannot overwrite first-touch metadata on claim.
  */
 export function readAttribution(): SignupAttribution {
   const fromBl = parseBlAttrCookie(readCookie(BL_ATTR_COOKIE)) ?? {}
@@ -153,5 +171,8 @@ export function readAttribution(): SignupAttribution {
   if (fbp) out.fbp = fbp
   if (fbc) out.fbc = fbc
   if (gclAw) out.gcl_aw = gclAw
+  if (isAuthCallbackLandingPage(out.landing_page)) {
+    delete out.landing_page
+  }
   return out
 }

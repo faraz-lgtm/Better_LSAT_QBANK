@@ -1761,6 +1761,24 @@ Deno.test('mergeSignupAttribution prefers cookie over metadata', () => {
   assertEquals(merged?.utm_source, 'google')
 })
 
+Deno.test('mergeSignupAttribution keeps metadata landing when cookie is auth callback', () => {
+  const merged = mergeSignupAttribution(
+    {
+      fbp: 'fb.1.cookie',
+      landing_page:
+        'https://app.betterlsat.com/auth/callback?token_hash=abc&type=signup',
+    },
+    {
+      fbp: 'fb.1.meta',
+      landing_page: 'https://app.betterlsat.com/intent',
+      utm_source: 'meta',
+    },
+  )
+  assertEquals(merged?.landing_page, 'https://app.betterlsat.com/intent')
+  assertEquals(merged?.utm_source, 'meta')
+  assertEquals(merged?.fbp, 'fb.1.cookie')
+})
+
 Deno.test('resolveSignupCheckoutPlan prefers body over metadata and defaults to free', () => {
   assertEquals(resolveSignupCheckoutPlan('monthly', 'free'), 'monthly')
   assertEquals(resolveSignupCheckoutPlan(null, 'three_month'), 'three_month')

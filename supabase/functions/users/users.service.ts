@@ -169,14 +169,42 @@ export type TrackSignupConversionResult = {
 
 const SIGNUP_CONVERSION_WINDOW_MS = 2 * 60 * 1000
 
+function isAuthCallbackLandingPage(url: unknown): boolean {
+  if (typeof url !== 'string' || !url.trim()) return false
+  try {
+    const path = new URL(url.trim()).pathname
+    return path === '/auth/callback' || path.startsWith('/auth/callback/')
+  } catch {
+    return url.includes('/auth/callback')
+  }
+}
+
+/**
+ * Merge cookie + auth metadata attribution.
+ * Cookie wins on overlapping keys (same-browser OAuth), except auth-callback
+ * landing pages which must not overwrite first-touch metadata (cross-browser magic link).
+ */
 export function mergeSignupAttribution(
   cookieAttr: SignupAttribution | null | undefined,
   metadataAttr: SignupAttribution | null | undefined,
 ): SignupAttribution | null {
-  const merged: SignupAttribution = {
-    ...(typeof metadataAttr === 'object' && metadataAttr ? metadataAttr : {}),
-    ...(typeof cookieAttr === 'object' && cookieAttr ? cookieAttr : {}),
+  const meta =
+    typeof metadataAttr === 'object' && metadataAttr ? { ...metadataAttr } : {}
+  const cookie =
+    typeof cookieAttr === 'object' && cookieAttr ? { ...cookieAttr } : {}
+
+  if (isAuthCallbackLandingPage(cookie.landing_page)) {
+    delete cookie.landing_page
   }
+
+  const merged: SignupAttribution = { ...meta, ...cookie }
+
+  const metaLanding =
+    typeof meta.landing_page === 'string' ? meta.landing_page.trim() : ''
+  if (metaLanding && isAuthCallbackLandingPage(merged.landing_page)) {
+    merged.landing_page = metaLanding
+  }
+
   return Object.keys(merged).length > 0 ? merged : null
 }
 

@@ -3,6 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import {
   BL_ATTR_COOKIE,
   captureAttributionFromUrl,
+  isAuthCallbackLandingPage,
+  isAuthCallbackPath,
   mergeFirstTouch,
   parseBlAttrCookie,
   parseCookieValue,
@@ -79,6 +81,48 @@ describe("attribution helpers", () => {
     const again = captureAttributionFromUrl("?utm_source=bing")
     expect(again?.landing_page).toBe("https://app.betterlsat.com/signup?plan=monthly")
     expect(again?.utm_source).toBe("bing")
+  })
+
+  it("isAuthCallbackPath / landing helpers detect callback URLs", () => {
+    expect(isAuthCallbackPath("/auth/callback")).toBe(true)
+    expect(isAuthCallbackPath("/signup")).toBe(false)
+    expect(
+      isAuthCallbackLandingPage(
+        "https://app.betterlsat.com/auth/callback?token_hash=abc&type=signup",
+      ),
+    ).toBe(true)
+    expect(isAuthCallbackLandingPage("https://app.betterlsat.com/intent")).toBe(false)
+  })
+
+  it("captureAttributionFromUrl does not write landing_page on auth callback", () => {
+    vi.stubGlobal("location", {
+      hostname: "app.betterlsat.com",
+      protocol: "https:",
+      origin: "https://app.betterlsat.com",
+      pathname: "/auth/callback",
+      search: "?token_hash=abc&type=signup",
+    })
+    const result = captureAttributionFromUrl("?token_hash=abc&type=signup")
+    expect(result?.landing_page).toBeUndefined()
+    expect(document.cookie).not.toContain(BL_ATTR_COOKIE)
+  })
+
+  it("readAttribution strips auth-callback landing_page", () => {
+    Object.defineProperty(document, "cookie", {
+      configurable: true,
+      get: () =>
+        `${BL_ATTR_COOKIE}=${encodeURIComponent(
+          JSON.stringify({
+            utm_source: "meta",
+            landing_page:
+              "https://app.betterlsat.com/auth/callback?token_hash=abc&type=signup",
+          }),
+        )}`,
+      set: () => {},
+    })
+    const attr = readAttribution()
+    expect(attr.utm_source).toBe("meta")
+    expect(attr.landing_page).toBeUndefined()
   })
 
   it("readAttribution merges click cookies", () => {

@@ -80,6 +80,17 @@ describe("createAuthApi", () => {
     expect(updateUser).toHaveBeenCalledWith({ password: "super-secret" })
   })
 
+  it("updateUserData merges metadata via updateUser", async () => {
+    const updateUser = vi.fn().mockResolvedValue({ error: null })
+    const api = createAuthApi(mockSupabase({ auth: { updateUser } }))
+
+    await api.updateUserData({ attribution: { utm_source: "google" }, checkout_plan: "free" })
+
+    expect(updateUser).toHaveBeenCalledWith({
+      data: { attribution: { utm_source: "google" }, checkout_plan: "free" },
+    })
+  })
+
   it("sendPasswordResetEmail calls resetPasswordForEmail with redirect", async () => {
     const resetPasswordForEmail = vi.fn().mockResolvedValue({ error: null })
     const api = createAuthApi(mockSupabase({ auth: { resetPasswordForEmail } }))

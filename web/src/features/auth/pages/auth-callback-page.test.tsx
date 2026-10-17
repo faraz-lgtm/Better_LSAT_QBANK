@@ -40,6 +40,7 @@ const authMock = {
   exchangeCodeForSession: vi.fn(),
   verifyOtp: vi.fn(),
   getSession: vi.fn(),
+  updateUser: vi.fn(),
 }
 const invokeMock = vi.fn()
 
@@ -65,6 +66,8 @@ describe("AuthCallbackPage", () => {
     authMock.exchangeCodeForSession.mockReset()
     authMock.verifyOtp.mockReset()
     authMock.getSession.mockReset()
+    authMock.updateUser.mockReset()
+    authMock.updateUser.mockResolvedValue({ error: null })
     invokeMock.mockReset()
     trackFreeDiagnosticSignupAndWaitMock.mockReset()
     trackFreeDiagnosticSignupAndWaitMock.mockImplementation(async () => {})
@@ -259,6 +262,57 @@ describe("AuthCallbackPage", () => {
       }),
       300,
     )
+  })
+
+  it("stamps bl_attr onto user_metadata when missing (Google path)", async () => {
+    authMock.exchangeCodeForSession.mockResolvedValue({ error: null })
+    authMock.getSession.mockResolvedValue({
+      data: {
+        session: {
+          user: {
+            id: "u1",
+            email: "u1@example.com",
+            user_metadata: {},
+          },
+        },
+      },
+      error: null,
+    })
+    mockUsersInvoke({ tracked: true })
+    window.history.pushState({}, "", "/auth/callback?code=google-stamp")
+
+    renderCallback("/auth/callback?code=google-stamp")
+
+    expect(await screen.findByText(/onboarding view/i)).toBeInTheDocument()
+    expect(authMock.updateUser).toHaveBeenCalledWith({
+      data: {
+        attribution: { gclid: "test-gclid" },
+        checkout_plan: "free",
+      },
+    })
+  })
+
+  it("does not restamp user_metadata when attribution already present", async () => {
+    authMock.exchangeCodeForSession.mockResolvedValue({ error: null })
+    authMock.getSession.mockResolvedValue({
+      data: {
+        session: {
+          user: {
+            id: "u1",
+            email: "u1@example.com",
+            user_metadata: { attribution: { utm_source: "email" }, checkout_plan: "free" },
+          },
+        },
+      },
+      error: null,
+    })
+    mockUsersInvoke({ tracked: false })
+    window.history.pushState({}, "", "/auth/callback?code=already-stamped")
+
+    renderCallback("/auth/callback?code=already-stamped")
+
+    expect(await screen.findByText(/onboarding view/i)).toBeInTheDocument()
+    expect(authMock.updateUser).not.toHaveBeenCalled()
   })
 
   it("does not fire free_diagnostic_signup when conversion already tracked", async () => {

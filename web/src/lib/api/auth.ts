@@ -102,6 +102,13 @@ export function createAuthApi(supabase: SupabaseClient) {
       const { error } = await supabase.auth.updateUser({ password: newPassword })
       if (error) throw error
     },
+
+    /** Merge fields into auth user_metadata (e.g. Google attribution stamp on callback). */
+    async updateUserData(data: Record<string, unknown>): Promise<void> {
+      if (Object.keys(data).length === 0) return
+      const { error } = await supabase.auth.updateUser({ data })
+      if (error) throw error
+    },
   }
 }
 

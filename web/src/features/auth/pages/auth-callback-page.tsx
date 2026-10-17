@@ -204,11 +204,30 @@ function AuthCallbackPage() {
 
         captureEvent(AnalyticsEvent.authCompleted)
 
+        // Google OAuth often drops options.data; stamp bl_attr onto user_metadata here.
+        const meta = (session.user.user_metadata ?? {}) as Record<string, unknown>
+        const hasMetaAttribution =
+          meta.attribution && typeof meta.attribution === "object" && !Array.isArray(meta.attribution)
+        const cookieAttribution = readAttribution()
+        if (!hasMetaAttribution && Object.keys(cookieAttribution).length > 0) {
+          try {
+            await authApi.updateUserData({
+              attribution: cookieAttribution,
+              checkout_plan:
+                typeof meta.checkout_plan === "string" && meta.checkout_plan.trim()
+                  ? meta.checkout_plan
+                  : (readPendingCheckoutPlan() ?? "free"),
+            })
+          } catch (stampError) {
+            console.warn("Signup attribution metadata stamp failed:", stampError)
+          }
+        }
+
         let conversionWait: Promise<void> = Promise.resolve()
         try {
           const conversion = await trackSignupConversionOnce(session.user.id, () =>
             usersApi.trackSignupConversion({
-              attribution: readAttribution(),
+              attribution: cookieAttribution,
               checkoutPlan: readPendingCheckoutPlan() ?? "free",
               eventSourceUrl: window.location.href,
             }),
