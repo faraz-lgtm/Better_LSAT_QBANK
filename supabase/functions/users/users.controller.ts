@@ -1,4 +1,5 @@
 import { CORS_EDGE_NARROW, json, requireAuthUser } from '../_shared/edge-http.ts'
+import { readClientIp, resolveSignupGeo } from '../_shared/signup-geo.ts'
 import { createUsersRepository, createServiceRoleClient } from './users.repository.ts'
 import { AuthorizationError, createUsersService } from './users.service.ts'
 
@@ -50,6 +51,7 @@ export async function handleUsersRequest(req: Request): Promise<Response> {
                 appMeta.providers[0].trim()
               ? appMeta.providers[0].trim()
               : null
+        const signupLocation = await resolveSignupGeo({ headers: req.headers })
         const result = await service.trackSignupConversion({
           userId: auth.user.id,
           email: auth.user.email ?? null,
@@ -62,11 +64,8 @@ export async function handleUsersRequest(req: Request): Promise<Response> {
           eventSourceUrl:
             typeof body.eventSourceUrl === 'string' ? body.eventSourceUrl : null,
           clientUserAgent: req.headers.get('user-agent'),
-          clientIpAddress:
-            req.headers.get('cf-connecting-ip') ??
-            req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
-            null,
-          clientCountry: req.headers.get('cf-ipcountry'),
+          clientIpAddress: readClientIp(req.headers),
+          signupLocation,
           provider: providerFromApp,
         })
         return json(result, {}, corsHeaders)

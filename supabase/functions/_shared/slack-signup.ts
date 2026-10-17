@@ -1,3 +1,5 @@
+import { formatSignupLocation } from './signup-geo.ts'
+
 export type SlackSignupNotifyInput = {
   email: string
   userId?: string
@@ -9,12 +11,19 @@ export type SlackSignupNotifyInput = {
   utms?: string | null
   /** Free / Paid (plan) intent label. */
   intent?: string | null
-  /** ISO country code. */
+  /**
+   * Preferred structured location (city/region/country).
+   * Falls back to `country` when unset.
+   */
+  location?: { country?: string | null; region?: string | null; city?: string | null } | null
+  /** @deprecated Prefer `location`. ISO country code used when `location` is absent. */
   country?: string | null
 
   fetchImpl?: typeof fetch
   getEnv?: (key: string) => string | undefined
 }
+
+export { formatSignupLocation }
 
 export type AuthUsersWebhookPayload = {
   type: string
@@ -132,7 +141,7 @@ export async function notifySlackSignup(input: SlackSignupNotifyInput): Promise<
     '',
     `• *Email:* \`${email}\``,
     `• *Intent:* ${input.intent?.trim() || 'Free'}`,
-    `• *Location:* ${formatSignupCountry(input.country)}`,
+    `• *Location:* ${formatSignupLocation(input.location ?? { country: input.country })}`,
     `• *Provider:* ${input.provider?.trim() || 'unknown'}`,
     `• *Link:* ${input.landingPage?.trim() || 'unknown'}`,
     `• *UTMs:* ${input.utms?.trim() || 'unknown'}`,

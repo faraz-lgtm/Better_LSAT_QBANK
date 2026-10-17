@@ -5,6 +5,7 @@ import {
   formatSignupCreatedAtToronto,
   formatSignupIntent,
   formatSignupLandingPage,
+  formatSignupLocation,
   formatSignupUtms,
   notifySlackSignup,
   parseAuthUsersConfirmedSignup,
@@ -35,7 +36,7 @@ Deno.test('notifySlackSignup posts Slack message with enrichment fields', async 
     landingPage: 'https://app.betterlsat.com/signup?utm_source=google&plan=monthly',
     utms: 'source=google · medium=cpc',
     intent: 'Paid (monthly)',
-    country: 'US',
+    location: { city: 'New York', region: 'NY', country: 'US' },
     getEnv: (key) => (key === 'SLACK_SIGNUP_WEBHOOK_URL' ? 'https://hooks.slack.com/services/x' : undefined),
     fetchImpl: async (input, init) => {
       url = String(input)
@@ -52,7 +53,7 @@ Deno.test('notifySlackSignup posts Slack message with enrichment fields', async 
   assertEquals(text.includes('*Link:* https://app.betterlsat.com/signup?utm_source=google&plan=monthly'), true)
   assertEquals(text.includes('*UTMs:* source=google · medium=cpc'), true)
   assertEquals(text.includes('*Intent:* Paid (monthly)'), true)
-  assertEquals(text.includes('*Location:* US'), true)
+  assertEquals(text.includes('*Location:* New York, NY, US'), true)
   assertEquals(text.includes('(Toronto)'), true)
   assertEquals(text.includes('2026-10-08T10:00:00Z'), false)
 })
@@ -116,6 +117,25 @@ Deno.test('formatSignupUtms and landing page helpers', () => {
   assertEquals(formatSignupCountry('us'), 'US')
   assertEquals(formatSignupCountry('XX'), 'unknown')
   assertEquals(formatSignupCountry(null), 'unknown')
+  assertEquals(
+    formatSignupLocation({ city: 'Toronto', region: 'ON', country: 'ca' }),
+    'Toronto, ON, CA',
+  )
+  assertEquals(formatSignupLocation(null), 'unknown')
+})
+
+Deno.test('notifySlackSignup falls back to country when location absent', async () => {
+  let body: Record<string, unknown> = {}
+  await notifySlackSignup({
+    email: 'a@example.com',
+    country: 'ca',
+    getEnv: (key) => (key === 'SLACK_SIGNUP_WEBHOOK_URL' ? 'https://hooks.slack.com/services/x' : undefined),
+    fetchImpl: async (_input, init) => {
+      body = JSON.parse((init as { body?: string } | undefined)?.body ?? '{}') as Record<string, unknown>
+      return new Response('ok', { status: 200 })
+    },
+  })
+  assertEquals(String(body.text ?? '').includes('*Location:* CA'), true)
 })
 
 Deno.test('authorizeSignupWebhook accepts x-signup-webhook-secret', () => {

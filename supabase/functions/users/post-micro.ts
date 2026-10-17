@@ -3,6 +3,7 @@ import { CORS_EDGE_NARROW, json } from '../_shared/edge-http.ts'
 import { createLawHubClient } from '../_shared/lawhub-client.ts'
 import { parseLawHubEnv } from '../_shared/lawhub-env.ts'
 import { isLawHubIdentityError } from '../_shared/lawhub-student-identity.ts'
+import { readClientIp, resolveSignupGeo } from '../_shared/signup-geo.ts'
 import { createLsacSyncRepository } from '../lsac-sync/lsac-sync.repository.ts'
 import { createLsacSyncService } from '../lsac-sync/lsac-sync.service.ts'
 import { createUsersRepository, createServiceRoleClient } from './users.repository.ts'
@@ -223,6 +224,7 @@ export async function handleUsersPostMicro(req: Request, slug: string): Promise<
               appMeta.providers[0].trim()
             ? appMeta.providers[0].trim()
             : null
+      const signupLocation = await resolveSignupGeo({ headers: req.headers })
       const result = await service.trackSignupConversion({
         userId: user.id,
         email: user.email ?? null,
@@ -235,11 +237,8 @@ export async function handleUsersPostMicro(req: Request, slug: string): Promise<
         eventSourceUrl:
           typeof body.eventSourceUrl === 'string' ? body.eventSourceUrl : null,
         clientUserAgent: req.headers.get('user-agent'),
-        clientIpAddress:
-          req.headers.get('cf-connecting-ip') ??
-          req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
-          null,
-        clientCountry: req.headers.get('cf-ipcountry'),
+        clientIpAddress: readClientIp(req.headers),
+        signupLocation,
         provider: providerFromApp,
       })
       return json(result, {}, corsHeaders)

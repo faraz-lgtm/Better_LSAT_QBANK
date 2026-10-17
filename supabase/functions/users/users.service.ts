@@ -17,7 +17,10 @@ import {
 import { capturePostHogEvent } from '../_shared/posthog.ts'
 import { sendMetaCompleteRegistration } from '../_shared/meta-capi.ts'
 import {
-  formatSignupCountry,
+  readSignupLocationFromAttribution,
+  type SignupLocation,
+} from '../_shared/signup-geo.ts'
+import {
   formatSignupIntent,
   formatSignupLandingPage,
   formatSignupUtms,
@@ -138,8 +141,8 @@ export type TrackSignupConversionInput = {
   eventSourceUrl?: string | null
   clientUserAgent?: string | null
   clientIpAddress?: string | null
-  /** ISO country from CF-IPCountry. */
-  clientCountry?: string | null
+  /** Resolved geo from edge headers / IP lookup. */
+  signupLocation?: SignupLocation | null
   provider?: string | null
 }
 
@@ -475,7 +478,9 @@ export function createUsersService(deps: UsersServiceDeps) {
         input.checkoutPlan,
         input.userMetadataCheckoutPlan,
       )
-      const country = formatSignupCountry(input.clientCountry)
+      const location = input.signupLocation ?? null
+      const country = location?.country?.trim() || null
+      const hasLocation = Boolean(country || location?.region?.trim() || location?.city?.trim())
       let attribution = mergeSignupAttribution(
         input.attribution,
         input.userMetadataAttribution,
@@ -483,7 +488,16 @@ export function createUsersService(deps: UsersServiceDeps) {
       attribution = {
         ...(attribution ?? {}),
         checkout_plan: checkoutPlan,
-        ...(country !== 'unknown' ? { country } : {}),
+        ...(country ? { country } : {}),
+        ...(hasLocation && location
+          ? {
+              signup_location: {
+                country: location.country,
+                region: location.region,
+                city: location.city,
+              },
+            }
+          : {}),
       }
 
       const trackedAt = new Date().toISOString()
@@ -529,6 +543,9 @@ export function createUsersService(deps: UsersServiceDeps) {
       })
 
       const notify = deps.notifySlackSignup ?? notifySlackSignup
+      const storedLocation =
+        readSignupLocationFromAttribution(claimed.signup_attribution) ??
+        readSignupLocationFromAttribution(attribution)
       try {
         await notify({
           email: claimed.email ?? email ?? '',
@@ -538,7 +555,7 @@ export function createUsersService(deps: UsersServiceDeps) {
           landingPage: formatSignupLandingPage(attribution),
           utms: formatSignupUtms(attribution),
           intent: formatSignupIntent(checkoutPlan),
-          country,
+          location: storedLocation,
           fetchImpl: deps.fetchImpl,
         })
       } catch (error) {

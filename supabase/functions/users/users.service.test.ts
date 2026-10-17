@@ -1869,7 +1869,8 @@ Deno.test('trackSignupConversion claims once and returns eventId', async () => {
   })
   let slackCalled = false
   let slackIntent = ''
-  let slackCountry = ''
+  let slackLocation: { country?: string | null; region?: string | null; city?: string | null } | null =
+    null
   let slackLanding = ''
   const service = createUsersService({
     repository,
@@ -1877,7 +1878,7 @@ Deno.test('trackSignupConversion claims once and returns eventId', async () => {
     notifySlackSignup: async (input) => {
       slackCalled = true
       slackIntent = input.intent ?? ''
-      slackCountry = input.country ?? ''
+      slackLocation = input.location ?? null
       slackLanding = input.landingPage ?? ''
       return true
     },
@@ -1892,7 +1893,12 @@ Deno.test('trackSignupConversion claims once and returns eventId', async () => {
     },
     userMetadataAttribution: { fbclid: 'f-1' },
     checkoutPlan: 'monthly',
-    clientCountry: 'us',
+    signupLocation: {
+      country: 'US',
+      region: 'NY',
+      city: 'New York',
+      source: 'ip_lookup',
+    },
     provider: 'google',
     authCreatedAt: new Date().toISOString(),
   })
@@ -1904,10 +1910,89 @@ Deno.test('trackSignupConversion claims once and returns eventId', async () => {
   assertEquals(out.attribution?.fbclid, 'f-1')
   assertEquals(out.attribution?.checkout_plan, 'monthly')
   assertEquals(out.attribution?.country, 'US')
+  assertEquals(out.attribution?.signup_location, {
+    country: 'US',
+    region: 'NY',
+    city: 'New York',
+  })
   assertEquals(slackCalled, true)
   assertEquals(slackIntent, 'Paid (monthly)')
-  assertEquals(slackCountry, 'US')
+  assertEquals(slackLocation, {
+    country: 'US',
+    region: 'NY',
+    city: 'New York',
+    source: 'none',
+  })
   assertEquals(slackLanding, 'https://app.betterlsat.com/signup?utm_source=ads')
+})
+
+Deno.test('trackSignupConversion Slack location is unknown when geo missing', async () => {
+  let slackLocation: { country?: string | null; region?: string | null; city?: string | null } | null |
+    undefined = undefined
+  const repository = mockRepo({
+    getProfileById: async (id) => ({
+      id,
+      email: null,
+      full_name: null,
+      first_name: null,
+      last_name: null,
+      phone: null,
+      avatar_url: null,
+      role: 'student',
+      student_coaching_id: null,
+      stripe_customer_id: null,
+      prep_plus_source: null,
+      lawhub_invite_status: null,
+      lawhub_invite_last_error: null,
+      lawhub_invited_at: null,
+      is_first_time_login: true,
+      signup_conversion_tracked_at: null,
+      signup_attribution: null,
+      created_at: '2026-10-17T00:00:00Z',
+      updated_at: '2026-10-17T00:00:00Z',
+    }),
+    claimSignupConversion: async (input) => ({
+      profile: {
+        id: input.userId,
+        email: input.email,
+        full_name: null,
+        first_name: null,
+        last_name: null,
+        phone: null,
+        avatar_url: null,
+        role: 'student',
+        student_coaching_id: null,
+        stripe_customer_id: null,
+        prep_plus_source: null,
+        lawhub_invite_status: null,
+        lawhub_invite_last_error: null,
+        lawhub_invited_at: null,
+        is_first_time_login: true,
+        signup_conversion_tracked_at: input.trackedAt,
+        signup_attribution: input.attribution,
+        created_at: '2026-10-17T00:00:00Z',
+        updated_at: input.trackedAt,
+      },
+      won: true,
+    }),
+  })
+  const service = createUsersService({
+    repository,
+    lawHub: null,
+    notifySlackSignup: async (input) => {
+      slackLocation = input.location ?? null
+      return true
+    },
+  })
+  const out = await service.trackSignupConversion({
+    userId: 'user-no-geo',
+    email: 'nogeo@example.com',
+    signupLocation: { country: null, region: null, city: null, source: 'none' },
+    authCreatedAt: new Date().toISOString(),
+  })
+  assertEquals(out.tracked, true)
+  assertEquals(out.attribution?.signup_location, undefined)
+  assertEquals(slackLocation, null)
 })
 
 Deno.test('trackSignupConversion does not Slack when alreadyTracked', async () => {
