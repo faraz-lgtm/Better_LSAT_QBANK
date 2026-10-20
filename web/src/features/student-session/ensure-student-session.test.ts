@@ -2,9 +2,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 const getMyProfile = vi.fn()
 const getEntitlementState = vi.fn()
+const getSession = vi.fn()
 
 vi.mock("@/lib/supabase/client", () => ({
-  getSupabaseBrowserClient: () => ({}),
+  getSupabaseBrowserClient: () => ({
+    auth: { getSession },
+  }),
 }))
 
 vi.mock("@/lib/api/users", async () => {
@@ -27,10 +30,32 @@ import {
 } from "./ensure-student-session"
 import { resetStudentSession } from "./studentSessionSlice"
 
+const studentProfile = {
+  id: "u1",
+  email: "a@b.com",
+  full_name: "Ada",
+  first_name: "Ada",
+  last_name: null,
+  phone: null,
+  role: "student" as const,
+  student_coaching_id: null,
+  is_first_time_login: false,
+  created_at: "2026-01-01",
+  updated_at: "2026-01-01",
+}
+
+function mockAuthUser(userId: string | null) {
+  getSession.mockResolvedValue({
+    data: { session: userId ? { user: { id: userId } } : null },
+  })
+}
+
 describe("ensureStudentSession", () => {
   beforeEach(() => {
     getMyProfile.mockReset()
     getEntitlementState.mockReset()
+    getSession.mockReset()
+    mockAuthUser("u1")
     store.dispatch(resetStudentSession())
     resetEnsureStudentSessionInflight()
   })
@@ -45,19 +70,7 @@ describe("ensureStudentSession", () => {
 
     const first = ensureProfile()
     const second = ensureProfile()
-    resolveProfile({
-      id: "u1",
-      email: "a@b.com",
-      full_name: "Ada",
-      first_name: "Ada",
-      last_name: null,
-      phone: null,
-      role: "student",
-      student_coaching_id: null,
-      is_first_time_login: false,
-      created_at: "2026-01-01",
-      updated_at: "2026-01-01",
-    })
+    resolveProfile(studentProfile)
 
     const [a, b] = await Promise.all([first, second])
     expect(getMyProfile).toHaveBeenCalledTimes(1)
@@ -82,21 +95,49 @@ describe("ensureStudentSession", () => {
 
   it("refetches after a cached null profile so onboarding-created rows are visible", async () => {
     getMyProfile.mockResolvedValueOnce(null).mockResolvedValueOnce({
-      id: "u1",
-      email: "a@b.com",
+      ...studentProfile,
       full_name: "Ada Lovelace",
-      first_name: "Ada",
       last_name: "Lovelace",
-      phone: null,
-      role: "student",
-      student_coaching_id: null,
       is_first_time_login: true,
-      created_at: "2026-01-01",
-      updated_at: "2026-01-01",
     })
 
     expect(await ensureProfile()).toBeNull()
     expect(await ensureProfile()).toMatchObject({ id: "u1", first_name: "Ada" })
     expect(getMyProfile).toHaveBeenCalledTimes(2)
+  })
+
+  it("refetches when cached profile belongs to a different auth user", async () => {
+    getMyProfile
+      .mockResolvedValueOnce({
+        ...studentProfile,
+        id: "admin-1",
+        role: "super_admin",
+        full_name: "Admin",
+        first_name: "Admin",
+      })
+      .mockResolvedValueOnce(studentProfile)
+
+    mockAuthUser("admin-1")
+    expect(await ensureProfile()).toMatchObject({ id: "admin-1", role: "super_admin" })
+    expect(getMyProfile).toHaveBeenCalledTimes(1)
+
+    mockAuthUser("u1")
+    expect(await ensureProfile()).toMatchObject({ id: "u1", role: "student" })
+    expect(getMyProfile).toHaveBeenCalledTimes(2)
+  })
+
+  it("returns null without refetch when signed out with a stale cached profile", async () => {
+    getMyProfile.mockResolvedValueOnce({
+      ...studentProfile,
+      id: "admin-1",
+      role: "super_admin",
+    })
+
+    mockAuthUser("admin-1")
+    expect(await ensureProfile()).toMatchObject({ id: "admin-1" })
+
+    mockAuthUser(null)
+    expect(await ensureProfile()).toBeNull()
+    expect(getMyProfile).toHaveBeenCalledTimes(1)
   })
 })

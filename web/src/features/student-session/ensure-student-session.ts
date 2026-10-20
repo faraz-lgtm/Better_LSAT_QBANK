@@ -4,9 +4,11 @@ import {
   loadEntitlement,
   loadProfile,
   loadStudyContext,
+  resetStudentSession,
   type StudentSessionState,
 } from "@/features/student-session/studentSessionSlice"
 import type { StudentStudyContext, UserEntitlement, UserProfile } from "@/lib/api/users"
+import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
 const inflight = {
   profile: null as Promise<UserProfile | null> | null,
@@ -16,6 +18,21 @@ const inflight = {
 
 function session(): StudentSessionState {
   return (getAppStore().getState() as { studentSession: StudentSessionState }).studentSession
+}
+
+/** Auth user id for the current session, or null when signed out. */
+async function currentAuthUserId(): Promise<string | null> {
+  const { data } = await getSupabaseBrowserClient().auth.getSession()
+  return data.session?.user?.id ?? null
+}
+
+/**
+ * Drop a cached profile that belongs to a different auth user (e.g. admin → student
+ * login after a soft logout that left Redux intact).
+ */
+function dropStaleSessionCache(): void {
+  getAppStore().dispatch(resetStudentSession())
+  resetEnsureStudentSessionInflight()
 }
 
 async function waitWhile(
@@ -37,10 +54,18 @@ async function waitWhile(
  * A prior successful load that returned `null` (no row yet) is not treated as a permanent
  * cache hit — Google signup → onboarding → saveOnboarding creates the row, and route guards
  * must be able to see it without a full page reload.
+ *
+ * A cached profile whose `id` does not match the current auth user is discarded so account
+ * switches cannot reuse the previous role (admin → student soft logout).
  */
 export async function ensureProfile(): Promise<UserProfile | null> {
   const current = session()
-  if (current.profileStatus === "succeeded" && current.profile) return current.profile
+  if (current.profileStatus === "succeeded" && current.profile) {
+    const authUserId = await currentAuthUserId()
+    if (authUserId && current.profile.id === authUserId) return current.profile
+    dropStaleSessionCache()
+    if (!authUserId) return null
+  }
   if (inflight.profile) return inflight.profile
 
   const store = getAppStore()

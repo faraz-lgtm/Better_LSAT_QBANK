@@ -561,7 +561,12 @@ function RequireRole({ children, requiredRole }: { children: ReactElement; requi
   if (requiredRole === "admin" && profile.role !== "admin" && profile.role !== "super_admin") {
     return <Navigate to="/app" replace />
   }
-  if (requiredRole === "student" && profile.role === "admin") return <Navigate to="/admin" replace />
+  if (
+    requiredRole === "student" &&
+    (profile.role === "admin" || profile.role === "super_admin")
+  ) {
+    return <Navigate to="/admin" replace />
+  }
   return children
 }
 

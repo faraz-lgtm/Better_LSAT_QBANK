@@ -3,6 +3,7 @@ import { NavLink, useNavigate } from "react-router-dom"
 
 import { useAdminApi } from "@/features/admin/use-admin-api"
 import { resetUser } from "@/lib/analytics/posthog"
+import { clearStudentSessionCaches } from "@/lib/auth/clear-student-session-caches"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
 const links: Array<{ to: string; label: string; section: "Content" | "Settings"; badge?: string }> = [
@@ -66,6 +67,7 @@ function AdminSidebar() {
     try {
       const supabase = getSupabaseBrowserClient()
       await supabase.auth.signOut()
+      clearStudentSessionCaches()
       resetUser()
     } finally {
       navigate("/login", { replace: true })
