@@ -12,6 +12,7 @@ describe("produktly helpers", () => {
   const identifyUser = vi.fn()
   const clearCurrentUser = vi.fn()
   const startTour = vi.fn()
+  const closeTour = vi.fn()
   const openFeedback = vi.fn()
   const closeFeedback = vi.fn()
 
@@ -20,6 +21,7 @@ describe("produktly helpers", () => {
     identifyUser.mockReset()
     clearCurrentUser.mockReset()
     startTour.mockReset()
+    closeTour.mockReset()
     openFeedback.mockReset()
     closeFeedback.mockReset()
     clearProduktlyUser()
@@ -30,6 +32,7 @@ describe("produktly helpers", () => {
       clearCurrentUser,
       configure: vi.fn(),
       startTour,
+      closeTour,
       openFeedback,
       closeFeedback,
     }
@@ -86,32 +89,42 @@ describe("produktly helpers", () => {
     expect(() => closeProduktlyFeedback(2722)).not.toThrow()
   })
 
-  it("startProduktlyTour forwards params", () => {
+  it("startProduktlyTour closes any open tour then forwards params", () => {
     startProduktlyTour({ tourId: 99, stepIndex: 2 })
-    expect(startTour).toHaveBeenCalledWith({ tourId: 99, stepIndex: 2 })
+    expect(closeTour).toHaveBeenCalledWith({ id: 99 })
+    expect(startTour).toHaveBeenCalledWith({
+      tourId: 99,
+      stepIndex: 2,
+      respectAllTourSettings: false,
+    })
   })
 
-  it("startProduktlyTour adds refreshToken when clearing progress so dismissed tours restart", () => {
+  it("startProduktlyTour defaults to step 0 and ignores once-per-user settings", () => {
     startProduktlyTour({ tourId: 99, clearProgress: true })
     expect(startTour).toHaveBeenCalledWith({
       tourId: 99,
+      stepIndex: 0,
+      respectAllTourSettings: false,
       clearProgress: true,
       refreshToken: expect.any(Number),
     })
   })
 
-  it("startProduktlyTour keeps an explicit refreshToken when clearing progress", () => {
+  it("startProduktlyTour bumps refreshToken on every retry when clearing progress", () => {
     startProduktlyTour({ tourId: 99, clearProgress: true, refreshToken: "manual" })
-    expect(startTour).toHaveBeenCalledWith({
-      tourId: 99,
-      clearProgress: true,
-      refreshToken: "manual",
-    })
+    expect(startTour).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tourId: 99,
+        clearProgress: true,
+        refreshToken: expect.any(Number),
+      }),
+    )
   })
 
   it("startProduktlyTour no-ops for empty tour id", () => {
     startProduktlyTour({ tourId: 0 })
     expect(startTour).not.toHaveBeenCalled()
+    expect(closeTour).not.toHaveBeenCalled()
   })
 
   it("startProduktlyTour retries until the tour card iframe mounts", () => {
@@ -124,6 +137,7 @@ describe("produktly helpers", () => {
     })
 
     startProduktlyTour({ tourId: 99, clearProgress: true })
+    expect(closeTour).toHaveBeenCalledWith({ id: 99 })
     expect(startTour).toHaveBeenCalledTimes(1)
 
     vi.advanceTimersByTime(250)
@@ -134,6 +148,36 @@ describe("produktly helpers", () => {
 
     vi.advanceTimersByTime(1000)
     expect(startTour).toHaveBeenCalledTimes(3)
+  })
+
+  it("startProduktlyTour does not treat a pre-existing iframe as success", () => {
+    const iframe = document.createElement("iframe")
+    iframe.id = "produktly-card-iframe"
+    document.body.appendChild(iframe)
+
+    closeTour.mockImplementation(() => {
+      document.getElementById("produktly-card-iframe")?.remove()
+    })
+
+    startTour.mockImplementation(() => {
+      if (startTour.mock.calls.length >= 2) {
+        const next = document.createElement("iframe")
+        next.id = "produktly-card-iframe"
+        document.body.appendChild(next)
+      }
+    })
+
+    startProduktlyTour({ tourId: 99, clearProgress: true })
+    expect(closeTour).toHaveBeenCalledWith({ id: 99 })
+    expect(document.getElementById("produktly-card-iframe")).toBeNull()
+    expect(startTour).toHaveBeenCalledTimes(1)
+
+    vi.advanceTimersByTime(250)
+    expect(startTour).toHaveBeenCalledTimes(2)
+
+    vi.advanceTimersByTime(250)
+    expect(startTour).toHaveBeenCalledTimes(2)
+    expect(document.getElementById("produktly-card-iframe")).toBeTruthy()
   })
 
   it("startProduktlyTour stops retrying after max attempts when the card never mounts", () => {

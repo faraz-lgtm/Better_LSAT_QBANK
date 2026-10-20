@@ -22,6 +22,8 @@ type ProduktlyApi = {
     waitForUser?: boolean
   }) => void
   startTour?: (params: StartProduktlyTourParams) => void
+  closeTour?: (params: { id: number }) => void
+  closeAll?: () => void
   openFeedback?: (params: { id: number; ignorePublish?: boolean }) => void
   closeFeedback?: (params: { id: number }) => void
 }
@@ -76,9 +78,9 @@ export function clearProduktlyUser(): void {
  * When `clearProgress` is set, also bumps `refreshToken` so a dismissed tour
  * restarts from step 0 instead of being ignored / resumed mid-tour.
  *
- * Retries briefly until the tour card iframe mounts — Produktly often no-ops
- * if identify / available has not finished, or a same-tick SPA navigation
- * cancels the first start.
+ * Always closes any existing instance of this tour first, then retries until
+ * a fresh tour card iframe mounts. A leftover iframe from a dismissed tour
+ * used to make restarts look like a no-op ("Get Started only works once").
  */
 export function startProduktlyTour(params: StartProduktlyTourParams): void {
   if (!params.tourId) return
@@ -100,18 +102,19 @@ export function startProduktlyTour(params: StartProduktlyTourParams): void {
   }
   activeTourStartCancel = cancel
 
-  const buildPayload = (): StartProduktlyTourParams => {
-    if (!params.clearProgress) return params
-    // Bump refreshToken on every attempt so a prior dismiss/no-op can re-trigger.
-    if (params.refreshToken === undefined || attempt > 1) {
-      return { ...params, refreshToken: Date.now() }
-    }
-    return params
-  }
+  // Drop any open/dismissed card so the next start is not treated as already mounted.
+  getProduktly()?.closeTour?.({ id: params.tourId })
 
-  const schedule = () => {
-    if (cancelled) return
-    timer = window.setTimeout(run, TOUR_START_RETRY_MS)
+  const buildPayload = (): StartProduktlyTourParams => {
+    const base: StartProduktlyTourParams = {
+      ...params,
+      // Get Started should always reopen from step 0, ignoring "once per user".
+      stepIndex: params.stepIndex ?? 0,
+      respectAllTourSettings: params.respectAllTourSettings ?? false,
+    }
+    if (!params.clearProgress) return base
+    // Bump refreshToken on every attempt so a prior dismiss/no-op can re-trigger.
+    return { ...base, refreshToken: Date.now() }
   }
 
   const run = () => {
@@ -119,15 +122,18 @@ export function startProduktlyTour(params: StartProduktlyTourParams): void {
     attempt += 1
     getProduktly()?.startTour?.(buildPayload())
 
-    if (isProduktlyTourCardMounted()) {
-      cancel()
-      return
-    }
-    if (attempt >= TOUR_START_MAX_ATTEMPTS) {
-      cancel()
-      return
-    }
-    schedule()
+    timer = window.setTimeout(() => {
+      if (cancelled) return
+      if (isProduktlyTourCardMounted()) {
+        cancel()
+        return
+      }
+      if (attempt >= TOUR_START_MAX_ATTEMPTS) {
+        cancel()
+        return
+      }
+      run()
+    }, TOUR_START_RETRY_MS)
   }
 
   run()
