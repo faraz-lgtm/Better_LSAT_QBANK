@@ -16,6 +16,7 @@ describe("produktly helpers", () => {
   const closeFeedback = vi.fn()
 
   beforeEach(() => {
+    vi.useFakeTimers()
     identifyUser.mockReset()
     clearCurrentUser.mockReset()
     startTour.mockReset()
@@ -23,6 +24,7 @@ describe("produktly helpers", () => {
     closeFeedback.mockReset()
     clearProduktlyUser()
     clearCurrentUser.mockReset()
+    document.getElementById("produktly-card-iframe")?.remove()
     window.Produktly = {
       identifyUser,
       clearCurrentUser,
@@ -34,7 +36,10 @@ describe("produktly helpers", () => {
   })
 
   afterEach(() => {
+    vi.runOnlyPendingTimers()
+    vi.useRealTimers()
     clearProduktlyUser()
+    document.getElementById("produktly-card-iframe")?.remove()
     delete window.Produktly
   })
 
@@ -107,6 +112,34 @@ describe("produktly helpers", () => {
   it("startProduktlyTour no-ops for empty tour id", () => {
     startProduktlyTour({ tourId: 0 })
     expect(startTour).not.toHaveBeenCalled()
+  })
+
+  it("startProduktlyTour retries until the tour card iframe mounts", () => {
+    startTour.mockImplementation(() => {
+      if (startTour.mock.calls.length >= 3) {
+        const iframe = document.createElement("iframe")
+        iframe.id = "produktly-card-iframe"
+        document.body.appendChild(iframe)
+      }
+    })
+
+    startProduktlyTour({ tourId: 99, clearProgress: true })
+    expect(startTour).toHaveBeenCalledTimes(1)
+
+    vi.advanceTimersByTime(250)
+    expect(startTour).toHaveBeenCalledTimes(2)
+
+    vi.advanceTimersByTime(250)
+    expect(startTour).toHaveBeenCalledTimes(3)
+
+    vi.advanceTimersByTime(1000)
+    expect(startTour).toHaveBeenCalledTimes(3)
+  })
+
+  it("startProduktlyTour stops retrying after max attempts when the card never mounts", () => {
+    startProduktlyTour({ tourId: 99, clearProgress: true })
+    vi.advanceTimersByTime(250 * 10)
+    expect(startTour).toHaveBeenCalledTimes(8)
   })
 
   it("openProduktlyFeedback forwards id", () => {

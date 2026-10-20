@@ -264,18 +264,25 @@ function StudentAppSidebar({
   useEffect(() => {
     if (!pendingProduktlyTour || !isDashboardActive(pathname)) return
     let cancelled = false
-    const frame = requestAnimationFrame(() => {
+    let clearStateTimer: number | undefined
+    // Defer past paint so dashboard tour targets exist; do not clear router
+    // state in the same turn as startTour — that SPA replace can cancel the
+    // Produktly card before the iframe mounts (intermittent empty root).
+    const startTimer = window.setTimeout(() => {
       if (cancelled) return
       startProduktlyTour({
         tourId: PRODUKTLY_PRODUCT_TOUR_ID,
         clearProgress: true,
       })
-      // Clear after starting so replacing state does not cancel this frame.
-      navigate(`${pathname}${search}`, { replace: true, state: null })
-    })
+      clearStateTimer = window.setTimeout(() => {
+        if (cancelled) return
+        navigate(`${pathname}${search}`, { replace: true, state: null })
+      }, 400)
+    }, 50)
     return () => {
       cancelled = true
-      cancelAnimationFrame(frame)
+      window.clearTimeout(startTimer)
+      if (clearStateTimer !== undefined) window.clearTimeout(clearStateTimer)
     }
   }, [navigate, pathname, pendingProduktlyTour, search])
 

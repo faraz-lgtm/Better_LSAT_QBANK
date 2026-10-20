@@ -36,9 +36,21 @@ declare global {
 /** Last identified user — duplicate identify aborts in-flight fetchAll. */
 let lastIdentifiedUserId: string | null = null
 
+/** Cancel in-flight startTour retries when a newer start is requested. */
+let activeTourStartCancel: (() => void) | null = null
+
+const TOUR_START_MAX_ATTEMPTS = 8
+const TOUR_START_RETRY_MS = 250
+
 function getProduktly(): ProduktlyApi | undefined {
   if (typeof window === "undefined") return undefined
   return window.Produktly
+}
+
+/** True when Produktly has mounted the product-tour card iframe. */
+export function isProduktlyTourCardMounted(): boolean {
+  if (typeof document === "undefined") return false
+  return Boolean(document.getElementById("produktly-card-iframe"))
 }
 
 /** Identify the logged-in user for targeting and progress persistence. */
@@ -63,14 +75,62 @@ export function clearProduktlyUser(): void {
  * Start a Produktly product tour by dashboard id.
  * When `clearProgress` is set, also bumps `refreshToken` so a dismissed tour
  * restarts from step 0 instead of being ignored / resumed mid-tour.
+ *
+ * Retries briefly until the tour card iframe mounts — Produktly often no-ops
+ * if identify / available has not finished, or a same-tick SPA navigation
+ * cancels the first start.
  */
 export function startProduktlyTour(params: StartProduktlyTourParams): void {
   if (!params.tourId) return
-  const payload =
-    params.clearProgress && params.refreshToken === undefined
-      ? { ...params, refreshToken: Date.now() }
-      : params
-  getProduktly()?.startTour?.(payload)
+  if (typeof window === "undefined") return
+
+  activeTourStartCancel?.()
+
+  let cancelled = false
+  let attempt = 0
+  let timer: number | null = null
+
+  const cancel = () => {
+    cancelled = true
+    if (timer !== null) {
+      window.clearTimeout(timer)
+      timer = null
+    }
+    if (activeTourStartCancel === cancel) activeTourStartCancel = null
+  }
+  activeTourStartCancel = cancel
+
+  const buildPayload = (): StartProduktlyTourParams => {
+    if (!params.clearProgress) return params
+    // Bump refreshToken on every attempt so a prior dismiss/no-op can re-trigger.
+    if (params.refreshToken === undefined || attempt > 1) {
+      return { ...params, refreshToken: Date.now() }
+    }
+    return params
+  }
+
+  const schedule = () => {
+    if (cancelled) return
+    timer = window.setTimeout(run, TOUR_START_RETRY_MS)
+  }
+
+  const run = () => {
+    if (cancelled) return
+    attempt += 1
+    getProduktly()?.startTour?.(buildPayload())
+
+    if (isProduktlyTourCardMounted()) {
+      cancel()
+      return
+    }
+    if (attempt >= TOUR_START_MAX_ATTEMPTS) {
+      cancel()
+      return
+    }
+    schedule()
+  }
+
+  run()
 }
 
 /** Open a Produktly feedback collector widget by dashboard id. */
