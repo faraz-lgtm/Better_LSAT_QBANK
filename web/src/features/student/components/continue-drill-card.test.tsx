@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest"
 import { ContinueDrillCard } from "@/features/student/components/continue-drill-card"
 
 describe("ContinueDrillCard", () => {
-  it("exposes Produktly tour target on the difficulty chip", () => {
+  it("exposes Produktly tour targets on Continue and the difficulty chip", () => {
     render(
       <ContinueDrillCard
         drill={{
@@ -23,6 +23,10 @@ describe("ContinueDrillCard", () => {
       />,
     )
 
+    expect(screen.getByRole("button", { name: /Continue/i })).toHaveAttribute(
+      "data-tour-target",
+      "dashboard-continue-drill",
+    )
     expect(screen.getByText("Hardest").closest("[data-tour-target]")).toHaveAttribute(
       "data-tour-target",
       "dashboard-drill-difficulty",

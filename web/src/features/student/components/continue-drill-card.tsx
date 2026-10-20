@@ -187,6 +187,7 @@ function ContinueDrillCard({
           <button
             type="button"
             onClick={onContinue}
+            data-tour-target="dashboard-continue-drill"
             className="continue-drill-card__action inline-flex h-[48px] shrink-0 items-center justify-center gap-[8px] rounded-[16px] border border-[var(--primary-border)] bg-[var(--primary)] px-[16px] text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)]"
           >
             {continueLabel}

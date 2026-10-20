@@ -8,8 +8,9 @@ export const PRODUKTLY_FEEDBACK_WIDGET_ID = 2722
  * - Step 1 (logo):            [data-tour-target="sidebar-brand"]
  * - Step 2 (menu):            [data-tour-target="sidebar-menu"]
  * - Step 7 (Explanations):    [data-tour-target="nav-explanations"]
- * - Step 15 (Active Drills):  [data-tour-target="dashboard-active-drills"]
+ * - Step 15 (Continue drill): [data-tour-target="dashboard-continue-drill"]
  * - Step 16 (drill difficulty): [data-tour-target="dashboard-drill-difficulty"]
+ *   (section hook still available: [data-tour-target="dashboard-active-drills"])
  *
  * Do not use full Tailwind class chains (e.g. border-[color:var(...)]) — they break
  * the spotlight and can cover half the viewport.
