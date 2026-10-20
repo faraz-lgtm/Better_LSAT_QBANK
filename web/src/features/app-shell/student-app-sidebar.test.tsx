@@ -1,7 +1,7 @@
-import { render, screen } from "@testing-library/react"
+import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import { MemoryRouter } from "react-router-dom"
-import { describe, expect, it, vi } from "vitest"
+import { MemoryRouter, Route, Routes } from "react-router-dom"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { StudentAppSidebar } from "@/features/app-shell/student-app-sidebar"
 
@@ -24,6 +24,10 @@ vi.mock("@/lib/analytics/produktly-widgets", () => ({
 }))
 
 describe("StudentAppSidebar", () => {
+  beforeEach(() => {
+    startProduktlyTour.mockReset()
+  })
+
   it("shows premium navigation including diagnostic links", () => {
     render(
       <MemoryRouter initialEntries={["/app"]}>
@@ -112,7 +116,7 @@ describe("StudentAppSidebar", () => {
     expect(screen.queryByRole("link", { name: "Explanations" })).not.toBeInTheDocument()
   })
 
-  it("places Get Started above MAIN and starts the Produktly tour", async () => {
+  it("places Get Started above MAIN and starts the Produktly tour on /app", async () => {
     const user = userEvent.setup()
     const onMobileClose = vi.fn()
     render(
@@ -138,6 +142,32 @@ describe("StudentAppSidebar", () => {
       clearProgress: true,
     })
     expect(onMobileClose).toHaveBeenCalled()
+  })
+
+  it("navigates to /app then starts the Produktly tour from another route", async () => {
+    const user = userEvent.setup()
+    const onMobileClose = vi.fn()
+    render(
+      <MemoryRouter initialEntries={["/app/practice/drills"]}>
+        <Routes>
+          <Route
+            path="*"
+            element={<StudentAppSidebar mobileOpen={false} onMobileClose={onMobileClose} />}
+          />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    await user.click(screen.getByRole("button", { name: "Get Started" }))
+
+    expect(onMobileClose).toHaveBeenCalled()
+    await waitFor(() => {
+      expect(startProduktlyTour).toHaveBeenCalledWith({
+        tourId: 11289,
+        clearProgress: true,
+      })
+    })
+    expect(screen.getByRole("link", { name: "Dashboard" })).toHaveClass("student-sidebar-link--active")
   })
 
   it("marks Prep Course parent active and shows nested course links on prep-course routes", () => {

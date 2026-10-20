@@ -142,9 +142,15 @@ async function trackSignupConversionOnce(
   return await inflight
 }
 
+function alreadySignedInMessage(email: string | null | undefined): string {
+  const who = email?.trim() ? email.trim() : "another account"
+  return `You're already signed in as ${who}. Log out before signing in with a different account.`
+}
+
 function AuthCallbackPage() {
   const navigate = useNavigate()
   const [error, setError] = useState<string | null>(null)
+  const [continueHref, setContinueHref] = useState<string | null>(null)
 
   const authApi = useMemo(() => {
     try {
@@ -179,6 +185,29 @@ function AuthCallbackPage() {
         const authError = url.searchParams.get("error_description") ?? url.searchParams.get("error")
 
         if (authError) throw new Error(authError)
+
+        const hasIncomingCredentials = Boolean(code || tokenHash)
+        const existingSession = await authApi.getSession()
+
+        // Hard block: do not replace an existing session with a magic link / OAuth code.
+        if (existingSession?.user && hasIncomingCredentials) {
+          stripAuthParamsFromUrl()
+          if (flowType === "recovery") {
+            navigate("/reset-password", { replace: true })
+            return
+          }
+          if (!isActive) return
+          setError(alreadySignedInMessage(existingSession.user.email))
+          try {
+            const destination = resolvePendingCheckoutDestination(
+              await fetchPostAuthDestination(usersApi),
+            )
+            if (isActive) setContinueHref(destination)
+          } catch {
+            if (isActive) setContinueHref("/app")
+          }
+          return
+        }
 
         if (tokenHash && otpType) {
           await verifyTokenHashOnce(
@@ -276,9 +305,19 @@ function AuthCallbackPage() {
       {error ? (
         <>
           <p className="text-sm text-[#df1c41]">{error}</p>
-          <Link to="/login" className="text-sm font-semibold text-[#0d47a1] hover:underline">
-            Back to login
-          </Link>
+          <div className="flex flex-col items-center gap-2">
+            {continueHref ? (
+              <Link
+                to={continueHref}
+                className="text-sm font-semibold text-[#0d47a1] hover:underline"
+              >
+                Continue to app
+              </Link>
+            ) : null}
+            <Link to="/login" className="text-sm font-semibold text-[#0d47a1] hover:underline">
+              Back to login
+            </Link>
+          </div>
         </>
       ) : (
         <p className="text-sm text-[#666d80]">Please wait while we verify your authentication.</p>

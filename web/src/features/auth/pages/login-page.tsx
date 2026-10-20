@@ -250,7 +250,7 @@ function LoginPage() {
             <div className="flex items-center justify-between">
               <label className="figma-gap-8 figma-text-sm figma-track-sm inline-flex items-center font-medium text-[#666d80]">
                 <Checkbox size="md" disabled={isBusy} />
-                Keep me login
+                Keep me signed in
               </label>
               <Link to="/forgot-password" className="figma-text-sm figma-track-sm font-semibold text-[#0d47a1]">
                 Forgot Password?

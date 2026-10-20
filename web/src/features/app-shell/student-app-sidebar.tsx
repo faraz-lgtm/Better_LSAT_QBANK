@@ -244,17 +244,40 @@ function StudentAppSidebar({
   lockPremiumNav = false,
   beforeFooter,
 }: StudentAppSidebarProps) {
-  const { pathname, search } = useLocation()
+  const { pathname, search, state } = useLocation()
   const navigate = useNavigate()
   const entitlement = useStudentEntitlementOptional()
   const { openLockedContentModal } = useGuestPricingModal()
   const lockLsacNav = !lockPremiumNav && entitlement ? !entitlement.canAccessLsacContent : false
   const dashboardActive = isDashboardActive(pathname)
   const [collapsed, setCollapsed] = useState(false)
+  const pendingProduktlyTour =
+    typeof state === "object" &&
+    state !== null &&
+    "startProduktlyTour" in state &&
+    Boolean((state as { startProduktlyTour?: unknown }).startProduktlyTour)
 
   useEffect(() => {
     onMobileClose()
   }, [onMobileClose, pathname, search])
+
+  useEffect(() => {
+    if (!pendingProduktlyTour || !isDashboardActive(pathname)) return
+    let cancelled = false
+    const frame = requestAnimationFrame(() => {
+      if (cancelled) return
+      startProduktlyTour({
+        tourId: PRODUKTLY_PRODUCT_TOUR_ID,
+        clearProgress: true,
+      })
+      // Clear after starting so replacing state does not cancel this frame.
+      navigate(`${pathname}${search}`, { replace: true, state: null })
+    })
+    return () => {
+      cancelled = true
+      cancelAnimationFrame(frame)
+    }
+  }, [navigate, pathname, pendingProduktlyTour, search])
 
   async function handleLogout() {
     const supabase = getSupabaseBrowserClient()
@@ -267,6 +290,18 @@ function StudentAppSidebar({
   function handleLockedContentClick() {
     onMobileClose()
     openLockedContentModal()
+  }
+
+  function handleGetStartedClick() {
+    onMobileClose()
+    if (isDashboardActive(pathname)) {
+      startProduktlyTour({
+        tourId: PRODUKTLY_PRODUCT_TOUR_ID,
+        clearProgress: true,
+      })
+      return
+    }
+    navigate(STUDENT_DASHBOARD_HREF, { state: { startProduktlyTour: true } })
   }
 
   return (
@@ -339,13 +374,7 @@ function StudentAppSidebar({
                 className="student-sidebar-link w-full"
                 aria-label={STUDENT_GET_STARTED_LABEL}
                 title={STUDENT_GET_STARTED_LABEL}
-                onClick={() => {
-                  startProduktlyTour({
-                    tourId: PRODUKTLY_PRODUCT_TOUR_ID,
-                    clearProgress: true,
-                  })
-                  onMobileClose()
-                }}
+                onClick={handleGetStartedClick}
               >
                 <SidebarNavIcon icon={STUDENT_GET_STARTED_ICON} />
                 <span className="student-sidebar-label">{STUDENT_GET_STARTED_LABEL}</span>
