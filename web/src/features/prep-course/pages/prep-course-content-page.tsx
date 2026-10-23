@@ -295,7 +295,7 @@ function PrepCourseContentPage() {
     const mod = curriculum.modules.find((module) => module.id === moduleId)
     if (!mod) return
     if (lockedModuleIds.has(moduleId)) {
-      openLockedContentModal()
+      openLockedContentModal("courses")
       return
     }
     setSelectedModuleId(moduleId)
@@ -325,7 +325,7 @@ function PrepCourseContentPage() {
   }, [curriculum.modules, hydratedModuleIds, selectedModuleId])
 
   function handleLockedContentClick() {
-    openLockedContentModal()
+    openLockedContentModal("courses")
   }
 
   function handleToggleModuleBookmark(moduleId: string, next: boolean) {

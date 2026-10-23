@@ -2,15 +2,27 @@ import { useEffect } from "react"
 import { Lock, X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import {
+  getLockedContentCopy,
+  type LockedContentVariant,
+} from "@/features/guest/pricing/guest-locked-content-copy"
 
 type GuestLockedContentModalProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
   onSubscribe: () => void
+  variant?: LockedContentVariant
 }
 
 /** Figma `19939:8387` backdrop + compact locked-content upgrade prompt. */
-function GuestLockedContentModal({ open, onOpenChange, onSubscribe }: GuestLockedContentModalProps) {
+function GuestLockedContentModal({
+  open,
+  onOpenChange,
+  onSubscribe,
+  variant = "default",
+}: GuestLockedContentModalProps) {
+  const copy = getLockedContentCopy(variant)
+
   useEffect(() => {
     if (!open) return
 
@@ -53,12 +65,19 @@ function GuestLockedContentModal({ open, onOpenChange, onSubscribe }: GuestLocke
           id="guest-locked-content-modal-title"
           className="w-full max-w-[436px] text-center text-[24px] font-bold leading-[1.3] text-[#062357]"
         >
-          Subscriber-Only Content
+          {copy.title}
         </h2>
         <div className="flex w-full max-w-[436px] flex-col gap-4">
-          <p className="text-center text-sm font-medium leading-[1.5] tracking-[0.28px] text-[#062357]">
-            This question is available exclusively to subscribers. Upgrade your plan to access every official LSAT PrepTest ever released, including 101 previous-generation tests.
-          </p>
+          <div className="flex flex-col gap-3">
+            {copy.paragraphs.map((paragraph) => (
+              <p
+                key={paragraph}
+                className="text-center text-sm font-medium leading-[1.5] tracking-[0.28px] text-[#062357]"
+              >
+                {paragraph}
+              </p>
+            ))}
+          </div>
 
           <div className="flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-8">
             <Button
@@ -74,7 +93,7 @@ function GuestLockedContentModal({ open, onOpenChange, onSubscribe }: GuestLocke
               className="h-10 min-w-[136px] rounded-[14px] border border-[#0b4e6e] bg-[#0d47a1] px-4 py-2 text-sm font-semibold leading-[1.5] tracking-[0.28px] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)] hover:bg-[#0b3d8a]"
               onClick={onSubscribe}
             >
-              Subscribe Now
+              {copy.ctaLabel}
             </Button>
           </div>
         </div>

@@ -34,7 +34,7 @@ function PathProbe() {
 function LockedContentTriggers() {
   const { openLockedContentModal } = useGuestPricingModal()
   return (
-    <button type="button" onClick={openLockedContentModal}>
+    <button type="button" onClick={() => openLockedContentModal()}>
       Open locked
     </button>
   )

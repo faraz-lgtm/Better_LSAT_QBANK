@@ -21,6 +21,10 @@ import {
   type StudentNavItemIconKey,
 } from "@/features/app-shell/student-nav-config"
 import { useStudentEntitlementOptional, isLsacLockedNavItem } from "@/features/app-shell/student-entitlement-context"
+import {
+  lockedContentVariantForNavHref,
+  type LockedContentVariant,
+} from "@/features/guest/pricing/guest-locked-content-copy"
 import { useGuestPricingModal } from "@/features/guest/pricing/guest-pricing-modal-provider"
 import { PREPTEST_LIST_HREF, shouldForceParentNav } from "@/features/student/preptests/preptest-routes"
 import { PREP_COURSE_ESSENTIALS_SLUG, PREP_COURSE_NAV_ITEMS } from "@/features/prep-course/lib/prep-course-nav"
@@ -215,7 +219,13 @@ function getLockedPremiumNavLabel(item: StudentNavItem): string {
   return item.href === "/app/analytics" ? "Analytics" : item.label
 }
 
-function LockedPremiumNavItem({ item, onLockedClick }: { item: StudentNavItem; onLockedClick: () => void }) {
+function LockedPremiumNavItem({
+  item,
+  onLockedClick,
+}: {
+  item: StudentNavItem
+  onLockedClick: (item: StudentNavItem) => void
+}) {
   const label = getLockedPremiumNavLabel(item)
 
   return (
@@ -224,7 +234,7 @@ function LockedPremiumNavItem({ item, onLockedClick }: { item: StudentNavItem; o
       data-tour-target={tourTargetForNavHref(item.href)}
       aria-label={`${label} (locked)`}
       title={`${label} (locked)`}
-      onClick={onLockedClick}
+      onClick={() => onLockedClick(item)}
       className="student-sidebar-link student-sidebar-link--locked student-sidebar-link--with-trailing w-full justify-between"
     >
       <span className="student-sidebar-link-content flex min-w-0 items-center gap-2.5">
@@ -294,9 +304,13 @@ function StudentAppSidebar({
     navigate("/login", { replace: true })
   }
 
-  function handleLockedContentClick() {
+  function handleLockedContentClick(itemOrVariant?: StudentNavItem | LockedContentVariant) {
     onMobileClose()
-    openLockedContentModal()
+    if (typeof itemOrVariant === "string") {
+      openLockedContentModal(itemOrVariant)
+      return
+    }
+    openLockedContentModal(itemOrVariant ? lockedContentVariantForNavHref(itemOrVariant.href) : "default")
   }
 
   function handleGetStartedClick() {
@@ -440,7 +454,13 @@ function StudentAppSidebar({
                   const tourTarget = tourTargetForNavHref(item.href)
 
                   if (lockPremiumNav && !isUnlockedOnFreePlan(item)) {
-                    return <LockedPremiumNavItem key={item.href} item={item} onLockedClick={handleLockedContentClick} />
+                    return (
+                      <LockedPremiumNavItem
+                        key={item.href}
+                        item={item}
+                        onLockedClick={handleLockedContentClick}
+                      />
+                    )
                   }
 
                   if (isPrepCourseNavItem(item)) {
@@ -452,7 +472,7 @@ function StudentAppSidebar({
                         collapsed={collapsed}
                         onExpandSidebar={() => setCollapsed(false)}
                         lockNonEssentialCourses={lockPremiumNav}
-                        onLockedCourseClick={handleLockedContentClick}
+                        onLockedCourseClick={() => handleLockedContentClick("courses")}
                       />
                     )
                   }
@@ -469,7 +489,7 @@ function StudentAppSidebar({
                         aria-disabled="true"
                         aria-label={item.label}
                         title="Link your LawHub coach to unlock"
-                        onClick={handleLockedContentClick}
+                        onClick={() => handleLockedContentClick(item)}
                         className="student-sidebar-link student-sidebar-link--with-trailing w-full justify-between opacity-70 hover:opacity-100"
                       >
                         <span className="student-sidebar-link-content flex min-w-0 items-center gap-2.5">
