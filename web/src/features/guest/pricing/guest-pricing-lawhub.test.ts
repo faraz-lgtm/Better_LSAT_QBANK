@@ -4,7 +4,7 @@ import { PAID_PRICING_PLANS } from "@/features/guest/pricing/guest-pricing-plans
 import { resolveGuestPricingDueToday } from "@/features/guest/pricing/guest-pricing-lawhub"
 
 describe("guest pricing lawhub", () => {
-  it("uses the Core price when LawHub Advantage is off", () => {
+  it("uses the plan price when LawHub Advantage is off", () => {
     const monthly = PAID_PRICING_PLANS.find((plan) => plan.id === "monthly")!
     expect(resolveGuestPricingDueToday(monthly, false)).toEqual({
       amount: 69,

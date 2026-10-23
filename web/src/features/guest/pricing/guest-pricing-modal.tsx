@@ -129,7 +129,7 @@ function GuestPricingModal({
               <p className="pricing-page__subtitle">
                 {includeLawHub
                   ? "Choose the access period that fits your prep timeline. Your tools stay the same."
-                  : "Choose a Core plan — you keep your own LawHub PrepPlus subscription."}
+                  : "Choose a Monthly, 3 Months, 6 Months, or 12 Months plan — you keep your own LawHub PrepPlus subscription."}
               </p>
             </div>
 
