@@ -22,6 +22,7 @@ import { useGuestPricingModal } from '@/features/guest/pricing/guest-pricing-mod
 import { GuestFreeAnalyticsLimitCta } from '@/features/guest/diagnostic/guest-upgrade-cta'
 import { useDiagnosticSubscription } from '@/features/guest/diagnostic/use-diagnostic-subscription'
 import { StudentMain } from '@/features/student/components/student-main'
+import { ensureStudyContext } from '@/features/student-session/ensure-student-session'
 import { createDiagnosticApi, type MiniDiagnosticExplanation } from '@/lib/api/diagnostic'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { formatMmSs } from '@/features/student/practice-session/practice-results-ui'
@@ -70,7 +71,7 @@ type DifficultyAccuracy = {
 
 const LSAT_MIN = 120
 const LSAT_MAX = 180
-const LSAT_GOAL_SCORE = 165
+const SET_GOAL_SCORE_HREF = '/app/analytics'
 
 /** Collapsed results list: Mini shows 3 rows before “See All”. */
 const RESULTS_LIST_PREVIEW_MINI = 3
@@ -292,7 +293,7 @@ function DiagnosticPageHeader({
     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
       <div className="flex flex-col gap-1">
         <h1 className="text-[28px] font-bold leading-[1.3] text-[var(--color-student-heading)]">
-          Here&apos;s your baseline
+          Here&apos;s your starting point
         </h1>
         <p className="text-sm font-medium leading-normal tracking-[0.02em] text-[var(--greyscale-500)]">
           {intentTitle} · {result.questionCount} questions
@@ -323,13 +324,22 @@ function DiagnosticPageHeader({
 
 // ─── Section 2: Score Cards ───────────────────────────────────────────────────
 
-function EstimatedScoreCard({ result }: { result: GuestDiagnosticResult }) {
-  const gapPoints = LSAT_GOAL_SCORE - result.scaledScore
+function EstimatedScoreCard({
+  result,
+  personalGoalScore,
+}: {
+  result: GuestDiagnosticResult
+  personalGoalScore: number | null
+}) {
+  const intentLabel =
+    result.intentId === 'mini' ? 'Mini Diagnostic' : 'Full Section Diagnostic'
+  const gapPoints =
+    personalGoalScore != null ? personalGoalScore - result.scaledScore : null
 
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-4 rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6">
       <p className="text-sm font-semibold leading-normal tracking-[0.02em] text-[var(--greyscale-500)]">
-        Estimated scaled score
+        Estimated score range
       </p>
 
       <div className="flex flex-col gap-1">
@@ -337,22 +347,16 @@ function EstimatedScoreCard({ result }: { result: GuestDiagnosticResult }) {
           {result.scaledScore}
         </p>
         <p className="text-base font-medium leading-normal text-[var(--greyscale-500)]">
-          Likely range{' '}
-          <span className="font-semibold text-[var(--color-student-heading)]">
-            {result.scaledScoreLow}–{result.scaledScoreHigh}
-          </span>
-          {' · '}
-          <span className="font-semibold text-[var(--color-student-heading)]">
-            {Math.round(result.percentile)}th percentile
-          </span>
+          Based on this {result.questionCount}-question {intentLabel}. Your range may change as we
+          learn more from your practice.
         </p>
       </div>
 
       <ScoreRangeBar
         scoreLow={result.scaledScoreLow}
         scoreHigh={result.scaledScoreHigh}
-        goalScore={LSAT_GOAL_SCORE}
-        showGoal
+        goalScore={personalGoalScore ?? undefined}
+        showGoal={personalGoalScore != null}
       />
 
       <div className="flex flex-wrap gap-5">
@@ -360,131 +364,124 @@ function EstimatedScoreCard({ result }: { result: GuestDiagnosticResult }) {
           <span className="inline-block size-2 rounded-full bg-[var(--primary)]" />
           <span className="text-xs leading-normal text-[var(--greyscale-500)]">Your estimated range</span>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="inline-block h-3 w-0.5 bg-[#df1c41]" />
-          <span className="text-xs leading-normal text-[var(--greyscale-500)]">
-            Your goal score ({LSAT_GOAL_SCORE})
-          </span>
-        </div>
+        {personalGoalScore != null ? (
+          <div className="flex items-center gap-2">
+            <span className="inline-block h-3 w-0.5 bg-[#df1c41]" />
+            <span className="text-xs leading-normal text-[var(--greyscale-500)]">
+              Your goal score ({personalGoalScore})
+            </span>
+          </div>
+        ) : null}
       </div>
 
-      <p className="text-[11px] leading-relaxed text-[var(--greyscale-400)]">
-        Estimated from {result.questionCount} questions. Your first full-length PrepTest will give
-        a more accurate score.
-      </p>
-
-      {gapPoints > 0 && (
+      {gapPoints != null && gapPoints > 0 ? (
         <div className="mt-auto rounded-[10px] bg-[var(--primary-0)] px-4 py-3">
           <p className="text-sm font-semibold text-[var(--color-student-heading)]">
             {gapPoints} points from your goal
           </p>
           <p className="mt-0.5 text-xs text-[var(--greyscale-500)]">
-            Score {LSAT_GOAL_SCORE} to reach the top law schools
+            Score {personalGoalScore} to reach the top law schools
           </p>
         </div>
-      )}
+      ) : null}
     </div>
   )
 }
 
 function GapToGoalCard({
   result,
-  locked,
-  onSubscribe,
+  personalGoalScore,
 }: {
   result: GuestDiagnosticResult
-  locked: boolean
-  onSubscribe: () => void
+  personalGoalScore: number | null
 }) {
-  const gapPoints = Math.max(0, LSAT_GOAL_SCORE - result.scaledScore)
+  const hasPersonalGoal = personalGoalScore != null
+  const gapPoints = hasPersonalGoal ? Math.max(0, personalGoalScore - result.scaledScore) : null
   const projectedLow = Math.min(180, result.scaledScoreLow + 9)
   const projectedHigh = Math.min(180, result.scaledScoreHigh + 11)
 
   return (
     <div className="relative flex min-w-0 flex-1 flex-col gap-4 overflow-hidden rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6">
       <p className="text-sm font-semibold leading-normal tracking-[0.02em] text-[var(--greyscale-500)]">
-        Gap to your goal
+        Your score target
       </p>
 
-      <div className="flex flex-col gap-1">
-        <p className="text-[52px] font-extrabold leading-none text-[var(--color-student-heading)]">
-          {gapPoints} {gapPoints === 1 ? 'point' : 'points'}
-        </p>
-        <p className="text-sm font-medium leading-normal text-[var(--greyscale-500)]">
-          Students who started in your range and studied consistently reached{' '}
-          <span className="font-semibold text-[var(--color-student-heading)]">
-            {projectedLow}–{projectedHigh}
-          </span>{' '}
-          in 14 weeks.
-        </p>
-      </div>
+      {hasPersonalGoal && gapPoints != null ? (
+        <>
+          <div className="flex flex-col gap-1">
+            <p className="text-[52px] font-extrabold leading-none text-[var(--color-student-heading)]">
+              {gapPoints} {gapPoints === 1 ? 'point' : 'points'}
+            </p>
+            <p className="text-sm font-medium leading-normal text-[var(--greyscale-500)]">
+              Students who started in your range and studied consistently reached{' '}
+              <span className="font-semibold text-[var(--color-student-heading)]">
+                {projectedLow}–{projectedHigh}
+              </span>{' '}
+              in 14 weeks.
+            </p>
+          </div>
 
-      <div className="flex flex-col gap-3">
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-[var(--greyscale-500)]">Today</span>
-            <span className="text-xs font-bold text-[var(--color-student-heading)]">
-              {result.scaledScoreLow}–{result.scaledScoreHigh}
-            </span>
-          </div>
-          <div className="relative h-2.5 w-full overflow-hidden rounded-full bg-[var(--greyscale-100)]">
-            <div
-              className="absolute top-0 h-full rounded-full bg-[#9ab4e0]"
-              style={{
-                left: `${scaledScoreToPercent(result.scaledScoreLow)}%`,
-                width: `${Math.max(2, scaledScoreToPercent(result.scaledScoreHigh) - scaledScoreToPercent(result.scaledScoreLow))}%`,
-              }}
-            />
-          </div>
-        </div>
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-[var(--greyscale-500)]">
-              Projected, 14 weeks of structured prep
-            </span>
-            <span className="text-xs font-bold text-[var(--color-student-heading)]">
-              {projectedLow}–{projectedHigh}
-            </span>
-          </div>
-          <div className="relative h-2.5 w-full overflow-hidden rounded-full bg-[var(--greyscale-100)]">
-            <div
-              className="absolute top-0 h-full rounded-full bg-[var(--primary)]"
-              style={{
-                left: `${scaledScoreToPercent(projectedLow)}%`,
-                width: `${Math.max(2, scaledScoreToPercent(projectedHigh) - scaledScoreToPercent(projectedLow))}%`,
-              }}
-            />
-          </div>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-[11px] text-[var(--greyscale-400)]">120</span>
-          <span className="text-[11px] text-[var(--greyscale-400)]">180</span>
-        </div>
-      </div>
-
-      <p className="text-[11px] leading-relaxed text-[var(--greyscale-400)]">
-        Projection from past betterLSAT students with similar starting diagnostics. Individual
-        results vary.
-      </p>
-
-      {/* Lock gradient + CTA */}
-      {locked ? (
-        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-end rounded-[16px] bg-gradient-to-t from-[var(--greyscale-0)]/95 via-[var(--greyscale-0)]/60 to-transparent pb-8">
-          <div className="pointer-events-auto flex flex-col items-center gap-3 px-6 text-center">
-            <div className="flex size-10 items-center justify-center rounded-full border border-[var(--greyscale-100)] bg-[var(--greyscale-0)]">
-              <Lock className="size-4 text-[var(--greyscale-500)]" />
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-[var(--greyscale-500)]">Today</span>
+                <span className="text-xs font-bold text-[var(--color-student-heading)]">
+                  {result.scaledScoreLow}–{result.scaledScoreHigh}
+                </span>
+              </div>
+              <div className="relative h-2.5 w-full overflow-hidden rounded-full bg-[var(--greyscale-100)]">
+                <div
+                  className="absolute top-0 h-full rounded-full bg-[#9ab4e0]"
+                  style={{
+                    left: `${scaledScoreToPercent(result.scaledScoreLow)}%`,
+                    width: `${Math.max(2, scaledScoreToPercent(result.scaledScoreHigh) - scaledScoreToPercent(result.scaledScoreLow))}%`,
+                  }}
+                />
+              </div>
             </div>
-            <p className="text-sm font-semibold text-[var(--color-student-heading)]">Unlock your full projection</p>
-            <button
-              type="button"
-              onClick={onSubscribe}
-              className="h-9 rounded-[10px] bg-[var(--primary)] px-5 text-sm font-semibold text-white transition-colors hover:bg-[var(--primary-600)]"
-            >
-              Unlock my full report
-            </button>
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-[var(--greyscale-500)]">
+                  Projected, 14 weeks of structured prep
+                </span>
+                <span className="text-xs font-bold text-[var(--color-student-heading)]">
+                  {projectedLow}–{projectedHigh}
+                </span>
+              </div>
+              <div className="relative h-2.5 w-full overflow-hidden rounded-full bg-[var(--greyscale-100)]">
+                <div
+                  className="absolute top-0 h-full rounded-full bg-[var(--primary)]"
+                  style={{
+                    left: `${scaledScoreToPercent(projectedLow)}%`,
+                    width: `${Math.max(2, scaledScoreToPercent(projectedHigh) - scaledScoreToPercent(projectedLow))}%`,
+                  }}
+                />
+              </div>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-[11px] text-[var(--greyscale-400)]">120</span>
+              <span className="text-[11px] text-[var(--greyscale-400)]">180</span>
+            </div>
           </div>
+
+          <p className="text-[11px] leading-relaxed text-[var(--greyscale-400)]">
+            Projection from past betterLSAT students with similar starting diagnostics. Individual
+            results vary.
+          </p>
+        </>
+      ) : (
+        <div className="flex flex-col gap-4">
+          <p className="text-base font-medium leading-normal text-[var(--greyscale-500)]">
+            Set your target score to see how far you have to go.
+          </p>
+          <Link
+            to={SET_GOAL_SCORE_HREF}
+            className="inline-flex h-9 w-fit items-center rounded-[10px] bg-[var(--primary)] px-5 text-sm font-semibold text-white transition-colors hover:bg-[var(--primary-600)]"
+          >
+            Set My Goal Score
+          </Link>
         </div>
-      ) : null}
+      )}
     </div>
   )
 }
@@ -629,10 +626,12 @@ function PointLeakRow({
   onDrill?: () => void
 }) {
   const missLabel =
-    `Missed ${leak.missed} of ${leak.total}` +
-    (leak.overSeconds != null && leak.overSeconds > 10
-      ? ` · averaged ${formatSeconds(leak.avgTimeSeconds!)}, ${formatSeconds(leak.overSeconds)} over budget`
-      : '')
+    leak.total <= 2
+      ? `You missed ${leak.missed} question${leak.missed === 1 ? '' : 's'} of this type. One question is not enough to call this a pattern yet.`
+      : `You missed ${leak.missed} of ${leak.total} questions of this type.` +
+        (leak.overSeconds != null && leak.overSeconds > 10
+          ? ` · averaged ${formatSeconds(leak.avgTimeSeconds!)}, ${formatSeconds(leak.overSeconds)} over budget`
+          : '')
 
   return (
     <div className="flex items-center gap-3 border-t border-[var(--greyscale-100)] px-6 py-4 first:border-t-0">
@@ -641,41 +640,20 @@ function PointLeakRow({
       </div>
       <div className="min-w-0 flex-1">
         <p className="text-sm font-semibold text-[var(--color-student-heading)]">
-          {leak.questionType}
+          Early signal: {leak.questionType} questions
           <span className="ml-1.5 font-normal text-[var(--greyscale-500)]">· {leak.section}</span>
         </p>
         <p className="mt-0.5 text-xs font-medium text-[var(--greyscale-500)]">{missLabel}</p>
-        <div className="mt-2 flex items-center gap-2">
-          <div className="h-1.5 w-32 overflow-hidden rounded-full bg-[var(--greyscale-100)]">
-            <div
-              className="h-full rounded-full bg-[var(--primary)]"
-              style={{ width: `${(leak.missed / leak.total) * 100}%` }}
-            />
-          </div>
-          <span className="text-[10px] text-[var(--greyscale-400)]">
-            {Math.round((leak.missed / leak.total) * 100)}% miss rate
-          </span>
-        </div>
       </div>
-      <div className="flex shrink-0 items-center gap-4">
-        <div className="text-right">
-          <p className="text-lg font-bold leading-none text-[#df1c41]">
-            +{leak.pointsRecoverable}
-          </p>
-          <p className="mt-0.5 text-[10px] text-[var(--greyscale-400)]">
-            {leak.pointsRecoverable === 1 ? 'point' : 'points'}
-          </p>
-        </div>
-        {onDrill ? (
-          <button
-            type="button"
-            onClick={onDrill}
-            className="h-8 rounded-[8px] bg-[var(--primary)] px-3 text-xs font-semibold text-white transition-colors hover:bg-[var(--primary-600)]"
-          >
-            Drill
-          </button>
-        ) : null}
-      </div>
+      {onDrill ? (
+        <button
+          type="button"
+          onClick={onDrill}
+          className="h-8 shrink-0 rounded-[8px] bg-[var(--primary)] px-3 text-xs font-semibold text-white transition-colors hover:bg-[var(--primary-600)]"
+        >
+          Drill
+        </button>
+      ) : null}
     </div>
   )
 }
@@ -691,19 +669,17 @@ function PointLeakMapSection({
 }) {
   const visibleLeaks = locked ? leaks.slice(0, 2) : leaks
   const lockedLeaks = locked ? leaks.slice(2) : []
-  const lockedPoints = lockedLeaks.reduce((sum, l) => sum + l.pointsRecoverable, 0)
-  const totalRecoverable = leaks.reduce((sum, l) => sum + l.pointsRecoverable, 0)
 
   return (
     <div className="overflow-hidden rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)]">
       {/* Header */}
       <div className="flex items-start justify-between border-b border-[var(--greyscale-100)] px-6 py-5">
         <div>
-          <h3 className="text-xl font-bold leading-[1.35] text-[var(--color-student-heading)]">Your point leak map</h3>
+          <h3 className="text-xl font-bold leading-[1.35] text-[var(--color-student-heading)]">
+            Early performance signals
+          </h3>
           <p className="mt-0.5 text-sm font-medium text-[var(--greyscale-500)]">
-            All {leaks.length} leaks, ranked by points you can realistically get back. Total
-            recoverable:{' '}
-            <span className="font-semibold text-[var(--color-student-heading)]">~{totalRecoverable} points</span>
+            Early patterns from this diagnostic. More practice will make these clearer.
           </p>
         </div>
         {locked ? (
@@ -719,7 +695,9 @@ function PointLeakMapSection({
 
       {/* Visible rows (with Drill button) */}
       {visibleLeaks.length === 0 ? (
-        <div className="px-6 py-8 text-sm text-[var(--greyscale-500)]">No point leaks found — great work!</div>
+        <div className="px-6 py-8 text-sm text-[var(--greyscale-500)]">
+          No early signals yet — great work!
+        </div>
       ) : (
         <div>
           {visibleLeaks.map((leak, i) => (
@@ -751,20 +729,21 @@ function PointLeakMapSection({
             <div className="mx-6 w-full max-w-sm rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6 text-center shadow-sm">
               <p className="flex items-center justify-center gap-1.5 text-sm font-semibold text-[var(--greyscale-400)]">
                 <span className="inline-block size-3 rounded-full bg-[#f59e0b]" />
-                {lockedLeaks.length} more leak{lockedLeaks.length !== 1 ? 's' : ''} worth ~
-                {lockedPoints} points
+                {lockedLeaks.length} more signal{lockedLeaks.length !== 1 ? 's' : ''} to review
               </p>
-              <h4 className="mt-3 text-lg font-bold text-[var(--color-student-heading)]">See every leak, ranked</h4>
+              <h4 className="mt-3 text-lg font-bold text-[var(--color-student-heading)]">
+                See every early signal
+              </h4>
               <p className="mt-2 text-sm leading-relaxed text-[var(--greyscale-500)]">
-                Plus the drill set that targets each one, so you&apos;re closing the right gaps in
-                the right order.
+                Upgrade to unlock targeted practice, full explanations, analytics, and deeper
+                performance insights.
               </p>
               <button
                 type="button"
                 onClick={onSubscribe}
                 className="mt-5 h-10 rounded-[10px] bg-[var(--primary)] px-6 text-sm font-semibold text-white transition-colors hover:bg-[var(--primary-600)]"
               >
-                Unlock my full report
+                Explore BetterLSAT Plans
               </button>
             </div>
           </div>
@@ -842,10 +821,9 @@ function AccuracyByDifficultySection({
         {locked ? (
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-[var(--greyscale-0)]/80 px-4">
             <div className="flex flex-col items-center gap-1 text-center">
-              <h4 className="text-base font-bold text-[var(--color-student-heading)]">Where the easy points went</h4>
-              <p className="text-sm text-[var(--greyscale-500)]">
-                See which difficulty bands are costing you the most
-              </p>
+              <h4 className="text-base font-bold text-[var(--color-student-heading)]">
+                See how your accuracy changes across question difficulty.
+              </h4>
               <button
                 type="button"
                 onClick={onSubscribe}
@@ -978,7 +956,7 @@ function TimingBreakdownSection({
         <div>
           <h3 className="text-xl font-bold leading-[1.35] text-[var(--color-student-heading)]">Timing breakdown</h3>
           <p className="mt-0.5 text-sm font-medium text-[var(--greyscale-500)]">
-            Average seconds per question across the test, in budget vs. over
+            See where you spent too much or too little time across the test.
           </p>
         </div>
         {locked ? <SectionLockedBadge /> : null}
@@ -1020,19 +998,28 @@ function TimingBreakdownSection({
 
 // ─── Section 8: Your Plan ─────────────────────────────────────────────────────
 
-function YourPlanSection({ onSubscribe }: { onSubscribe: () => void }) {
+function YourPlanSection({
+  intentId,
+  onSubscribe,
+}: {
+  intentId: GuestDiagnosticIntentId
+  onSubscribe: () => void
+}) {
+  const diagnosticLabel = intentId === 'mini' ? 'Mini Diagnostic' : 'diagnostic'
+
   return (
     <div className="overflow-hidden rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)]">
       <div className="flex items-start justify-between border-b border-[var(--greyscale-100)] px-6 py-5">
         <div>
-          <h3 className="text-xl font-bold leading-[1.35] text-[var(--color-student-heading)]">Your plan to test day</h3>
+          <h3 className="text-xl font-bold leading-[1.35] text-[var(--color-student-heading)]">Your next step</h3>
           <p className="mt-0.5 text-sm font-medium text-[var(--greyscale-500)]">
-            14 weeks · 8–10 hrs/week · 4 sessions per week. Reviewed weekly.
+            Your {diagnosticLabel} is only the start. Keep practicing to build a clearer picture of
+            what to work on next.
           </p>
         </div>
         <div className="flex items-center gap-1.5 rounded-full border border-[var(--greyscale-100)] bg-[var(--greyscale-25)] px-3 py-1">
           <Lock className="size-3 text-[var(--greyscale-500)]" />
-          <span className="text-xs font-semibold text-[var(--greyscale-500)]">Week 1 of 14 shown</span>
+          <span className="text-xs font-semibold text-[var(--greyscale-500)]">Plan locked</span>
         </div>
       </div>
 
@@ -1060,9 +1047,9 @@ function YourPlanSection({ onSubscribe }: { onSubscribe: () => void }) {
         {/* Overlay */}
         <div className="absolute inset-0 flex items-center justify-center bg-[var(--greyscale-0)]/85">
           <div className="text-center">
-            <h4 className="text-base font-bold text-[var(--color-student-heading)]">Your week-by-week plan</h4>
+            <h4 className="text-base font-bold text-[var(--color-student-heading)]">Your study plan</h4>
             <p className="mt-1 text-sm text-[var(--greyscale-500)]">
-              Built from your diagnostic, targeting your exact leaks in order
+              Unlock a structured study plan based on your timeline and performance.
             </p>
             <button
               type="button"
@@ -1082,10 +1069,10 @@ function YourPlanSection({ onSubscribe }: { onSubscribe: () => void }) {
 // ─── Section 9: Upgrade CTA ───────────────────────────────────────────────────
 
 const UPGRADE_FEATURES: [string, string][] = [
-  ['All 7 point leaks, ranked by points recoverable', 'Written explanations for all questions'],
-  ['Timing & pacing breakdown per section', 'Accuracy by difficulty — where the easy points went'],
-  ['Your week-by-week plan to your test date', 'School fit + scholarship range at your scores'],
-  ['6,000+ explanations & official LSAC question bank', 'Targeted drills auto-built from this diagnostic'],
+  ['Early performance signals from your diagnostic', 'Written explanations for all questions'],
+  ['Timing & pacing breakdown per section', 'Accuracy by difficulty across the test'],
+  ['A structured study plan for your timeline', 'School fit + scholarship range at your scores'],
+  ['6,000+ explanations & official LSAC question bank', 'Targeted practice built from your results'],
 ]
 
 function DiagnosticUpgradeCTA({
@@ -1095,7 +1082,7 @@ function DiagnosticUpgradeCTA({
   result: GuestDiagnosticResult
   onSubscribe: () => void
 }) {
-  const gapPoints = Math.max(0, LSAT_GOAL_SCORE - result.scaledScore)
+  const diagnosticLabel = result.intentId === 'mini' ? 'Mini Diagnostic' : 'diagnostic'
 
   return (
     <div
@@ -1106,19 +1093,18 @@ function DiagnosticUpgradeCTA({
     >
       {/* Eyebrow */}
       <p className="text-xs font-bold tracking-[0.24px] text-[#9dbaea]">
-        Your baseline is done — this is the part that moves the score
+        Your starting point is set — this is the part that moves the score
       </p>
 
       {/* Heading */}
       <h2 className="text-2xl font-bold leading-[1.3] text-white">
-        You&apos;re {gapPoints} point{gapPoints !== 1 ? 's' : ''} from {LSAT_GOAL_SCORE}. Here&apos;s
-        everything we already know about how to get them.
+        Your {diagnosticLabel} gave us the first signals. More practice makes the picture clearer.
       </h2>
 
       {/* Body */}
       <p className="text-base font-semibold leading-relaxed text-[#c9d9f5]">
-        Your diagnostic produced a full teaching plan. You&apos;re seeing about a third of it.
-        Unlocking opens the rest of the report and the platform it points to.
+        Upgrade to unlock targeted practice, full explanations, analytics, and deeper performance
+        insights.
       </p>
 
       {/* Feature grid */}
@@ -1136,7 +1122,7 @@ function DiagnosticUpgradeCTA({
           onClick={onSubscribe}
           className="h-10 rounded-[10px] bg-white px-5 text-sm font-semibold text-[var(--primary)] transition-opacity hover:opacity-90"
         >
-          See plans from $52/mo
+          Explore BetterLSAT Plans
         </button>
         <p className="text-sm font-semibold text-[#c9d9f5]">
           Cancel anytime · your report stays saved either way
@@ -1296,7 +1282,7 @@ function WrongQuestionsReviewSection({
             <CompactReviewRow
               key={outcome.questionId}
               questionNumber={questionNumber}
-              qType="Locked question"
+              qType="Question"
               subline="Upgrade to see your answer, the correct choice, and the explanation."
               isUnlocked={false}
               intentId={result.intentId}
@@ -1354,7 +1340,7 @@ function WrongQuestionsReviewSection({
           <Lock className="mt-0.5 size-4 shrink-0 text-[var(--primary)]" />
           <p className="text-sm text-[var(--greyscale-500)]">
             <span className="font-semibold text-[var(--color-student-heading)]">
-              {totalLocked} explanations still locked
+              {totalLocked} more explanations available with a paid plan
             </span>
             {wrongLocked > 0
               ? ` — including ${wrongLocked} of the questions you got wrong`
@@ -1438,7 +1424,7 @@ function CompactReviewRow({
             onClick={() => setExpanded((v) => !v)}
             className="shrink-0 text-xs font-semibold text-[var(--primary)] hover:underline"
           >
-            {expanded ? 'Hide ↑' : 'Open with explanation →'}
+            {expanded ? 'Hide ↑' : 'View Explanation →'}
           </button>
         ) : (
           <button
@@ -1447,7 +1433,7 @@ function CompactReviewRow({
             className="flex shrink-0 items-center gap-1.5 text-xs font-semibold text-[var(--greyscale-400)] hover:text-[var(--primary)]"
           >
             <Lock className="size-3" />
-            Locked
+            Unlock Full Explanation
           </button>
         )}
       </div>
@@ -1507,31 +1493,23 @@ function NotReadySection({ onSubscribe }: { onSubscribe: () => void }) {
 
 // ─── Section 12: Bottom report bar (free only) ───────────────────────────────
 
-function BottomReportBar({
-  result,
-  onSubscribe,
-}: {
-  result: GuestDiagnosticResult
-  onSubscribe: () => void
-}) {
-  const gapPoints = Math.max(0, LSAT_GOAL_SCORE - result.scaledScore)
-
+function BottomReportBar({ onSubscribe }: { onSubscribe: () => void }) {
   return (
     <div className="rounded-[12px] border border-[var(--greyscale-100)] bg-[var(--primary-0)] px-6 py-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm font-medium text-[var(--greyscale-500)]">
-          You&apos;re seeing about a third of your report.{' '}
+          You&apos;re seeing the first signals from your diagnostic.{' '}
           <span className="font-semibold text-[var(--color-student-heading)]">
-            {gapPoints} point{gapPoints !== 1 ? 's' : ''} still to close
+            Upgrade for deeper insights
           </span>{' '}
-          — unlock the full leak map, your week-by-week plan, and every explanation.
+          — unlock targeted practice, full explanations, analytics, and your study plan.
         </p>
         <button
           type="button"
           onClick={onSubscribe}
           className="h-10 shrink-0 rounded-[10px] bg-[var(--primary)] px-5 text-sm font-semibold text-white transition-colors hover:bg-[var(--primary-600)]"
         >
-          Unlock full report · from $52/mo
+          Explore BetterLSAT Plans
         </button>
       </div>
     </div>
@@ -1552,10 +1530,26 @@ function GuestDiagnosticResultsView({
   const [explanationsError, setExplanationsError] = useState<string | null>(null)
   const [sortMode, setSortMode] = useState<QuestionSortMode>('number')
   const [listExpanded, setListExpanded] = useState(false)
+  const [personalGoalScore, setPersonalGoalScore] = useState<number | null>(null)
 
   useEffect(() => {
     refreshSubscription?.()
   }, [refreshSubscription])
+
+  useEffect(() => {
+    let alive = true
+    void ensureStudyContext()
+      .then((studyContext) => {
+        if (!alive) return
+        setPersonalGoalScore(studyContext?.preferences?.goalScore ?? null)
+      })
+      .catch(() => {
+        if (alive) setPersonalGoalScore(null)
+      })
+    return () => {
+      alive = false
+    }
+  }, [])
 
   useEffect(() => {
     if (!hasActiveCore) {
@@ -1649,8 +1643,8 @@ function GuestDiagnosticResultsView({
 
       {/* 2. Two score cards */}
       <div className="flex w-full flex-col gap-4 lg:flex-row lg:items-stretch">
-        <EstimatedScoreCard result={result} />
-        <GapToGoalCard result={result} locked={!showPaidContent} onSubscribe={openPricingModal} />
+        <EstimatedScoreCard result={result} personalGoalScore={personalGoalScore} />
+        <GapToGoalCard result={result} personalGoalScore={personalGoalScore} />
       </div>
 
       {/* 3. Three stats row */}
@@ -1821,7 +1815,9 @@ function GuestDiagnosticResultsView({
         onSubscribe={openPricingModal}
       />
 
-      {!showPaidContent && <YourPlanSection onSubscribe={openPricingModal} />}
+      {!showPaidContent && (
+        <YourPlanSection intentId={result.intentId} onSubscribe={openPricingModal} />
+      )}
 
       <WrongQuestionsReviewSection
         result={result}
@@ -1833,9 +1829,7 @@ function GuestDiagnosticResultsView({
 
       {!showPaidContent && <NotReadySection onSubscribe={openPricingModal} />}
 
-      {!showPaidContent && (
-        <BottomReportBar result={result} onSubscribe={openPricingModal} />
-      )}
+      {!showPaidContent && <BottomReportBar onSubscribe={openPricingModal} />}
     </StudentMain>
   )
 }

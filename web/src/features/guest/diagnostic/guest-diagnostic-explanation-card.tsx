@@ -31,13 +31,13 @@ type GuestDiagnosticExplanationCardProps = {
   className?: string
 }
 
-/** Figma 21396:22478 — 120×32 primary */
+/** Primary CTA — room for “View Explanation” */
 const EXPLANATION_BUTTON_CLASS =
-  'inline-flex h-8 w-[120px] shrink-0 items-center justify-center whitespace-nowrap rounded-[10px] bg-[var(--primary-500,#0d47a1)] px-4 py-2 text-xs font-semibold leading-normal tracking-[0.02em] text-white shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)] transition-colors hover:bg-[var(--primary-600,#0a3a82)] disabled:pointer-events-none disabled:opacity-60'
+  'inline-flex h-10 min-w-[148px] shrink-0 items-center justify-center whitespace-nowrap rounded-[10px] bg-[var(--primary-500,#0d47a1)] px-5 py-2.5 text-xs font-semibold leading-normal tracking-[0.02em] text-white shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)] transition-colors hover:bg-[var(--primary-600,#0a3a82)] disabled:pointer-events-none disabled:opacity-60'
 
-/** Figma 21396:22479 — 120×32 outline */
+/** Outline CTA — matched size to primary */
 const REVIEW_TESTER_BUTTON_CLASS =
-  'inline-flex h-8 w-[120px] shrink-0 items-center justify-center whitespace-nowrap rounded-[12px] border border-[var(--greyscale-100,#dfe1e7)] bg-[var(--greyscale-0,white)] px-4 py-2 text-xs font-semibold leading-normal tracking-[0.02em] text-[var(--primary-500,#0d47a1)] shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)] transition-colors hover:border-[var(--primary-500,#0d47a1)] hover:bg-[var(--primary-500,#0d47a1)] hover:text-white disabled:pointer-events-none disabled:opacity-60'
+  'inline-flex h-10 min-w-[148px] shrink-0 items-center justify-center whitespace-nowrap rounded-[12px] border border-[var(--greyscale-100,#dfe1e7)] bg-[var(--greyscale-0,white)] px-5 py-2.5 text-xs font-semibold leading-normal tracking-[0.02em] text-[var(--primary-500,#0d47a1)] shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)] transition-colors hover:border-[var(--primary-500,#0d47a1)] hover:bg-[var(--primary-500,#0d47a1)] hover:text-white disabled:pointer-events-none disabled:opacity-60'
 
 const STATS_LABEL_CLASS =
   'm-0 text-sm font-semibold leading-normal tracking-[0.02em] text-[var(--greyscale-500)] max-md:text-[11px]'
@@ -202,11 +202,11 @@ function GuestDiagnosticExplanationCard({
           <div className="flex shrink-0 flex-row flex-wrap gap-2 max-md:w-full md:flex-col md:justify-center md:gap-4 md:self-center">
             {diagnosticExplanationHref ? (
               <Link to={diagnosticExplanationHref} className={EXPLANATION_BUTTON_CLASS}>
-                Explanation
+                View Explanation
               </Link>
             ) : (
               <button type="button" className={EXPLANATION_BUTTON_CLASS} disabled>
-                Explanation
+                View Explanation
               </button>
             )}
             {reviewTesterHref ? (
