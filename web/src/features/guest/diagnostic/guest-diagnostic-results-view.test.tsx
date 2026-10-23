@@ -99,6 +99,26 @@ describe("GuestDiagnosticResultsView Section diagnostic", () => {
 })
 
 describe("GuestDiagnosticResultsView Mini teaser", () => {
+  it("shows rounded percentile range labels (no decimal midpoints)", () => {
+    subscription.hasActiveCore = false
+    const result = {
+      ...buildDefaultGuestDiagnosticResult("mini"),
+      percentile: 2.19,
+      percentileLow: 0,
+      percentileHigh: 4.38,
+      percentileLabel: "0–4",
+    }
+    render(
+      <MemoryRouter>
+        <GuestDiagnosticResultsView result={result} />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByText("0–4")).toBeInTheDocument()
+    expect(screen.queryByText("0–4.4")).not.toBeInTheDocument()
+    expect(screen.queryByText("2th percentile")).not.toBeInTheDocument()
+  })
+
   it("shows 3 Mini rows collapsed with report sections visible, then See All reveals Q4–Q5 and locked teasers only", async () => {
     const user = userEvent.setup()
     subscription.hasActiveCore = false
@@ -130,6 +150,22 @@ describe("GuestDiagnosticResultsView Mini teaser", () => {
     for (const row of screen.getAllByTestId("diagnostic-locked-question-row")) {
       expect(row.textContent).not.toContain(realQ6Type!)
     }
+  })
+
+  it("aligns early-signal map lock teaser to the computed leak count", () => {
+    subscription.hasActiveCore = false
+    const result = buildDefaultGuestDiagnosticResult("mini")
+    // Default mini: 7 missed unique types → 2 visible + 5 more locked
+    render(
+      <MemoryRouter>
+        <GuestDiagnosticResultsView result={result} />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByText("Early performance signals")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Drill all 7" })).toBeInTheDocument()
+    expect(screen.getByText("5 more signals to review")).toBeInTheDocument()
+    expect(screen.getByText("Early performance signals from your diagnostic")).toBeInTheDocument()
   })
 })
 

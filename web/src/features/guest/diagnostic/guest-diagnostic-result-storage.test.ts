@@ -43,7 +43,7 @@ describe("guest diagnostic result storage", () => {
     expect(result.correctCount).toBe(2)
     // 2/10 correct = 8 incorrect → Apr 2025 projection
     expect(result.scaledScoreLabel).toBe("120–134")
-    expect(result.percentileLabel).toBe("0–4.4")
+    expect(result.percentileLabel).toBe("0–4")
     expect(result.percentileLow).toBe(0)
     expect(result.percentileHigh).toBe(4.38)
     expect(result.outcomes.filter((o) => o.isCorrect)).toHaveLength(2)
@@ -75,7 +75,7 @@ describe("guest diagnostic result storage", () => {
 
     expect(result.correctCount).toBe(18)
     expect(result.scaledScoreLabel).toBe("158–162")
-    expect(result.percentileLabel).toBe("66.4–79")
+    expect(result.percentileLabel).toBe("66–79")
     expect(result.percentileLow).toBe(66.38)
     expect(result.percentileHigh).toBe(79)
   })

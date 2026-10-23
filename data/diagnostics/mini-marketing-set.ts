@@ -60,8 +60,8 @@ export function formatMiniDiagnosticScoreRange(range: MiniDiagnosticScoreRange):
 }
 
 export function formatMiniDiagnosticPercentileRange(range: MiniDiagnosticScoreRange): string {
-  const low = range.percentileLow % 1 === 0 ? String(range.percentileLow) : range.percentileLow.toFixed(1)
-  const high = range.percentileHigh % 1 === 0 ? String(range.percentileHigh) : range.percentileHigh.toFixed(1)
-  if (low === high) return low
+  const low = Math.round(range.percentileLow)
+  const high = Math.round(range.percentileHigh)
+  if (low === high) return String(low)
   return `${low}–${high}`
 }

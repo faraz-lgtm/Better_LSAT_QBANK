@@ -254,9 +254,11 @@ function StudentAppHeader({ onOpenMobileNav, headerActions }: StudentAppHeaderPr
                 <span className="text-xs font-semibold leading-tight tracking-[0.24px] text-[color:var(--primary-800)]">
                   {displayName}
                 </span>
-                <span className="max-w-[220px] truncate text-xs font-normal leading-tight tracking-[0.24px] text-[color:var(--primary-800)]">
-                  {email ?? "student@example.com"}
-                </span>
+                {email ? (
+                  <span className="max-w-[220px] truncate text-xs font-normal leading-tight tracking-[0.24px] text-[color:var(--primary-800)]">
+                    {email}
+                  </span>
+                ) : null}
               </span>
               <FigmaIcon
                 name="chevron-down"

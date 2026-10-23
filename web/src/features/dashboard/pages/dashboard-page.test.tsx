@@ -194,7 +194,7 @@ describe("DashboardPage", () => {
       expect(screen.queryByText("Choose a plan to continue")).not.toBeInTheDocument()
     })
 
-    // Free plan must not load real analytics — blur teasers use hardcoded placeholders only.
+    // Free plan must not load real analytics — blur teasers stay empty shells.
     expect(mocks.getOverview).not.toHaveBeenCalled()
     expect(mocks.getTrajectory).not.toHaveBeenCalled()
     expect(mocks.getSessions).not.toHaveBeenCalled()

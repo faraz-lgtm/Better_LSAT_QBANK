@@ -28,6 +28,10 @@ import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { formatMmSs } from '@/features/student/practice-session/practice-results-ui'
 import { cn } from '@/lib/utils'
 import type { GuestDiagnosticIntentId } from '@/features/guest/diagnostic/guest-diagnostic-intent-types'
+import {
+  computePointLeaks,
+  type PointLeak,
+} from '@/features/guest/diagnostic/compute-point-leaks'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -47,17 +51,6 @@ type QuestionSortMode = 'number' | 'correct' | 'incorrect'
 
 type SortedOutcome = GuestDiagnosticResult['outcomes'][number] & {
   originalIndex: number
-}
-
-type PointLeak = {
-  questionType: string
-  section: string
-  total: number
-  missed: number
-  avgTimeSeconds: number | null
-  avgTargetSeconds: number | null
-  overSeconds: number | null
-  pointsRecoverable: number
 }
 
 type DifficultyAccuracy = {
@@ -91,18 +84,6 @@ const DIFFICULTY_LABELS: Record<number, string> = {
   5: 'Very Hard',
 }
 
-const RC_QUESTION_TYPES = new Set([
-  'Inference',
-  'Main Point',
-  'Primary Purpose',
-  "Author's Attitude",
-  'Function',
-  'Organization',
-  'Analogy',
-  'Structure',
-  'Global',
-])
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function scaledScoreToPercent(score: number): number {
@@ -113,55 +94,6 @@ function formatSeconds(totalSeconds: number): string {
   const m = Math.floor(totalSeconds / 60)
   const s = Math.round(totalSeconds % 60)
   return `${m}:${s.toString().padStart(2, '0')}`
-}
-
-function getQuestionSection(questionType: string): string {
-  return RC_QUESTION_TYPES.has(questionType) ? 'Reading Comprehension' : 'Logical Reasoning'
-}
-
-function computePointLeaks(
-  outcomes: GuestDiagnosticResult['outcomes'],
-  intentId: GuestDiagnosticIntentId,
-): PointLeak[] {
-  const groups: Record<
-    string,
-    { missed: number; total: number; totalTime: number; totalTarget: number; count: number }
-  > = {}
-
-  for (const outcome of outcomes) {
-    const meta = getDiagnosticQuestionMeta(outcome.questionId, intentId)
-    if (!meta?.questionType) continue
-    const type = meta.questionType
-    if (!groups[type]) groups[type] = { missed: 0, total: 0, totalTime: 0, totalTarget: 0, count: 0 }
-    groups[type].total++
-    if (!outcome.isCorrect) groups[type].missed++
-    if (outcome.timeSpentSeconds != null && meta.targetTimeSeconds) {
-      groups[type].totalTime += outcome.timeSpentSeconds
-      groups[type].totalTarget += meta.targetTimeSeconds
-      groups[type].count++
-    }
-  }
-
-  return Object.entries(groups)
-    .filter(([, g]) => g.missed > 0)
-    .map(([questionType, g]) => {
-      const avgTime = g.count > 0 ? g.totalTime / g.count : null
-      const avgTarget = g.count > 0 ? g.totalTarget / g.count : null
-      const overSeconds = avgTime != null && avgTarget != null ? avgTime - avgTarget : null
-      const missRate = g.missed / g.total
-      const pointsRecoverable = Math.max(1, Math.round(g.missed + (missRate > 0.6 ? 1 : 0)))
-      return {
-        questionType,
-        section: getQuestionSection(questionType),
-        total: g.total,
-        missed: g.missed,
-        avgTimeSeconds: avgTime,
-        avgTargetSeconds: avgTarget,
-        overSeconds,
-        pointsRecoverable,
-      }
-    })
-    .sort((a, b) => b.pointsRecoverable - a.pointsRecoverable || b.missed - a.missed)
 }
 
 function computeAccuracyByDifficulty(

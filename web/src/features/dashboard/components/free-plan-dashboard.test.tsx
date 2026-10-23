@@ -98,7 +98,12 @@ describe("FreePlanDashboard", () => {
 
     expect(screen.getByText("Total Study Time")).toBeInTheDocument()
     expect(screen.getByText("Performance Overview")).toBeInTheDocument()
-    expect(screen.getByText("Across 50 practice tests")).toBeInTheDocument()
+    expect(screen.getByText("Per question")).toBeInTheDocument()
+
+    // No fake placeholders that look like real data.
+    expect(screen.queryByText("Across 50 practice tests")).not.toBeInTheDocument()
+    expect(screen.queryByText("+14 this week")).not.toBeInTheDocument()
+    expect(screen.queryByText("Needs improvement")).not.toBeInTheDocument()
 
     const skeletons = screen.getAllByTestId("locked-metric-skeleton")
     expect(skeletons).toHaveLength(10)

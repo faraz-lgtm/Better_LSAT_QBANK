@@ -23,7 +23,6 @@ const LOCKED_STAT_CARDS = [
   {
     id: "study-time",
     label: "Total Study Time",
-    caption: "Needs improvement",
     iconSrc: "/dashboard/stat-study.svg",
     skeletonWidthClass: "w-16",
   },
@@ -37,14 +36,12 @@ const LOCKED_STAT_CARDS = [
   {
     id: "questions-done",
     label: "Questions Done",
-    caption: "+14 this week",
     iconSrc: "/dashboard/stat-questions.svg",
     skeletonWidthClass: "w-14",
   },
   {
     id: "overall-accuracy",
     label: "Overall Accuracy",
-    caption: "Needs improvement",
     iconSrc: "/dashboard/stat-accuracy.svg",
     skeletonWidthClass: "w-12",
   },
@@ -230,7 +227,9 @@ function FreePlanLockedQuickStats() {
             </span>
           </div>
           <LockedMetricSkeleton widthClass={card.skeletonWidthClass} className="mt-[7.5px]" />
-          <p className="mt-[3.75px] text-xs tracking-[0.24px] text-[var(--greyscale-500)]">{card.caption}</p>
+          {"caption" in card && card.caption ? (
+            <p className="mt-[3.75px] text-xs tracking-[0.24px] text-[var(--greyscale-500)]">{card.caption}</p>
+          ) : null}
         </article>
       ))}
     </div>
@@ -244,14 +243,9 @@ function FreePlanLockedPerformanceOverview() {
         <h2 className="m-0 text-lg font-semibold tracking-[0.36px] text-[var(--color-student-heading)]">
           Performance Overview
         </h2>
-        <div className="flex flex-wrap items-center gap-4">
-          <p className="m-0 text-[11px] font-medium leading-[16.5px] text-[var(--primary)]">
-            These score are predictive and differ for every student
-          </p>
-          <span className="rounded-full bg-[var(--primary-25)] px-[9.375px] py-[3.75px] text-[11px] font-medium leading-[16.5px] text-[var(--primary)]">
-            Across 50 practice tests
-          </span>
-        </div>
+        <p className="m-0 text-[11px] font-medium leading-[16.5px] text-[var(--primary)]">
+          These score are predictive and differ for every student
+        </p>
       </div>
 
       <div className="mt-[18.75px] grid grid-cols-2 gap-px overflow-hidden rounded-none bg-[var(--greyscale-100)] sm:grid-cols-3 xl:grid-cols-6">
