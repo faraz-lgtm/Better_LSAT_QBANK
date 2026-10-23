@@ -694,7 +694,8 @@ describe("PrepCourseContentPage", () => {
     expect(within(moduleSidebar).getByRole("button", { name: "The Anatomy of an Argument (locked)" })).toBeInTheDocument()
 
     await user.click(within(moduleSidebar).getByRole("button", { name: "The Anatomy of an Argument (locked)" }))
-    expect(screen.getByRole("dialog", { name: "Subscriber-Only Content" })).toBeInTheDocument()
+    expect(screen.getByRole("dialog", { name: "Unlock the Full Course" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Unlock Course" })).toBeInTheDocument()
     expect(screen.getByRole("heading", { name: "The Kickoff" })).toBeInTheDocument()
   })
 })

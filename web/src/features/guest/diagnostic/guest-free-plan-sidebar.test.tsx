@@ -65,7 +65,40 @@ describe("GuestFreePlanSidebar", () => {
     )
 
     await user.click(screen.getByRole("button", { name: "Explanations (locked)" }))
-    expect(screen.getByRole("dialog", { name: "Subscriber-Only Content" })).toBeInTheDocument()
+    expect(screen.getByRole("dialog", { name: "See Why the Answer Works" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Unlock Explanations" })).toBeInTheDocument()
+    expect(screen.getByTestId("path")).toHaveTextContent("/app")
+  })
+
+  it("opens feature-specific locked-content copy for Drills, Sections, Analytics, and PrepTest", async () => {
+    const user = userEvent.setup()
+    render(
+      <MemoryRouter initialEntries={["/app"]}>
+        <GuestPricingModalProvider>
+          <GuestFreePlanSidebar mobileOpen={false} onMobileClose={() => {}} />
+        </GuestPricingModalProvider>
+        <PathProbe />
+      </MemoryRouter>,
+    )
+
+    await user.click(screen.getAllByRole("button", { name: "Drills (locked)" })[0]!)
+    expect(screen.getByRole("dialog", { name: "Unlock Targeted Drills" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Unlock Drills" })).toBeInTheDocument()
+    await user.click(screen.getByRole("button", { name: "Back" }))
+
+    await user.click(screen.getAllByRole("button", { name: "Sections (locked)" })[0]!)
+    expect(screen.getByRole("dialog", { name: "Know What to Study Next" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Unlock My Plan" })).toBeInTheDocument()
+    await user.click(screen.getByRole("button", { name: "Back" }))
+
+    await user.click(screen.getByRole("button", { name: "Analytics (locked)" }))
+    expect(screen.getByRole("dialog", { name: "See What's Costing You Points" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Unlock Analytics" })).toBeInTheDocument()
+    await user.click(screen.getByRole("button", { name: "Back" }))
+
+    await user.click(screen.getAllByRole("button", { name: "PrepTest (locked)" })[0]!)
+    expect(screen.getByRole("dialog", { name: "Unlock Official LSAT PrepTests" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Unlock PrepTests" })).toBeInTheDocument()
     expect(screen.getByTestId("path")).toHaveTextContent("/app")
   })
 
@@ -87,7 +120,8 @@ describe("GuestFreePlanSidebar", () => {
     )
 
     await user.click(screen.getByRole("button", { name: "LR Mastery Course (locked)" }))
-    expect(screen.getByRole("dialog", { name: "Subscriber-Only Content" })).toBeInTheDocument()
+    expect(screen.getByRole("dialog", { name: "Unlock the Full Course" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Unlock Course" })).toBeInTheDocument()
     expect(screen.getByTestId("path")).toHaveTextContent("/app")
   })
 

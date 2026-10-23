@@ -232,7 +232,7 @@ function PrepCourseLessonPage() {
         const normalized = normalizeCurriculum(courseData.curriculum, courseData.lessons, courseData.course.id)
         if (isPrepCourseLessonLockedForFreePlan(normalized, courseSlug, lessonSlug, limitFreeAccess)) {
           redirected = true
-          openLockedContentModal()
+          openLockedContentModal("courses")
           navigate(`/app/prep-course/${courseSlug}`, { replace: true })
           return
         }
@@ -364,7 +364,7 @@ function PrepCourseLessonPage() {
       setCompletedLessonSlugs(new Set(slugs))
       const nextSlug = nextLessonSlug(lessons, lesson.slug)
       if (nextSlug && isPrepCourseLessonLockedForFreePlan(curriculum, course.slug, nextSlug, limitFreeAccess)) {
-        openLockedContentModal()
+        openLockedContentModal("courses")
         return
       }
       if (nextSlug) {
@@ -562,7 +562,7 @@ function PrepCourseLessonPage() {
           onNext={() => {
             if (!nextSlug) return
             if (isPrepCourseLessonLockedForFreePlan(curriculum, course.slug, nextSlug, limitFreeAccess)) {
-              openLockedContentModal()
+              openLockedContentModal("courses")
               return
             }
             navigate(`/app/prep-course/${course.slug}/${nextSlug}`)
