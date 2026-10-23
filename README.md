@@ -76,7 +76,6 @@ Quick reference:
 | `LSAC_DEEPLINK_BASE_URL` | Optional override for deep link host (default: `https://lawhub.org`) |
 | `LSAC_CONFIRM_EMAIL_BASE_URL` | Optional confirm_email activation host (default: `https://app.lawhub.org/confirm_email`; sandbox: `https://lawpath.azurewebsites.net/confirm_email`) |
 | `LSAC_SYNC_KEY` | Required shared secret header (`x-lsac-sync-key`) for `lsac-sync` |
-| `PREP_COURSE_ENFORCE_ENTITLEMENT` | When `true`, prep-course requires linked + eligible LSAC subscription |
 
 **Hosted sandbox:** `supabase secrets set LAWHUB_SANDBOX=true` plus `LSAC_VENDOR_ID`, `LSAC_CLIENT_ID`, `LSAC_CLIENT_SECRET`. **Production:** `LAWHUB_SANDBOX=false`. **Local:** `supabase/functions/.env` (gitignored).
 

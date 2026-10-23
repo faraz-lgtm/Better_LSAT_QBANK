@@ -11,9 +11,9 @@ export class AuthorizationError extends Error {
 }
 
 export class EntitlementError extends Error {
-  readonly reason: 'LSAC_REQUIRED' | 'PAYMENT_REQUIRED'
+  readonly reason: 'PAYMENT_REQUIRED'
 
-  constructor(message: string, reason: 'LSAC_REQUIRED' | 'PAYMENT_REQUIRED' = 'LSAC_REQUIRED') {
+  constructor(message: string, reason: 'PAYMENT_REQUIRED' = 'PAYMENT_REQUIRED') {
     super(message)
     this.name = 'EntitlementError'
     this.reason = reason
@@ -119,12 +119,8 @@ async function buildActiveDrillAttempt(
 
 export function createPrepCourseService(deps: {
   repository: PrepCourseRepository
-  enforceEntitlement?: boolean
   hasActiveSubscription?: (userId: string) => Promise<boolean>
 }) {
-  // Temporary default: keep prep content accessible while LSAC entitlement data stabilizes.
-  const enforceEntitlement = deps.enforceEntitlement === true
-
   async function resolveHasActiveCore(userId: string): Promise<boolean> {
     if (!deps.hasActiveSubscription) return true
     const stripeConfigured = parseStripeEnv(Deno.env.toObject()) !== null
@@ -173,35 +169,6 @@ export function createPrepCourseService(deps: {
     }
   }
 
-  async function requireLearnerAccess(userId: string): Promise<void> {
-    if (!enforceEntitlement) return
-
-    // Profile + latest LSAC snapshot in parallel (was sequential + ~1 RTT extra).
-    const [profile, snapshot] = await Promise.all([
-      deps.repository.getProfileRole(userId),
-      deps.repository.getLatestStudentSnapshotByUserId(userId),
-    ])
-    if (!profile) {
-      throw new EntitlementError('LSAC account must be linked before accessing prep content')
-    }
-    if (profile.role === 'admin') return
-
-    const isLinked = Boolean(profile.student_coaching_id)
-    if (!isLinked) {
-      throw new EntitlementError('LSAC account must be linked before accessing prep content')
-    }
-
-    const linkedInSnapshot = snapshot?.linked === true
-    const subscriptionType = snapshot?.subscription_type?.trim().toLowerCase() ?? null
-    const hasEligibleSubscription = subscriptionType
-      ? subscriptionType.includes('advantage') || subscriptionType.includes('prep')
-      : false
-    const isEligible = linkedInSnapshot || hasEligibleSubscription
-    if (!isEligible) {
-      throw new EntitlementError('LawHub Advantage eligibility is required for prep content')
-    }
-  }
-
   function validateLessonCreatePayload(input: {
     lessonType: PrepLessonType
     textContent?: string | null
@@ -215,8 +182,7 @@ export function createPrepCourseService(deps: {
   }
 
   return {
-    async listCourses(userId: string) {
-      await requireLearnerAccess(userId)
+    async listCourses(_userId: string) {
       return await deps.repository.listPublishedCourses()
     },
 
@@ -230,12 +196,10 @@ export function createPrepCourseService(deps: {
       // Course outline passes hydrate=first for a fast first paint.
       const hydrateMode = opts?.hydrate ?? 'all'
       const slug = normalizeSlug(courseSlug)
-      // Overlap entitlement checks with the outline RPC when enforcement is on.
-      const outlinePromise = deps.repository.getCourseOutline(slug, userId, {
+      const outline = await deps.repository.getCourseOutline(slug, userId, {
         hydrate: hydrateMode,
         moduleId: requestedModuleId ?? undefined,
       })
-      const [, outline] = await Promise.all([requireLearnerAccess(userId), outlinePromise])
       if (!outline) throw new Error('Course not found')
       if (
         requestedModuleId &&
@@ -247,7 +211,6 @@ export function createPrepCourseService(deps: {
     },
 
     async setModuleBookmark(userId: string, courseSlug: string, moduleId: string, bookmarked: boolean) {
-      await requireLearnerAccess(userId)
       const course = await deps.repository.getPublishedCourseBySlug(normalizeSlug(courseSlug))
       if (!course) throw new Error('Course not found')
       const mod = await deps.repository.getPublishedModuleById(course.id, moduleId)
@@ -259,7 +222,6 @@ export function createPrepCourseService(deps: {
     },
 
     async setLessonBookmark(userId: string, courseSlug: string, lessonSlug: string, bookmarked: boolean) {
-      await requireLearnerAccess(userId)
       const course = await deps.repository.getPublishedCourseBySlug(normalizeSlug(courseSlug))
       if (!course) throw new Error('Course not found')
       const lesson = await deps.repository.getPublishedLessonBySlug(course.id, normalizeSlug(lessonSlug))
@@ -271,7 +233,6 @@ export function createPrepCourseService(deps: {
     },
 
     async completeLesson(userId: string, courseSlug: string, lessonSlug: string) {
-      await requireLearnerAccess(userId)
       const course = await deps.repository.getPublishedCourseBySlug(normalizeSlug(courseSlug))
       if (!course) throw new Error('Course not found')
       const lesson = await deps.repository.getPublishedLessonBySlug(course.id, normalizeSlug(lessonSlug))
@@ -283,7 +244,6 @@ export function createPrepCourseService(deps: {
     },
 
     async getLesson(userId: string, courseSlug: string, lessonSlug: string) {
-      await requireLearnerAccess(userId)
       const course = await deps.repository.getPublishedCourseBySlug(normalizeSlug(courseSlug))
       if (!course) throw new Error('Course not found')
       const lesson = await deps.repository.getPublishedLessonBySlug(course.id, normalizeSlug(lessonSlug))

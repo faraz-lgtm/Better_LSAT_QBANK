@@ -878,18 +878,50 @@ Deno.test('prep-course getLesson includes drill blind review attempt metadata', 
   assertEquals(out.activeDrillAttempt?.blindReview?.answers[0]?.isCorrect, true)
 })
 
-Deno.test('prep-course service blocks access when entitlement enforcement is enabled', async () => {
-  const service = createPrepCourseService({
-    repository: mockRepo({
-      getProfileRole: async () => ({ id: 'user-1', role: 'student', student_coaching_id: null }),
-    }),
-    enforceEntitlement: true,
+Deno.test('prep-course service allows unpaid unlinked students to list and load course outline', async () => {
+  await withStripeTestEnv(async () => {
+    const service = createPrepCourseService({
+      repository: mockRepo({
+        getProfileRole: async () => ({ id: 'user-1', role: 'student', student_coaching_id: null }),
+        getLatestStudentSnapshotByUserId: async () => null,
+        listPublishedCourses: async () => [
+          {
+            id: 'course-1',
+            slug: FREE_PREP_COURSE_SLUG,
+            title: 'LSAT Essentials Course',
+            description: null,
+            is_published: true,
+            created_at: '2026-01-01T00:00:00Z',
+            updated_at: '2026-01-01T00:00:00Z',
+          },
+        ],
+        getCourseOutline: async (courseSlug) => ({
+          course: {
+            id: 'course-1',
+            slug: courseSlug,
+            title: 'LSAT Essentials Course',
+            description: null,
+            is_published: true,
+            created_at: '2026-01-01T00:00:00Z',
+            updated_at: '2026-01-01T00:00:00Z',
+          },
+          curriculum: { modules: [] },
+          lessons: [],
+          completedLessonSlugs: [],
+          bookmarks: { moduleIds: [], lessonSlugs: [] },
+          hydratedModuleIds: [],
+          moduleStats: [],
+        }),
+      }),
+      hasActiveSubscription: async () => false,
+    })
+    const courses = await service.listCourses('user-1')
+    assertEquals(courses[0]?.slug, FREE_PREP_COURSE_SLUG)
+    const outline = await service.getCourseWithLessons('user-1', FREE_PREP_COURSE_SLUG, {
+      hydrate: 'first',
+    })
+    assertEquals(outline.course.slug, FREE_PREP_COURSE_SLUG)
   })
-  await assertRejects(
-    () => service.listCourses('user-1'),
-    Error,
-    'LSAC account must be linked',
-  )
 })
 
 const STRIPE_TEST_ENV: Record<string, string> = {
