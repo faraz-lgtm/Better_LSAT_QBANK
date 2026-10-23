@@ -18,13 +18,17 @@ describe("GuestPricingModal", () => {
     expect(
       screen.getByText(/LawHub Advantage \(\$124\/year\) is billed once today/i),
     ).toBeInTheDocument()
-    expect(screen.getByText(/\$478 due today \(incl\. \$124 LawHub Advantage\)/i)).toBeInTheDocument()
+    expect(
+      screen.getByText(/\$478 total with required LawHub Advantage for new LawHub users\./i),
+    ).toBeInTheDocument()
 
     await user.click(existingLsacCheckbox)
 
     expect(existingLsacCheckbox).toBeChecked()
     expect(screen.getByText(/LawHub PrepPlus is billed separately through LSAC/i)).toBeInTheDocument()
-    expect(screen.queryByText(/\$478 due today/i)).not.toBeInTheDocument()
+    expect(
+      screen.queryByText(/\$478 total with required LawHub Advantage for new LawHub users\./i),
+    ).not.toBeInTheDocument()
     expect(
       screen.getByRole("button", { name: /Need LawHub PrepPlus included\? View standard pricing/i }),
     ).toBeInTheDocument()

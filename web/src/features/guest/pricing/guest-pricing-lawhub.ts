@@ -29,7 +29,10 @@ function resolveGuestPricingDueToday(
   const amount = plan.priceUsd + LAWHUB_ADVANTAGE_YEARLY_PRICE
   return {
     amount,
-    label: `$${amount} due today (incl. $${LAWHUB_ADVANTAGE_YEARLY_PRICE} LawHub Advantage)`,
+    label:
+      plan.id === "six_month"
+        ? `$${amount} total with required LawHub Advantage for new LawHub users.`
+        : `$${amount} due today (incl. $${LAWHUB_ADVANTAGE_YEARLY_PRICE} LawHub Advantage)`,
     emphasized: true,
   }
 }
