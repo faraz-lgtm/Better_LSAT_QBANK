@@ -34,6 +34,8 @@ export type FreePricingPlan = {
 export type PricingPlan = FreePricingPlan | PaidPricingPlan
 
 const LAWHUB_REQUIRED_NOTE = "Official-question features require LawHub Advantage."
+const LAWHUB_SEPARATE_NOTE =
+  "LawHub Advantage required for official LSAT content: $124/year, paid separately to LSAC."
 
 const FREE_PRICING_PLAN: FreePricingPlan = {
   id: "free",
@@ -72,7 +74,7 @@ const PAID_PRICING_PLANS: PaidPricingPlan[] = [
     ],
     renewalNote: "Renews at $69 every month. Cancel anytime.",
     ctaLabel: "Choose Monthly",
-    lawHubNote: LAWHUB_REQUIRED_NOTE,
+    lawHubNote: LAWHUB_SEPARATE_NOTE,
   },
   {
     id: "three_month",
@@ -91,7 +93,7 @@ const PAID_PRICING_PLANS: PaidPricingPlan[] = [
     ],
     renewalNote: "Renews at $192 every 3 months.",
     ctaLabel: "Choose 3 Months",
-    lawHubNote: LAWHUB_REQUIRED_NOTE,
+    lawHubNote: LAWHUB_SEPARATE_NOTE,
   },
   {
     id: "six_month",
@@ -113,7 +115,7 @@ const PAID_PRICING_PLANS: PaidPricingPlan[] = [
     ],
     renewalNote: "Renews at $354 every 6 months.",
     ctaLabel: "Choose 6 Months",
-    lawHubNote: LAWHUB_REQUIRED_NOTE,
+    lawHubNote: LAWHUB_SEPARATE_NOTE,
   },
   {
     id: "yearly",
@@ -132,7 +134,7 @@ const PAID_PRICING_PLANS: PaidPricingPlan[] = [
     ],
     renewalNote: "Renews at $624 every 12 months.",
     ctaLabel: "Choose 12 Months",
-    lawHubNote: LAWHUB_REQUIRED_NOTE,
+    lawHubNote: LAWHUB_SEPARATE_NOTE,
   },
 ]
 

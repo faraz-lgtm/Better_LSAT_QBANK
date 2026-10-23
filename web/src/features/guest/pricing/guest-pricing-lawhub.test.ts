@@ -24,6 +24,10 @@ describe("guest pricing lawhub", () => {
 
   it("adds LawHub to the 6-month price", () => {
     const sixMonth = PAID_PRICING_PLANS.find((plan) => plan.id === "six_month")!
-    expect(resolveGuestPricingDueToday(sixMonth, true).amount).toBe(478)
+    expect(resolveGuestPricingDueToday(sixMonth, true)).toEqual({
+      amount: 478,
+      label: "$478 total with required LawHub Advantage for new LawHub users.",
+      emphasized: true,
+    })
   })
 })
