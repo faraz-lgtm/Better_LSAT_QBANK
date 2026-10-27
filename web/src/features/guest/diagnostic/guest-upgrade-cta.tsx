@@ -27,7 +27,7 @@ function GuestUpgradeCta({ variant = 'header', className }: GuestUpgradeCtaProps
     }
     openPricingModal()
   }
-  const label = linkLsac ? 'Link LSAC' : 'Upgrade to LSAT'
+  const label = linkLsac ? 'Link LSAC' : 'Upgrade'
 
   if (variant === 'banner') {
     return (
