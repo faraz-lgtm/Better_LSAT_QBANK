@@ -3634,16 +3634,50 @@ select.ds-input option {
   gap: 8px;
 }
 
-.student-sidebar-heading {
-  margin: 0;
+.student-sidebar-heading-row {
+  display: flex;
   width: 100%;
   min-width: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+.student-sidebar-heading {
+  margin: 0;
+  min-width: 0;
+  flex: 1 1 auto;
   font-size: 12px;
   font-weight: 500;
   line-height: 1.5;
   letter-spacing: 0.24px;
   color: var(--primary);
   text-transform: uppercase;
+}
+
+.student-sidebar-section-badge,
+.student-sidebar-item-badge {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #e3ecfb;
+  padding: 2px 7px;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: normal;
+  color: #0f3d91;
+  white-space: nowrap;
+}
+
+.student-sidebar-link--coming-soon {
+  cursor: default;
+  pointer-events: none;
+}
+
+.student-sidebar-link--coming-soon:hover {
+  background-color: transparent;
 }
 
 .student-sidebar-link {
@@ -3848,7 +3882,10 @@ select.ds-input option {
     align-items: center;
   }
 
+  .student-sidebar--collapsed .student-sidebar-heading-row,
   .student-sidebar--collapsed .student-sidebar-heading,
+  .student-sidebar--collapsed .student-sidebar-section-badge,
+  .student-sidebar--collapsed .student-sidebar-item-badge,
   .student-sidebar--collapsed .student-sidebar-label,
   .student-sidebar--collapsed .student-sidebar-chevron,
   .student-sidebar--collapsed .student-sidebar-lock,

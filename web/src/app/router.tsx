@@ -85,6 +85,14 @@ const PrepTestPoolsPage = lazyNamed(
 const DashboardPage = lazyNamed(() => import("@/features/dashboard/pages/dashboard-page"), "DashboardPage")
 const FeedbackPage = lazyNamed(() => import("@/features/feedback/pages/feedback-page"), "FeedbackPage")
 const RoadmapPage = lazyNamed(() => import("@/features/feedback/pages/roadmap-page"), "RoadmapPage")
+const TutoringSessionsPage = lazyNamed(
+  () => import("@/features/tutoring/pages/tutoring-sessions-page"),
+  "TutoringSessionsPage",
+)
+const LiveClassesPage = lazyNamed(
+  () => import("@/features/tutoring/pages/live-classes-page"),
+  "LiveClassesPage",
+)
 const GuestDiagnosticStartPage = lazyNamed(
   () => import("@/features/guest/pages/guest-diagnostic-start-page"),
   "GuestDiagnosticStartPage",
@@ -825,6 +833,22 @@ const router = createBrowserRouter([
             element: (
               <LazyPage>
                 <GuestDiagnosticResultsPage section="full" />
+              </LazyPage>
+            ),
+          },
+          {
+            path: "tutoring/sessions",
+            element: (
+              <LazyPage>
+                <TutoringSessionsPage />
+              </LazyPage>
+            ),
+          },
+          {
+            path: "tutoring/live-classes",
+            element: (
+              <LazyPage>
+                <LiveClassesPage />
               </LazyPage>
             ),
           },

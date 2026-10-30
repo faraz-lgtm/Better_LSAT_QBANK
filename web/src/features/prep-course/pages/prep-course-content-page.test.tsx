@@ -622,17 +622,47 @@ describe("PrepCourseContentPage", () => {
     expect(screen.queryByRole("link", { name: /Lesson B/i })).not.toBeInTheDocument()
   })
 
-  it("lets free students open The Kickoff and locks later modules behind the pricing popup", async () => {
+  it("lets free students open Kickoff and Anatomy, and locks later modules behind the pricing popup", async () => {
     entitlementMock = {
       entitlement: { hasActiveCore: false, accessState: "PAYMENT_REQUIRED" },
       loading: false,
     }
     const essentialsCourse = { ...course, slug: PREP_COURSE_ESSENTIALS_SLUG }
     const kickoffLesson = { ...lessonA, course_id: "c1", slug: "welcome-to-the-arena", title: "Welcome to the Arena" }
-    const lockedLesson = { ...lessonB, course_id: "c1", slug: "argument-basics", title: "Argument Basics" }
+    const anatomyFreeLesson = {
+      ...lessonB,
+      course_id: "c1",
+      slug: "the-support-system",
+      title: 'The "Support" System',
+      sort_order: 4,
+    }
+    const anatomyLockedLesson = {
+      ...lessonB,
+      id: "l3",
+      course_id: "c1",
+      slug: "full-drill-main-conclusion-questions",
+      title: "Full Drill: Main Conclusion Questions",
+      lesson_type: "adaptive_drill" as const,
+      sort_order: 9,
+    }
+    const anatomyLaterLesson = {
+      ...lessonB,
+      id: "l4",
+      course_id: "c1",
+      slug: "building-the-ladder-sub-conclusions",
+      title: "Building the Ladder: Sub-Conclusions",
+      sort_order: 10,
+    }
+    const grammarLesson = {
+      ...lessonB,
+      id: "l5",
+      course_id: "c1",
+      slug: "grammar-basics",
+      title: "Grammar Basics",
+    }
     getCourseMock.mockResolvedValue({
       course: essentialsCourse,
-      lessons: [kickoffLesson, lockedLesson],
+      lessons: [kickoffLesson, anatomyFreeLesson, anatomyLockedLesson, anatomyLaterLesson, grammarLesson],
       curriculum: {
         modules: [
           {
@@ -665,7 +695,24 @@ describe("PrepCourseContentPage", () => {
                 title: "General",
                 sort_order: 1,
                 duration_minutes: null,
-                lessons: [lockedLesson],
+                lessons: [anatomyFreeLesson, anatomyLockedLesson, anatomyLaterLesson],
+              },
+            ],
+          },
+          {
+            id: "grammar",
+            course_id: "c1",
+            title: "Practical Grammar",
+            sort_order: 3,
+            duration_minutes: null,
+            sections: [
+              {
+                id: "s4",
+                module_id: "grammar",
+                title: "General",
+                sort_order: 1,
+                duration_minutes: null,
+                lessons: [grammarLesson],
               },
             ],
           },
@@ -691,11 +738,30 @@ describe("PrepCourseContentPage", () => {
     )
 
     const moduleSidebar = screen.getByRole("complementary", { name: "Course modules" })
-    expect(within(moduleSidebar).getByRole("button", { name: "The Anatomy of an Argument (locked)" })).toBeInTheDocument()
+    expect(
+      within(moduleSidebar).getByRole("button", { name: /The Anatomy of an Argument/ }),
+    ).toBeInTheDocument()
+    expect(within(moduleSidebar).getByRole("button", { name: "Practical Grammar (locked)" })).toBeInTheDocument()
 
-    await user.click(within(moduleSidebar).getByRole("button", { name: "The Anatomy of an Argument (locked)" }))
-    expect(screen.getByRole("dialog", { name: "Unlock the Full Course" })).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Unlock Course" })).toBeInTheDocument()
-    expect(screen.getByRole("heading", { name: "The Kickoff" })).toBeInTheDocument()
+    await user.click(within(moduleSidebar).getByRole("button", { name: /The Anatomy of an Argument/ }))
+    expect(await screen.findByRole("heading", { name: "The Anatomy of an Argument" })).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: /The "Support" System/i })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Main Conclusion Questions (locked)" })).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: "Building the Ladder: Sub-Conclusions (locked)" }),
+    ).toBeInTheDocument()
+
+    await user.click(screen.getByRole("button", { name: "Main Conclusion Questions (locked)" }))
+    expect(screen.getByRole("dialog", { name: "Keep Learning with Full Access" })).toBeInTheDocument()
+    expect(screen.getByText(/Your free access includes Foundations, Module 1/i)).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Back to Course" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "View Plans" })).toBeInTheDocument()
+
+    await user.click(screen.getByRole("button", { name: "Back to Course" }))
+    expect(screen.queryByRole("dialog", { name: "Keep Learning with Full Access" })).not.toBeInTheDocument()
+
+    await user.click(within(moduleSidebar).getByRole("button", { name: "Practical Grammar (locked)" }))
+    expect(screen.getByRole("dialog", { name: "Keep Learning with Full Access" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "View Plans" })).toBeInTheDocument()
   })
 })

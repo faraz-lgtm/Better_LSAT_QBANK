@@ -3,9 +3,9 @@ import { ChevronRight } from "lucide-react"
 import { DrillDifficultyStatus } from "@/features/student/components/drill-difficulty-status"
 import { SectionInitialBadge } from "@/features/student/drills/section-initial-badge"
 
-/** Same-size outline CTA so LR/RC labels stay one line and align. */
+/** Outline CTA + chevron; width follows label (Figma free-plan drills). */
 const OUTLINE_CTA_CLASS =
-  "inline-flex h-[40px] w-[176px] shrink-0 items-center justify-center gap-[8px] whitespace-nowrap rounded-[12px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-[16px] text-[14px] font-semibold leading-[1.5] tracking-[0.28px] text-[var(--primary)] shadow-[0px_1px_2px_rgba(13,13,18,0.06)] hover:bg-[var(--greyscale-25)] dark:bg-transparent dark:text-white dark:hover:bg-[var(--greyscale-25)]"
+  "inline-flex h-[40px] shrink-0 items-center justify-center gap-[8px] whitespace-nowrap rounded-[12px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-[16px] text-[14px] font-semibold leading-[1.5] tracking-[0.28px] text-[var(--primary)] shadow-[0px_1px_2px_rgba(13,13,18,0.06)] hover:bg-[var(--greyscale-25)] dark:bg-transparent dark:text-white dark:hover:bg-[var(--greyscale-25)]"
 
 type PracticeDrillTypeRowProps = {
   section: "LR" | "RC"
@@ -16,6 +16,8 @@ type PracticeDrillTypeRowProps = {
   onStart: () => void
   /** When the list already has an LR/RC heading, hide the per-row badge. */
   showSectionBadge?: boolean
+  /** Free-plan Figma uses muted (`primary-0`) difficulty chips. */
+  difficultySurface?: "white" | "muted"
 }
 
 function PracticeDrillTypeRow({
@@ -26,6 +28,7 @@ function PracticeDrillTypeRow({
   difficultyColor,
   onStart,
   showSectionBadge = true,
+  difficultySurface = "white",
 }: PracticeDrillTypeRowProps) {
   const startLabel = section === "LR" ? "Start LR Drill" : "Start RC Drill"
 
@@ -44,7 +47,7 @@ function PracticeDrillTypeRow({
             label={difficultyLabel}
             filledBars={difficultyFilledBars}
             color={difficultyColor}
-            surface="white"
+            surface={difficultySurface}
           />
           <button type="button" onClick={onStart} className={OUTLINE_CTA_CLASS}>
             {startLabel}

@@ -1044,7 +1044,7 @@ Deno.test('prep-course getLesson allows unpaid students to open The Kickoff', as
   })
 })
 
-Deno.test('prep-course getLesson blocks unpaid students from later modules', async () => {
+Deno.test('prep-course getLesson allows unpaid students to open Anatomy intro', async () => {
   await withStripeTestEnv(async () => {
     const { kickoffLesson, lockedLesson } = freeAccessLessons()
     const service = createPrepCourseService({
@@ -1089,7 +1089,7 @@ Deno.test('prep-course getLesson blocks unpaid students from later modules', asy
                 {
                   id: 'section-anatomy',
                   module_id: 'anatomy',
-                  title: 'General',
+                  title: 'Introduction',
                   sort_order: 1,
                   duration_minutes: null,
                   lessons: [lockedLesson],
@@ -1101,8 +1101,90 @@ Deno.test('prep-course getLesson blocks unpaid students from later modules', asy
       }),
       hasActiveSubscription: async () => false,
     })
+    const out = await service.getLesson('user-1', FREE_PREP_COURSE_SLUG, 'argument-basics')
+    assertEquals(out.lesson.slug, 'argument-basics')
+  })
+})
+
+Deno.test('prep-course getLesson blocks unpaid students from Main Conclusion onward in Anatomy', async () => {
+  await withStripeTestEnv(async () => {
+    const { kickoffLesson, lockedLesson } = freeAccessLessons()
+    const freeAnatomyLesson = {
+      ...lockedLesson,
+      id: 'lesson-anatomy-free',
+      slug: 'the-support-system',
+      title: 'The "Support" System',
+      sort_order: 4,
+    }
+    const laterLesson = {
+      ...lockedLesson,
+      id: 'lesson-later',
+      slug: 'full-drill-main-conclusion-questions',
+      title: 'Full Drill: Main Conclusion Questions',
+      sort_order: 9,
+    }
+    const service = createPrepCourseService({
+      repository: mockRepo({
+        getPublishedCourseBySlug: async () => ({
+          id: 'course-1',
+          slug: FREE_PREP_COURSE_SLUG,
+          title: 'LSAT Essentials Course',
+          description: null,
+          is_published: true,
+          created_at: '2026-01-01T00:00:00Z',
+          updated_at: '2026-01-01T00:00:00Z',
+        }),
+        getPublishedLessonBySlug: async (_courseId, slug) => {
+          if (slug === kickoffLesson.slug) return kickoffLesson
+          if (slug === freeAnatomyLesson.slug) return freeAnatomyLesson
+          if (slug === laterLesson.slug) return laterLesson
+          return null
+        },
+        listPublishedCurriculum: async () => ({
+          modules: [
+            {
+              id: 'kickoff',
+              course_id: 'course-1',
+              title: 'The Kickoff',
+              sort_order: 1,
+              duration_minutes: null,
+              sections: [
+                {
+                  id: 'section-kickoff',
+                  module_id: 'kickoff',
+                  title: 'General',
+                  sort_order: 1,
+                  duration_minutes: null,
+                  lessons: [kickoffLesson],
+                },
+              ],
+            },
+            {
+              id: 'anatomy',
+              course_id: 'course-1',
+              title: 'The Anatomy of an Argument',
+              sort_order: 2,
+              duration_minutes: null,
+              sections: [
+                {
+                  id: 'section-anatomy',
+                  module_id: 'anatomy',
+                  title: 'General',
+                  sort_order: 1,
+                  duration_minutes: null,
+                  lessons: [freeAnatomyLesson, laterLesson],
+                },
+              ],
+            },
+          ],
+        }),
+      }),
+      hasActiveSubscription: async () => false,
+    })
+    const freeOut = await service.getLesson('user-1', FREE_PREP_COURSE_SLUG, 'the-support-system')
+    assertEquals(freeOut.lesson.slug, 'the-support-system')
     await assertRejects(
-      () => service.getLesson('user-1', FREE_PREP_COURSE_SLUG, 'argument-basics'),
+      () => service.getLesson('user-1', FREE_PREP_COURSE_SLUG, 'full-drill-main-conclusion-questions'),
       EntitlementError,
       'Subscribe to access this prep course content',
     )

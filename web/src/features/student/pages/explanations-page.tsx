@@ -9,10 +9,13 @@ import {
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { useStudentEntitlementOptional } from "@/features/app-shell/student-entitlement-context"
+import { useGuestPricingModal } from "@/features/guest/pricing/guest-pricing-modal-provider"
 import { StudentOptionMenu } from "@/features/student/components/student-option-menu"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import { StudentMain } from "@/features/student/components/student-main"
 import { SectionInitialBadge } from "@/features/student/drills/section-initial-badge"
+import { shouldLimitFreeExplanationAccess } from "@/features/student/explanation-detail/explanation-free-access"
 import {
   cacheExplanationPrepTestList,
   getCachedExplanationPrepTestList,
@@ -49,6 +52,8 @@ import { createExplanationsApi } from "@/lib/api/explanations"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { formatSupabaseCallError } from "@/lib/supabase/format-call-error"
 import { cn } from "@/lib/utils"
+
+const EXPLANATION_FIGMA = "/figma/explanations" as const
 
 const S = {
   heading: "var(--color-student-heading)",
@@ -211,6 +216,66 @@ function StatusBadge({ status }: { status: ExplanationQuestionStatus }) {
   )
 }
 
+/** Figma `19978:22422` — PT leading lock chip (40×40). */
+function ExplanationPrepTestLockBadge() {
+  return (
+    <span
+      data-explanation-lock-badge
+      className="flex size-10 shrink-0 items-center justify-center rounded-[12px] border border-[var(--primary)] bg-[var(--primary-0)] p-px"
+      aria-hidden
+    >
+      <img
+        src={`${EXPLANATION_FIGMA}/lock.svg`}
+        alt=""
+        width={24}
+        height={24}
+        className="size-6 max-w-none shrink-0 object-contain"
+        draggable={false}
+      />
+    </span>
+  )
+}
+
+/** Figma Status / Locked — 36×36 lock pill used on PT / section / passage / question rows. */
+function ExplanationLockedStatusBadge() {
+  return (
+    <span
+      data-explanation-locked-status
+      className="inline-flex size-9 shrink-0 items-center justify-center rounded-[10px] bg-[var(--primary-0)]"
+      aria-label="Locked"
+    >
+      <img
+        src={`${EXPLANATION_FIGMA}/lock-sm.svg`}
+        alt=""
+        width={16}
+        height={16}
+        className="size-4 max-w-none shrink-0 object-contain"
+        draggable={false}
+      />
+    </span>
+  )
+}
+
+function ExplanationMoreMenuButton() {
+  return (
+    <button
+      type="button"
+      className="inline-flex size-6 shrink-0 items-center justify-center"
+      aria-label="More options"
+      onClick={(event) => event.stopPropagation()}
+    >
+      <img
+        src={`${EXPLANATION_FIGMA}/dots.svg`}
+        alt=""
+        width={20}
+        height={4}
+        className="h-1 w-5 max-w-none shrink-0 object-contain"
+        draggable={false}
+      />
+    </button>
+  )
+}
+
 const TREE_ROW_CLASS =
   "explanations-tree-row flex h-14 w-full flex-nowrap items-center justify-between gap-3 border-b pr-3 text-left sm:h-20 sm:gap-6 sm:pr-6"
 
@@ -355,78 +420,133 @@ function ExplanationTreeQuestionRow({
   indentClass,
   bookmarked,
   onToggleBookmark,
+  locked = false,
+  onLockedClick,
 }: {
   question: ExplanationQuestionNode
   indentClass: string
   bookmarked: boolean
   onToggleBookmark: () => void
+  locked?: boolean
+  onLockedClick?: () => void
 }) {
   const { scaleFactor } = useAccommodations()
   const detailHref = explanationQuestionDetailHref(question.id)
+  const actionIconClass =
+    "size-7 rounded-lg text-[var(--greyscale-500)] hover:text-[color:var(--color-student-heading)] sm:size-9 sm:rounded-xl"
+
   return (
     <div
       className={cn(QUESTION_ROW_CLASS, indentClass)}
       data-tree-level="question"
+      data-explanation-locked={locked ? "true" : undefined}
       style={{ borderColor: S.border }}
       title={questionRowHoverTitle(question.difficulty, scaleFactor)}
     >
       <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-2.5 overflow-hidden sm:gap-6">
         <QuestionIndexBadge>{question.number}</QuestionIndexBadge>
-        <Link
-          to={detailHref}
-          className="block min-w-0 truncate rounded-lg text-[11px] font-semibold leading-[1.5] tracking-[0.2px] text-[var(--primary)] outline-offset-2 hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--color-student-accent)] sm:shrink-0 sm:whitespace-nowrap sm:text-sm sm:tracking-[0.28px]"
-        >
-          {explanationListQuestionLabel(question)}
-        </Link>
-        <div className="shrink-0 px-1 sm:px-4">
-          <StatusBadge status={question.status} />
+        {locked ? (
+          <button
+            type="button"
+            onClick={onLockedClick}
+            className="block min-w-0 truncate rounded-lg text-left text-[11px] font-semibold leading-[1.5] tracking-[0.2px] text-[var(--primary)] outline-offset-2 hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--color-student-accent)] sm:shrink-0 sm:whitespace-nowrap sm:text-sm sm:tracking-[0.28px]"
+          >
+            {explanationListQuestionLabel(question)}
+          </button>
+        ) : (
+          <Link
+            to={detailHref}
+            className="block min-w-0 truncate rounded-lg text-[11px] font-semibold leading-[1.5] tracking-[0.2px] text-[var(--primary)] outline-offset-2 hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--color-student-accent)] sm:shrink-0 sm:whitespace-nowrap sm:text-sm sm:tracking-[0.28px]"
+          >
+            {explanationListQuestionLabel(question)}
+          </Link>
+        )}
+        <div className="flex h-[60px] shrink-0 items-center justify-center px-1 sm:px-4">
+          {locked ? <ExplanationLockedStatusBadge /> : <StatusBadge status={question.status} />}
         </div>
       </div>
 
       <div className="flex w-auto shrink-0 flex-nowrap items-center justify-end gap-2 sm:w-[412px] sm:gap-6">
         <DifficultyMeter level={question.difficulty} />
         <div className="flex shrink-0 items-center gap-1.5 sm:gap-6">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="size-7 rounded-lg text-[var(--greyscale-500)] hover:text-[color:var(--color-student-heading)] sm:size-9 sm:rounded-xl"
-            asChild
-          >
-            <Link to={`${detailHref}?tab=analytics`} aria-label="Open analytics tab">
-              <BarChart3 className="size-4 sm:size-6" />
-            </Link>
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="size-7 rounded-lg text-[var(--greyscale-500)] hover:text-[color:var(--color-student-heading)] sm:size-9 sm:rounded-xl"
-            asChild
-          >
-            <Link to={`${detailHref}?tab=explanation`} aria-label="Open video explanation">
-              <PlayCircle className="size-4 sm:size-6" />
-            </Link>
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className={
-              bookmarked
-                ? "size-7 rounded-lg text-[var(--primary)] hover:text-[var(--primary)] sm:size-9 sm:rounded-xl"
-                : "size-7 rounded-lg text-[var(--greyscale-500)] hover:text-[color:var(--color-student-heading)] sm:size-9 sm:rounded-xl"
-            }
-            aria-label={
-              bookmarked
-                ? `Remove bookmark from ${explanationListQuestionLabel(question)}`
-                : `Bookmark ${explanationListQuestionLabel(question)}`
-            }
-            aria-pressed={bookmarked}
-            onClick={onToggleBookmark}
-          >
-            <Bookmark className="size-4 sm:size-6" fill={bookmarked ? "currentColor" : "none"} />
-          </Button>
+          {locked ? (
+            <>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className={actionIconClass}
+                aria-label="Unlock analytics"
+                onClick={onLockedClick}
+              >
+                <BarChart3 className="size-4 sm:size-6" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className={actionIconClass}
+                aria-label="Unlock video explanation"
+                onClick={onLockedClick}
+              >
+                <PlayCircle className="size-4 sm:size-6" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className={actionIconClass}
+                aria-label="Unlock bookmark"
+                onClick={onLockedClick}
+              >
+                <Bookmark className="size-4 sm:size-6" />
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className={actionIconClass}
+                asChild
+              >
+                <Link to={`${detailHref}?tab=analytics`} aria-label="Open analytics tab">
+                  <BarChart3 className="size-4 sm:size-6" />
+                </Link>
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className={actionIconClass}
+                asChild
+              >
+                <Link to={`${detailHref}?tab=explanation`} aria-label="Open video explanation">
+                  <PlayCircle className="size-4 sm:size-6" />
+                </Link>
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className={
+                  bookmarked
+                    ? "size-7 rounded-lg text-[var(--primary)] hover:text-[var(--primary)] sm:size-9 sm:rounded-xl"
+                    : actionIconClass
+                }
+                aria-label={
+                  bookmarked
+                    ? `Remove bookmark from ${explanationListQuestionLabel(question)}`
+                    : `Bookmark ${explanationListQuestionLabel(question)}`
+                }
+                aria-pressed={bookmarked}
+                onClick={onToggleBookmark}
+              >
+                <Bookmark className="size-4 sm:size-6" fill={bookmarked ? "currentColor" : "none"} />
+              </Button>
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -499,6 +619,16 @@ function mapListItemToRow(r: ExplanationPrepTestListItem): PrepTestRow {
 type ExplanationsListMode = "newest" | "oldest" | "bookmarked"
 
 function ExplanationsPage() {
+  const entitlement = useStudentEntitlementOptional()
+  const { openLockedContentModal } = useGuestPricingModal()
+  const limitFreeAccess = shouldLimitFreeExplanationAccess({
+    accessState: entitlement?.entitlement?.accessState,
+    hasActiveCore: entitlement?.entitlement?.hasActiveCore,
+  })
+  const handleLockedContent = useCallback(() => {
+    openLockedContentModal("explanations")
+  }, [openLockedContentModal])
+
   const [listMode, setListMode] = useState<ExplanationsListMode>("newest")
   const [sectionFilter] = useState<"all" | "lr" | "rc">("all")
   const [totalPrepTests, setTotalPrepTests] = useState(0)
@@ -1043,26 +1173,36 @@ function ExplanationsPage() {
             !useMock && !ptTree && (rowDetailsLoading || hydratingRowIds.has(ptId))
 
           return (
-            <div key={ptId} className="explanations-tree-pt" data-tree-level="prep-test">
+            <div
+              key={ptId}
+              className="explanations-tree-pt"
+              data-tree-level="prep-test"
+              data-explanation-locked={limitFreeAccess ? "true" : undefined}
+            >
               <button
                 type="button"
                 className={cn(PREP_TEST_ROW_CLASS, EXPLANATION_TREE_PL_CLASS.prepTest)}
                 style={{ borderColor: S.border }}
                 onClick={() => togglePrepTest(ptId)}
+                aria-expanded={ptIsOpen}
               >
                 <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-3 overflow-hidden sm:gap-6">
-                  <span
-                    className={`${TREE_BADGE_CLASS} size-12 flex-col border p-px sm:size-16`}
-                    style={{
-                      borderRadius: PREP_TEST_BADGE_SIZE.borderRadius,
-                      backgroundColor: ptBadgeColors.backgroundColor,
-                      borderColor: ptBadgeColors.borderColor,
-                      color: ptBadgeColors.color,
-                    }}
-                  >
-                    <span className="w-[28px] text-center text-[10px] font-semibold leading-[1.35] sm:w-[35px] sm:text-[12px]">PT</span>
-                    <span className="text-[18px] font-bold leading-[1.3] tabular-nums sm:text-[24px]">{ptNum}</span>
-                  </span>
+                  {limitFreeAccess ? (
+                    <ExplanationPrepTestLockBadge />
+                  ) : (
+                    <span
+                      className={`${TREE_BADGE_CLASS} size-12 flex-col border p-px sm:size-16`}
+                      style={{
+                        borderRadius: PREP_TEST_BADGE_SIZE.borderRadius,
+                        backgroundColor: ptBadgeColors.backgroundColor,
+                        borderColor: ptBadgeColors.borderColor,
+                        color: ptBadgeColors.color,
+                      }}
+                    >
+                      <span className="w-[28px] text-center text-[10px] font-semibold leading-[1.35] sm:w-[35px] sm:text-[12px]">PT</span>
+                      <span className="text-[18px] font-bold leading-[1.3] tabular-nums sm:text-[24px]">{ptNum}</span>
+                    </span>
+                  )}
                   <div className="flex min-w-0 flex-col items-start justify-center gap-1 overflow-hidden sm:gap-2">
                     <span className="text-[16px] font-bold leading-[1.35] whitespace-nowrap text-[var(--color-student-heading)] sm:text-[20px]">
                       PT - {ptNum}
@@ -1070,7 +1210,12 @@ function ExplanationsPage() {
                     {subtitleLoading ? (
                       <ExplanationsSkeletonBlock className="h-3.5 w-36" />
                     ) : (
-                      <span className="truncate text-xs font-medium leading-[1.5] tracking-[0.24px] text-[var(--greyscale-500)] sm:text-sm sm:tracking-[0.28px]">
+                      <span
+                        className={cn(
+                          "truncate text-xs leading-[1.5] tracking-[0.24px] text-[var(--greyscale-500)] sm:text-sm sm:tracking-[0.28px]",
+                          limitFreeAccess ? "font-semibold" : "font-medium",
+                        )}
+                      >
                         {statusTag}
                       </span>
                     )}
@@ -1082,6 +1227,7 @@ function ExplanationsPage() {
                     <ChevronRight className="ml-auto size-5 shrink-0 text-[var(--color-student-heading)] sm:size-6" aria-hidden />
                   )}
                 </div>
+                {limitFreeAccess ? <ExplanationMoreMenuButton /> : null}
               </button>
 
               {ptIsOpen ? (
@@ -1106,6 +1252,7 @@ function ExplanationsPage() {
                           className={cn(TREE_ROW_CLASS, EXPLANATION_TREE_PL_CLASS.section)}
                           style={{ backgroundColor: secHeaderBg, borderColor: S.border }}
                           onClick={() => toggleSection(ptId, sec)}
+                          aria-expanded={sOpen}
                         >
                           <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-3 overflow-hidden sm:gap-6">
                             <SectionKindBadge kind={sec.kind} />
@@ -1119,6 +1266,7 @@ function ExplanationsPage() {
                                 </span>
                               ) : null}
                             </div>
+                            {limitFreeAccess ? <ExplanationLockedStatusBadge /> : null}
                           </div>
                           {sOpen ? (
                             <ChevronDown className="size-5 shrink-0 text-[var(--greyscale-500)] sm:size-6" />
@@ -1137,6 +1285,8 @@ function ExplanationsPage() {
                                   indentClass={EXPLANATION_TREE_PL_CLASS.passage}
                                   bookmarked={bookmarkedQuestionIds.has(q.id)}
                                   onToggleBookmark={() => void toggleQuestionBookmark(ptId, q.id)}
+                                  locked={limitFreeAccess}
+                                  onLockedClick={handleLockedContent}
                                 />
                               ))}
                             </div>
@@ -1171,6 +1321,7 @@ function ExplanationsPage() {
                                       <span className="inline-flex h-6 shrink-0 items-center rounded-full bg-[var(--greyscale-0)] px-2.5 text-[11px] font-medium leading-[1.5] tracking-[0.22px] text-[var(--greyscale-500)] sm:h-8 sm:px-4 sm:text-sm sm:tracking-[0.28px]">
                                         {questionCountLabel}
                                       </span>
+                                      {limitFreeAccess ? <ExplanationLockedStatusBadge /> : null}
                                       {pOpen ? (
                                         <ChevronDown className="size-5 shrink-0 text-[var(--greyscale-500)] sm:size-6" aria-hidden />
                                       ) : (
@@ -1188,6 +1339,8 @@ function ExplanationsPage() {
                                           indentClass={EXPLANATION_TREE_PL_CLASS.question}
                                           bookmarked={bookmarkedQuestionIds.has(q.id)}
                                           onToggleBookmark={() => void toggleQuestionBookmark(ptId, q.id)}
+                                          locked={limitFreeAccess}
+                                          onLockedClick={handleLockedContent}
                                         />
                                       ))}
                                     </div>

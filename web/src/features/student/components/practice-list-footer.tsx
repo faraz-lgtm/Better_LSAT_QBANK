@@ -5,6 +5,8 @@ type PracticeListFooterProps = {
   onShowLess?: () => void
   showMoreLabel?: string
   showLessLabel?: string
+  /** Optional label color override (e.g. free-plan Figma primary-700). */
+  labelClassName?: string
 }
 
 function PracticeListFooter({
@@ -14,6 +16,7 @@ function PracticeListFooter({
   onShowLess,
   showMoreLabel = "See more",
   showLessLabel = "See less",
+  labelClassName = "text-[var(--primary)]",
 }: PracticeListFooterProps) {
   const canCollapse = Boolean(expanded && onShowLess)
   if (!hasMore && !canCollapse) return null
@@ -25,7 +28,7 @@ function PracticeListFooter({
     <div className="flex h-[32px] items-center justify-center">
       <button
         type="button"
-        className="text-[16px] font-semibold leading-[1.35] text-[var(--primary)] hover:underline"
+        className={`text-[16px] font-semibold leading-[1.35] hover:underline ${labelClassName}`}
         onClick={onClick}
       >
         {label}

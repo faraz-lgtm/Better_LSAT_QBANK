@@ -5,9 +5,9 @@ import {
 } from "@/features/student/diagnostic/diagnostic-results-routes"
 import { isDiagnosticExplanationsPath } from "@/features/student/diagnostic/diagnostic-explanations-routes"
 
-export type StudentNavSectionKey = "academy" | "prep" | "insights" | "community"
+export type StudentNavSectionKey = "academy" | "prep" | "insights" | "tutoring" | "community"
 
-/** Per-item icons from Figma sidebar node `19640:23125`. */
+/** Per-item icons from Figma sidebar node `19640:23125` (+ tutoring `21593:37079`). */
 export type StudentNavItemIconKey =
   | "get-started"
   | "dashboard"
@@ -21,6 +21,8 @@ export type StudentNavItemIconKey =
   | "insights-drills"
   | "insights-sections"
   | "insights-preptest"
+  | "tutoring-sessions"
+  | "live-classes"
   | "feedback"
   | "roadmap"
 
@@ -37,22 +39,29 @@ export const STUDENT_NAV_ITEM_ICON_SRC: Record<StudentNavItemIconKey, string> = 
   "insights-drills": "/nav/insights-drills.svg",
   "insights-sections": "/nav/insights-sections.svg",
   "insights-preptest": "/nav/insights-preptest.svg",
+  "tutoring-sessions": "/nav/tutoring-sessions.svg",
+  "live-classes": "/nav/live-classes.svg",
   feedback: "/nav/feedback.svg",
   roadmap: "/nav/roadmap.svg",
 }
 
 export const STUDENT_NAV_LOGOUT_ICON_SRC = "/nav/logout.svg"
 
+export type StudentNavItemStatus = "available" | "coming_soon"
+
 export type StudentNavItem = {
   label: string
   href: string
   icon: StudentNavItemIconKey
+  status?: StudentNavItemStatus
 }
 
 export type StudentNavSection = {
   key: StudentNavSectionKey
   label: string
   items: StudentNavItem[]
+  /** Figma tutoring section badge */
+  badge?: string
 }
 
 export const STUDENT_MAIN_NAV_SECTION = {
@@ -74,6 +83,9 @@ export const STUDENT_DASHBOARD_ICON: StudentNavItemIconKey = "dashboard"
 export const STUDENT_DIAGNOSTIC_HREF = "/intent"
 
 export const STUDENT_DIAGNOSTIC_ICON: StudentNavItemIconKey = "diagnostic"
+
+export const STUDENT_TUTORING_SESSIONS_HREF = "/app/tutoring/sessions"
+export const STUDENT_LIVE_CLASSES_HREF = "/app/tutoring/live-classes"
 
 export const STUDENT_NAV_SECTIONS: StudentNavSection[] = [
   {
@@ -104,6 +116,24 @@ export const STUDENT_NAV_SECTIONS: StudentNavSection[] = [
     ],
   },
   {
+    key: "tutoring",
+    label: "TUTORING",
+    badge: "NEW",
+    items: [
+      {
+        label: "Book 1 on 1 Sessions",
+        href: STUDENT_TUTORING_SESSIONS_HREF,
+        icon: "tutoring-sessions",
+      },
+      {
+        label: "Live Classes",
+        href: STUDENT_LIVE_CLASSES_HREF,
+        icon: "live-classes",
+        status: "coming_soon",
+      },
+    ],
+  },
+  {
     key: "community",
     label: "COMMUNITY",
     items: [
@@ -125,6 +155,7 @@ export function getActiveSectionKey(pathname: string): StudentNavSectionKey | nu
   }
   if (pathname.startsWith("/app/practice") || isPrepTestStudentPath(pathname)) return "prep"
   if (pathname.startsWith("/app/analytics")) return "insights"
+  if (pathname.startsWith("/app/tutoring")) return "tutoring"
   if (pathname.startsWith("/app/feedback") || pathname.startsWith("/app/roadmap")) {
     return "community"
   }

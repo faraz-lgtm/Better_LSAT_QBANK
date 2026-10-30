@@ -1,5 +1,4 @@
 import { useEffect } from "react"
-import { Lock, X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -14,7 +13,9 @@ type GuestLockedContentModalProps = {
   variant?: LockedContentVariant
 }
 
-/** Figma `19939:8387` backdrop + compact locked-content upgrade prompt. */
+const LOCK_ICON_SRC = "/figma/guest/icon-lock-upgrade.svg"
+
+/** Figma `21587:34268` / `21587:32455` / `21587:36586` / `21587:36609` locked-content upgrade prompt. */
 function GuestLockedContentModal({
   open,
   onOpenChange,
@@ -22,6 +23,7 @@ function GuestLockedContentModal({
   variant = "default",
 }: GuestLockedContentModalProps) {
   const copy = getLockedContentCopy(variant)
+  const dismissLabel = copy.dismissLabel ?? "Back"
 
   useEffect(() => {
     if (!open) return
@@ -45,25 +47,22 @@ function GuestLockedContentModal({
       onClick={() => onOpenChange(false)}
     >
       <div
-        className="relative flex w-full max-w-[484px] flex-col items-center gap-6 rounded-[16px] border border-[#dfe1e7] bg-[#f2f7ff] p-6 text-center shadow-[0px_5px_10px_-2px_rgba(13,13,18,0.04),0px_4px_8px_-1px_rgba(13,13,18,0.02)]"
+        className="relative flex w-full max-w-[484px] flex-col items-center gap-6 rounded-[16px] border border-[var(--greyscale-100,#dfe1e7)] bg-[var(--primary-25,#edf3ff)] p-6 text-center shadow-[0px_5px_10px_-2px_rgba(13,13,18,0.04),0px_4px_8px_-1px_rgba(13,13,18,0.02)]"
         onClick={(event) => event.stopPropagation()}
       >
-        <button
-          type="button"
-          className="absolute right-2 top-2 inline-flex size-7 items-center justify-center rounded-full text-[#666d80] transition-colors hover:bg-white hover:text-[#0d47a1]"
-          aria-label="Close upgrade prompt"
-          onClick={() => onOpenChange(false)}
-        >
-          <X className="size-4" strokeWidth={2.2} />
-        </button>
-
-        <span className="flex size-9 items-center justify-center text-[#0d47a1]" aria-hidden>
-          <Lock className="size-8" strokeWidth={2.4} />
+        <span className="relative inline-flex size-9 shrink-0 overflow-hidden" aria-hidden>
+          <img
+            src={LOCK_ICON_SRC}
+            alt=""
+            className="size-full max-w-none object-contain"
+            width={36}
+            height={36}
+          />
         </span>
 
         <h2
           id="guest-locked-content-modal-title"
-          className="w-full max-w-[436px] text-center text-[24px] font-bold leading-[1.3] text-[#062357]"
+          className="w-full max-w-[436px] text-center text-[24px] font-bold leading-[1.3] text-[var(--color-student-heading,#041a44)]"
         >
           {copy.title}
         </h2>
@@ -72,7 +71,7 @@ function GuestLockedContentModal({
             {copy.paragraphs.map((paragraph) => (
               <p
                 key={paragraph}
-                className="text-center text-sm font-medium leading-[1.5] tracking-[0.28px] text-[#062357]"
+                className="text-center text-sm font-medium leading-[1.5] tracking-[0.28px] text-[var(--color-student-heading,#041a44)]"
               >
                 {paragraph}
               </p>
@@ -83,10 +82,10 @@ function GuestLockedContentModal({
             <Button
               type="button"
               variant="outline"
-              className="h-10 min-w-[68px] rounded-[14px] border-[#dfe1e7] bg-white px-4 py-2 text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[#0d47a1] shadow-[0px_1px_2px_rgba(13,13,18,0.06)] hover:bg-[#edf3ff]"
+              className="h-10 min-w-[68px] rounded-[14px] border-[var(--greyscale-100,#dfe1e7)] bg-white px-4 py-2 text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[#0d47a1] shadow-[0px_1px_2px_rgba(13,13,18,0.06)] hover:bg-[#edf3ff]"
               onClick={() => onOpenChange(false)}
             >
-              Back
+              {dismissLabel}
             </Button>
             <Button
               type="button"

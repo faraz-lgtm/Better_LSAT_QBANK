@@ -2,14 +2,18 @@ import { useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { ExternalLink } from "lucide-react"
 
+import { useStudentEntitlementOptional } from "@/features/app-shell/student-entitlement-context"
+import { useGuestPricingModal } from "@/features/guest/pricing/guest-pricing-modal-provider"
 import { drillFilterPillClass } from "@/features/student/components/drill-filter-pill"
 import {
   PracticeContinueDrillsSection,
   type ContinueSectionFilter,
 } from "@/features/student/components/practice-continue-drills-section"
+import { PracticeDrillsFreePreview } from "@/features/student/components/practice-drills-free-preview"
 import { PracticeLrRcStarterCards } from "@/features/student/components/practice-lr-rc-starter-cards"
 import { PracticeTagDrillsSections, type TagDrill } from "@/features/student/components/practice-tag-drills-sections"
 import { StudentMain } from "@/features/student/components/student-main"
+import { shouldLimitFreeDrillAccess } from "@/features/student/drills/drill-free-access"
 import {
   mapSessionToContinueDrill,
   type ContinueDrill,
@@ -52,7 +56,14 @@ function difficultyLabelFromContinue(level: ContinueDrill["difficulty"]): string
 
 function PracticeDrillsPage() {
   const navigate = useNavigate()
+  const entitlement = useStudentEntitlementOptional()
+  const { openLockedContentModal } = useGuestPricingModal()
   const analyticsApi = useMemo(() => createAnalyticsApi(getSupabaseBrowserClient()), [])
+
+  const limitFreeAccess = shouldLimitFreeDrillAccess({
+    accessState: entitlement?.entitlement?.accessState,
+    hasActiveCore: entitlement?.entitlement?.hasActiveCore,
+  })
 
   const [sectionFilter, setSectionFilter] = useState<SectionFilter>("all")
   const [continueDrills, setContinueDrills] = useState<ContinueDrill[]>([])
@@ -61,9 +72,13 @@ function PracticeDrillsPage() {
   const [rcTagDrills, setRcTagDrills] = useState<TagDrill[]>([])
   const [lrContinueExpanded, setLrContinueExpanded] = useState(false)
   const [rcContinueExpanded, setRcContinueExpanded] = useState(false)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(!limitFreeAccess)
 
   useEffect(() => {
+    if (limitFreeAccess) {
+      setLoading(false)
+      return
+    }
     let cancelled = false
     void (async () => {
       setLoading(true)
@@ -96,7 +111,7 @@ function PracticeDrillsPage() {
     return () => {
       cancelled = true
     }
-  }, [analyticsApi])
+  }, [analyticsApi, limitFreeAccess])
 
   const filteredContinue = continueDrills.filter((drill) => {
     if (sectionFilter === "all") return true
@@ -112,84 +127,94 @@ function PracticeDrillsPage() {
   const starterVisible =
     sectionFilter === "all" ? (["lr", "rc"] as const) : sectionFilter === "lr" ? (["lr"] as const) : (["rc"] as const)
 
+  function handleLockedAction() {
+    openLockedContentModal("drills")
+  }
+
   return (
     <StudentMain className="drills-page bg-[var(--primary-0)]" contentClassName="flex flex-col gap-[25px] bg-[var(--primary-0)] pb-[48px]">
-      <div className="flex flex-wrap items-center justify-between gap-[12px]">
-        <div className="flex flex-wrap items-center gap-[8px]">
-          <button
-            type="button"
-            onClick={() => setSectionFilter("all")}
-            className={drillFilterPillClass(sectionFilter === "all")}
-          >
-            All
-          </button>
-          <button
-            type="button"
-            onClick={() => setSectionFilter("lr")}
-            className={drillFilterPillClass(sectionFilter === "lr")}
-          >
-            Logical Reasoning
-          </button>
-          <button
-            type="button"
-            onClick={() => setSectionFilter("rc")}
-            className={drillFilterPillClass(sectionFilter === "rc")}
-          >
-            Reading Comprehension
-          </button>
-        </div>
-        <button
-          type="button"
-          className="inline-flex h-[32px] items-center gap-[8px] pr-[16px] text-[12px] font-semibold leading-[1.5] tracking-[0.24px] text-[var(--primary)] hover:underline"
-          onClick={() => navigate("/app/analytics/drills")}
-        >
-          Drills Insight
-          <ExternalLink className="size-[16px]" aria-hidden />
-        </button>
-      </div>
+      {limitFreeAccess ? (
+        <PracticeDrillsFreePreview onLockedAction={handleLockedAction} />
+      ) : (
+        <>
+          <div className="flex flex-wrap items-center justify-between gap-[12px]">
+            <div className="flex flex-wrap items-center gap-[8px]">
+              <button
+                type="button"
+                onClick={() => setSectionFilter("all")}
+                className={drillFilterPillClass(sectionFilter === "all")}
+              >
+                All
+              </button>
+              <button
+                type="button"
+                onClick={() => setSectionFilter("lr")}
+                className={drillFilterPillClass(sectionFilter === "lr")}
+              >
+                Logical Reasoning
+              </button>
+              <button
+                type="button"
+                onClick={() => setSectionFilter("rc")}
+                className={drillFilterPillClass(sectionFilter === "rc")}
+              >
+                Reading Comprehension
+              </button>
+            </div>
+            <button
+              type="button"
+              className="inline-flex h-[32px] items-center gap-[8px] pr-[16px] text-[12px] font-semibold leading-[1.5] tracking-[0.24px] text-[var(--primary)] hover:underline"
+              onClick={() => navigate("/app/analytics/drills")}
+            >
+              Drills Insight
+              <ExternalLink className="size-[16px]" aria-hidden />
+            </button>
+          </div>
 
-      <section className="flex flex-col gap-[24px] rounded-[20px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-[24px]">
-        <h2 className="m-0 text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-[var(--color-student-heading)]">
-          Start A New Drill
-        </h2>
-        <PracticeLrRcStarterCards
-          layout="stacked"
-          visibleSections={[...starterVisible]}
-          lrButtonLabel="Start LR Drill"
-          rcButtonLabel="Start RC Drill"
-          lrSubtitle="Master argument analysis and critical thinking skills"
-          rcSubtitle="Improve passage analysis and comprehension strategies"
-          onStartLr={() => navigate("/app/practice/drills/lr/new")}
-          onStartRc={() => navigate("/app/practice/drills/rc/new")}
-        />
-      </section>
+          <section className="flex flex-col gap-[24px] rounded-[20px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-[24px]">
+            <h2 className="m-0 text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-[var(--color-student-heading)]">
+              Start A New Drill
+            </h2>
+            <PracticeLrRcStarterCards
+              layout="stacked"
+              visibleSections={[...starterVisible]}
+              lrButtonLabel="Start LR Drill"
+              rcButtonLabel="Start RC Drill"
+              lrSubtitle="Master argument analysis and critical thinking skills"
+              rcSubtitle="Improve passage analysis and comprehension strategies"
+              onStartLr={() => navigate("/app/practice/drills/lr/new")}
+              onStartRc={() => navigate("/app/practice/drills/rc/new")}
+            />
+          </section>
 
-      <PracticeContinueDrillsSection
-        drills={filteredContinue}
-        filter={continueFilter}
-        onFilterChange={(next) => {
-          setContinueFilter(next)
-          setLrContinueExpanded(false)
-          setRcContinueExpanded(false)
-        }}
-        lrExpanded={lrContinueExpanded}
-        rcExpanded={rcContinueExpanded}
-        onExpandLr={() => setLrContinueExpanded(true)}
-        onCollapseLr={() => setLrContinueExpanded(false)}
-        onExpandRc={() => setRcContinueExpanded(true)}
-        onCollapseRc={() => setRcContinueExpanded(false)}
-        onContinue={(path) => navigate(path)}
-        loading={loading}
-        difficultyLabelFromContinue={difficultyLabelFromContinue}
-      />
+          <PracticeContinueDrillsSection
+            drills={filteredContinue}
+            filter={continueFilter}
+            onFilterChange={(next) => {
+              setContinueFilter(next)
+              setLrContinueExpanded(false)
+              setRcContinueExpanded(false)
+            }}
+            lrExpanded={lrContinueExpanded}
+            rcExpanded={rcContinueExpanded}
+            onExpandLr={() => setLrContinueExpanded(true)}
+            onCollapseLr={() => setLrContinueExpanded(false)}
+            onExpandRc={() => setRcContinueExpanded(true)}
+            onCollapseRc={() => setRcContinueExpanded(false)}
+            onContinue={(path) => navigate(path)}
+            loading={loading}
+            difficultyLabelFromContinue={difficultyLabelFromContinue}
+          />
 
-      <PracticeTagDrillsSections
-        lr={lrTagDrills}
-        rc={rcTagDrills}
-        visibleSections={[...starterVisible]}
-        onStart={(configPath) => navigate(configPath)}
-        loading={loading}
-      />
+          <PracticeTagDrillsSections
+            lr={lrTagDrills}
+            rc={rcTagDrills}
+            visibleSections={[...starterVisible]}
+            onStart={(configPath) => navigate(configPath)}
+            loading={loading}
+          />
+        </>
+      )}
     </StudentMain>
   )
 }

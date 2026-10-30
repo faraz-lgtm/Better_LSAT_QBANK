@@ -9,7 +9,9 @@ import { PrepCourseModulePanel } from "@/features/prep-course/components/prep-co
 import { PrepCourseModuleSidebar } from "@/features/prep-course/components/prep-course-module-sidebar"
 import { moduleMatchesBookmarkFilter } from "@/features/prep-course/lib/prep-course-bookmarks"
 import {
+  collectLockedLessonSlugsForFreePlan,
   isPrepCourseModuleLockedForFreePlan,
+  isPrepCourseSectionLockedForFreePlan,
   shouldLimitFreePrepCourseAccess,
 } from "@/features/prep-course/lib/prep-course-free-access"
 import {
@@ -199,7 +201,21 @@ function PrepCourseContentPage() {
 
         const defaultModule = normalized.modules.find((module) => module.id === defaultModuleId)
         setExpandedSectionIds(
-          defaultModule ? new Set(defaultModule.sections.map((section) => section.id)) : new Set(),
+          defaultModule
+            ? new Set(
+                defaultModule.sections
+                  .filter(
+                    (section) =>
+                      !isPrepCourseSectionLockedForFreePlan(
+                        courseSlug,
+                        defaultModule,
+                        section,
+                        limitAccess,
+                      ),
+                  )
+                  .map((section) => section.id),
+              )
+            : new Set(),
         )
 
         if (defaultModuleId && !(data.hydratedModuleIds ?? []).includes(defaultModuleId)) {
@@ -245,6 +261,25 @@ function PrepCourseContentPage() {
         .map((module) => module.id),
     )
   }, [courseSlug, curriculum.modules, limitFreeAccess])
+
+  const lockedSectionIds = useMemo(() => {
+    const ids = new Set<string>()
+    if (!limitFreeAccess) return ids
+    for (const module of curriculum.modules) {
+      if (lockedModuleIds.has(module.id)) continue
+      for (const section of module.sections) {
+        if (isPrepCourseSectionLockedForFreePlan(courseSlug, module, section, true)) {
+          ids.add(section.id)
+        }
+      }
+    }
+    return ids
+  }, [courseSlug, curriculum.modules, limitFreeAccess, lockedModuleIds])
+
+  const lockedLessonSlugs = useMemo(
+    () => collectLockedLessonSlugsForFreePlan(curriculum, courseSlug, limitFreeAccess),
+    [courseSlug, curriculum, limitFreeAccess],
+  )
 
   const selectedModule = useMemo(
     () => curriculum.modules.find((mod) => mod.id === selectedModuleId) ?? null,
@@ -301,7 +336,10 @@ function PrepCourseContentPage() {
     setSelectedModuleId(moduleId)
     setExpandedSectionIds((prev) => {
       const next = new Set(prev)
-      for (const section of mod.sections) next.add(section.id)
+      for (const section of mod.sections) {
+        if (lockedSectionIds.has(section.id)) continue
+        next.add(section.id)
+      }
       return next
     })
     void ensureModuleHydrated(moduleId)
@@ -315,6 +353,7 @@ function PrepCourseContentPage() {
       let changed = false
       const next = new Set(prev)
       for (const section of fresh.sections) {
+        if (lockedSectionIds.has(section.id)) continue
         if (!next.has(section.id)) {
           next.add(section.id)
           changed = true
@@ -322,7 +361,7 @@ function PrepCourseContentPage() {
       }
       return changed ? next : prev
     })
-  }, [curriculum.modules, hydratedModuleIds, selectedModuleId])
+  }, [curriculum.modules, hydratedModuleIds, lockedSectionIds, selectedModuleId])
 
   function handleLockedContentClick() {
     openLockedContentModal("courses")
@@ -343,14 +382,20 @@ function PrepCourseContentPage() {
 
   function handleExpandModuleSections() {
     if (!selectedModule) return
-    const moduleSectionIds = selectedModule.sections.map((section) => section.id)
-    const allExpanded = moduleSectionIds.every((id) => expandedSectionIds.has(id))
+    const expandableSectionIds = selectedModule.sections
+      .filter((section) => !lockedSectionIds.has(section.id))
+      .map((section) => section.id)
+    if (expandableSectionIds.length === 0) {
+      openLockedContentModal("courses")
+      return
+    }
+    const allExpanded = expandableSectionIds.every((id) => expandedSectionIds.has(id))
     setExpandedSectionIds((prev) => {
       const next = new Set(prev)
       if (allExpanded) {
-        for (const id of moduleSectionIds) next.delete(id)
+        for (const id of expandableSectionIds) next.delete(id)
       } else {
-        for (const id of moduleSectionIds) next.add(id)
+        for (const id of expandableSectionIds) next.add(id)
       }
       return next
     })
@@ -425,6 +470,8 @@ function PrepCourseContentPage() {
                 onToggleModuleBookmark={(next) => handleToggleModuleBookmark(selectedModule.id, next)}
                 onToggleShowBookmarksOnly={setShowBookmarksOnly}
                 moduleLocked={lockedModuleIds.has(selectedModule.id)}
+                lockedSectionIds={lockedSectionIds}
+                lockedLessonSlugs={lockedLessonSlugs}
                 onLockedLessonClick={handleLockedContentClick}
               />
             ) : selectedModule ? (

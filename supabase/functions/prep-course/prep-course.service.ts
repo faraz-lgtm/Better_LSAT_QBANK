@@ -1,5 +1,10 @@
 import { isPrepCourseDrillLesson, isPrepLessonType, type PrepLessonType } from '../_shared/prep-lesson-type.ts'
-import { canAccessPrepCourseModule, findCurriculumModuleForLessonSlug } from '../_shared/prep-course-free-access.ts'
+import {
+  canAccessPrepCourseModule,
+  canAccessPrepCourseLesson,
+  resolveAnatomyFirstLockedSortOrder,
+  findCurriculumLessonContext,
+} from '../_shared/prep-course-free-access.ts'
 import { parseStripeEnv } from '../_shared/stripe-env.ts'
 import type { PrepCourseRepository, PrepCourseBookmarks, PrepLessonActiveDrillAttempt, PrepLessonDrillBlindReviewAttempt } from './prep-course.repository.ts'
 
@@ -155,11 +160,22 @@ export function createPrepCourseService(deps: {
     const hasActiveCore = await resolveHasActiveCore(userId)
     if (hasActiveCore) return
     const curriculum = await deps.repository.listPublishedCurriculum(course.id)
-    const module = findCurriculumModuleForLessonSlug(curriculum, lessonSlug)
-    if (!module) {
+    const ctx = findCurriculumLessonContext(curriculum, lessonSlug)
+    if (!ctx) {
       throw new EntitlementError('Subscribe to access this prep course content', 'PAYMENT_REQUIRED')
     }
-    await requirePaidOrFreeModuleAccess(userId, course.slug, module)
+    if (canAccessPrepCourseLesson({
+      hasActiveCore: false,
+      courseSlug: course.slug,
+      moduleTitle: ctx.module.title,
+      moduleSortOrder: ctx.module.sort_order,
+      sectionSortOrder: ctx.section.sort_order,
+      lessonSlug: ctx.lesson.slug,
+      lessonTitle: ctx.lesson.title ?? undefined,
+      lessonSortOrder: ctx.lesson.sort_order ?? undefined,
+      anatomyFirstLockedSortOrder: resolveAnatomyFirstLockedSortOrder(ctx.module),
+    })) return
+    throw new EntitlementError('Subscribe to access this prep course content', 'PAYMENT_REQUIRED')
   }
 
   async function requireAdmin(userId: string): Promise<void> {

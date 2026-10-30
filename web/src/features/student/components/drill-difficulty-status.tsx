@@ -51,7 +51,7 @@ function DrillDifficultyStatus({
 
   return (
     <div
-      className={`flex h-[32px] shrink-0 items-center gap-[10px] rounded-[10px] px-[10px] ${surfaceClass}`}
+      className={`flex h-[40px] shrink-0 items-center gap-[10px] rounded-[10px] px-[10px] ${surfaceClass}`}
       data-tour-target={tourTarget}
     >
       <DifficultyBars filledBars={filledBars} color={color} />

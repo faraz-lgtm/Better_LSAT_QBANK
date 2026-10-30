@@ -14,6 +14,11 @@ type PracticeLrRcStarterCardsProps = {
    * `stacked` — Figma drills "Start A New Drill" nested card (title above, CTA bottom-right).
    */
   layout?: "inline" | "stacked"
+  /**
+   * Nested stacked-card surface. `plain` matches free-plan Figma (`21587:35080`) white cards.
+   * Default `muted` keeps the paid drills page look.
+   */
+  cardTone?: "muted" | "plain"
 }
 
 function PracticeLrRcStarterCards({
@@ -25,16 +30,21 @@ function PracticeLrRcStarterCards({
   onStartRc,
   visibleSections = ["lr", "rc"],
   layout = "inline",
+  cardTone = "muted",
 }: PracticeLrRcStarterCardsProps) {
   const showLr = visibleSections.includes("lr")
   const showRc = visibleSections.includes("rc")
+  const stackedCardBg =
+    cardTone === "plain"
+      ? "bg-[var(--greyscale-0)]"
+      : "bg-[var(--greyscale-25)] dark:bg-[var(--greyscale-0)]"
 
   if (layout === "stacked") {
     const both = showLr && showRc
     return (
       <div className={`grid gap-[24px] ${both ? "lg:grid-cols-2" : "max-w-[502px] grid-cols-1"}`}>
         {showLr ? (
-          <article className="flex flex-col gap-[16px] rounded-[18px] border border-[var(--greyscale-100)] bg-[var(--greyscale-25)] p-[24px] shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)] dark:bg-[var(--greyscale-0)]">
+          <article className={`flex flex-col gap-[16px] rounded-[18px] border border-[var(--greyscale-100)] p-[24px] shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)] ${stackedCardBg}`}>
             <div className="flex flex-col gap-[6px]">
               <div className="flex items-center gap-[12px]">
                 <span className="inline-flex size-[32px] shrink-0 items-center justify-center rounded-[8px] border-[0.5px] border-[var(--explanation-answered)] bg-[var(--explanation-answered-bg)] text-[14px] font-black leading-[1.5] tracking-[0.28px] text-[var(--explanation-answered)]">
@@ -61,7 +71,7 @@ function PracticeLrRcStarterCards({
         ) : null}
 
         {showRc ? (
-          <article className="flex flex-col gap-[16px] rounded-[18px] border border-[var(--greyscale-100)] bg-[var(--greyscale-25)] p-[24px] shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)] dark:bg-[var(--greyscale-0)]">
+          <article className={`flex flex-col gap-[16px] rounded-[18px] border border-[var(--greyscale-100)] p-[24px] shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)] ${stackedCardBg}`}>
             <div className="flex flex-col gap-[6px]">
               <div className="flex items-center gap-[12px]">
                 <span className="inline-flex size-[32px] shrink-0 items-center justify-center rounded-[8px] border-[0.5px] border-[var(--explanation-teal)] bg-[var(--explanation-rc-badge-bg-light)] text-[14px] font-black leading-[1.5] tracking-[0.28px] text-[var(--explanation-teal)]">

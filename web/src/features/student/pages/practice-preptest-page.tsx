@@ -3,9 +3,12 @@ import { Link, Navigate, useLocation, useNavigate, useParams, useSearchParams } 
 
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { useStudentEntitlementOptional } from "@/features/app-shell/student-entitlement-context"
+import { useGuestPricingModal } from "@/features/guest/pricing/guest-pricing-modal-provider"
 import { StudentMain } from "@/features/student/components/student-main"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import { DrillConfigSelectField } from "@/features/student/drills/drill-config-field"
+import { shouldLimitFreePrepTestAccess } from "@/features/student/preptests/preptest-free-access"
 import {
   mapPrepTestTimingToSectionTiming,
   type PrepTestDetailResponse,
@@ -235,12 +238,19 @@ function PracticePrepTestPage() {
   const isRetakeAttempt = isRetakePrepTestAttempt(searchParams)
   const practiceApi = useMemo(() => createPracticeApi(getSupabaseBrowserClient()), [])
   const { scaleFactor } = useAccommodations()
+  const entitlement = useStudentEntitlementOptional()
+  const { openLockedContentModal } = useGuestPricingModal()
+  const limitFreeAccess = shouldLimitFreePrepTestAccess({
+    accessState: entitlement?.entitlement?.accessState,
+    hasActiveCore: entitlement?.entitlement?.hasActiveCore,
+  })
 
   const [detail, setDetail] = useState<PrepTestDetailResponse | null>(() =>
     readCachedHubDetail(testIdParam, isRetakeAttempt),
   )
   const [loading, setLoading] = useState(() => readCachedHubDetail(testIdParam, isRetakeAttempt) == null)
   const [error, setError] = useState<string | null>(null)
+  const [freeAccessChecked, setFreeAccessChecked] = useState(!limitFreeAccess)
   const [timingId, setTimingId] = useState(
     () => readCachedHubDetail(testIdParam, isRetakeAttempt)?.defaultTimingId ?? "standard",
   )
@@ -284,8 +294,19 @@ function PracticePrepTestPage() {
     [isRetakeAttempt, testIdParam],
   )
 
+  useEffect(() => {
+    if (!limitFreeAccess || !testIdParam) {
+      setFreeAccessChecked(true)
+      return
+    }
+    setFreeAccessChecked(false)
+    openLockedContentModal("preptests")
+    navigate(PREPTEST_LIST_HREF, { replace: true })
+  }, [limitFreeAccess, navigate, openLockedContentModal, testIdParam])
+
   const load = useCallback(async () => {
     if (!testIdParam) return
+    if (limitFreeAccess && !freeAccessChecked) return
     setError(null)
 
     // Paint from cache immediately; refresh progress in the background.
@@ -318,7 +339,7 @@ function PracticePrepTestPage() {
     } finally {
       setLoading(false)
     }
-  }, [applyDetail, isRetakeAttempt, navigate, practiceApi, testIdParam])
+  }, [applyDetail, freeAccessChecked, isRetakeAttempt, limitFreeAccess, navigate, practiceApi, testIdParam])
 
   useEffect(() => {
     const stateRetake = (location.state as { retake?: boolean } | null)?.retake === true

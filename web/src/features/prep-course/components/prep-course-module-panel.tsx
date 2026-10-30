@@ -34,6 +34,10 @@ type PrepCourseModulePanelProps = {
   onToggleModuleBookmark: (next: boolean) => void
   onToggleShowBookmarksOnly?: (next: boolean) => void
   moduleLocked?: boolean
+  /** Section ids locked for free-plan users (e.g. Anatomy sections after the intro). */
+  lockedSectionIds?: ReadonlySet<string>
+  /** Lesson slugs locked for free-plan users (e.g. Main Conclusion Questions onward). */
+  lockedLessonSlugs?: ReadonlySet<string>
   onLockedLessonClick?: () => void
 }
 
@@ -65,6 +69,8 @@ function PrepCourseModulePanel({
   onToggleModuleBookmark,
   onToggleShowBookmarksOnly,
   moduleLocked = false,
+  lockedSectionIds,
+  lockedLessonSlugs,
   onLockedLessonClick,
 }: PrepCourseModulePanelProps) {
   const bookmarkToggleOn = moduleBookmarked || showBookmarksOnly
@@ -77,9 +83,12 @@ function PrepCourseModulePanel({
   const flattenSections = shouldFlattenModuleSections(module)
   const flatSection = flattenSections ? module.sections[0] : null
   const flatExpanded = flatSection ? expandedSectionIds.has(flatSection.id) : false
-  const moduleSectionIds = module.sections.map((section) => section.id)
+  const expandableSectionIds = module.sections
+    .filter((section) => !(moduleLocked || (lockedSectionIds?.has(section.id) ?? false)))
+    .map((section) => section.id)
   const moduleSectionsExpanded =
-    moduleSectionIds.length > 0 && moduleSectionIds.every((id) => expandedSectionIds.has(id))
+    expandableSectionIds.length > 0 &&
+    expandableSectionIds.every((id) => expandedSectionIds.has(id))
 
   const filterToBookmarkedLessons = showBookmarksOnly || moduleBookmarked
 
@@ -199,7 +208,7 @@ function PrepCourseModulePanel({
                 active={lesson.slug === activeLessonSlug}
                 completed={completedLessonSlugs.has(lesson.slug)}
                 bookmarked={bookmarkedLessonSlugs.has(lesson.slug)}
-                locked={moduleLocked}
+                locked={moduleLocked || (lockedLessonSlugs?.has(lesson.slug) ?? false)}
                 onLockedClick={onLockedLessonClick}
                 onToggleBookmark={
                   onToggleLessonBookmark
@@ -223,7 +232,8 @@ function PrepCourseModulePanel({
                 bookmarkedLessonSlugs={bookmarkedLessonSlugs}
                 onToggleLessonBookmark={onToggleLessonBookmark}
                 onToggle={() => onToggleSection(section.id)}
-                lessonsLocked={moduleLocked}
+                lessonsLocked={moduleLocked || (lockedSectionIds?.has(section.id) ?? false)}
+                lockedLessonSlugs={lockedLessonSlugs}
                 onLockedLessonClick={onLockedLessonClick}
               />
             ))
