@@ -19,8 +19,8 @@ describe("diagnostic results routes", () => {
   })
 
   it("builds history and attempt hrefs", () => {
-    expect(diagnosticHistoryHref("mini")).toBe("/app/diagnostic/results/mini")
-    expect(diagnosticHistoryHref("full")).toBe("/app/diagnostic/results/full")
+    expect(diagnosticHistoryHref("mini")).toBe("/app/diagnostic/results")
+    expect(diagnosticHistoryHref("full")).toBe("/app/diagnostic/results")
     expect(diagnosticAttemptHref("mini", "a1")).toBe("/app/diagnostic/results/mini/a1")
     expect(diagnosticAttemptHref("quick", "a2")).toBe("/app/diagnostic/results/full/a2")
   })
@@ -30,6 +30,7 @@ describe("diagnostic results routes", () => {
     expect(diagnosticResultsSectionFromPath("/app/diagnostic/results/mini/a1")).toBe("mini")
     expect(diagnosticResultsSectionFromPath("/app/diagnostic/results/full/a2")).toBe("full")
     expect(diagnosticResultsSectionFromPath("/app/diagnostic/results")).toBeNull()
+    expect(isDiagnosticResultsPath("/app/diagnostic/results")).toBe(true)
     expect(isDiagnosticResultsPath("/app/diagnostic/results/mini")).toBe(true)
     expect(isDiagnosticResultsPath("/app/practice/drills")).toBe(false)
   })

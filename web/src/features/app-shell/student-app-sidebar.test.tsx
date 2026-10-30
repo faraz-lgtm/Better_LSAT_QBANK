@@ -39,7 +39,10 @@ describe("StudentAppSidebar", () => {
     expect(screen.getByRole("link", { name: "Dashboard" })).toBeInTheDocument()
     expect(screen.getByText("DIAGNOSTIC")).toBeInTheDocument()
     expect(screen.getByRole("link", { name: "Diagnostic Test" })).toHaveAttribute("href", "/intent")
-    expect(screen.getByRole("button", { name: /Diagnostic Results/i })).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: /Diagnostic Results/i })).toHaveAttribute(
+      "href",
+      "/app/diagnostic/results",
+    )
     expect(screen.getByRole("link", { name: "Diagnostic Explanation" })).toHaveAttribute(
       "href",
       "/app/diagnostic/explanations",
@@ -63,7 +66,7 @@ describe("StudentAppSidebar", () => {
 
     const diagnosticHeading = screen.getByText("DIAGNOSTIC")
     const diagnosticTest = screen.getByRole("link", { name: "Diagnostic Test" })
-    const results = screen.getByRole("button", { name: /Diagnostic Results/i })
+    const results = screen.getByRole("link", { name: /Diagnostic Results/i })
     const explanation = screen.getByRole("link", { name: "Diagnostic Explanation" })
     expect(
       diagnosticHeading.compareDocumentPosition(diagnosticTest) & Node.DOCUMENT_POSITION_FOLLOWING,
@@ -222,18 +225,10 @@ describe("StudentAppSidebar", () => {
       "href",
       "/app/prep-course/betterlsat-core-syllabus-structure-content",
     )
-    expect(screen.getByRole("link", { name: "LR Mastery Course" })).toHaveAttribute(
-      "href",
-      "/app/prep-course/lr-mastery-course",
-    )
-    expect(screen.getByRole("link", { name: "RC Mastery Course" })).toHaveAttribute(
-      "href",
-      "/app/prep-course/rc-mastery",
-    )
+    expect(screen.getByLabelText("LR Mastery Course (coming soon)")).toBeInTheDocument()
+    expect(screen.getByLabelText("RC Mastery Course (coming soon)")).toBeInTheDocument()
+    expect(screen.getAllByText("Coming Soon").length).toBeGreaterThanOrEqual(2)
     expect(screen.getByRole("link", { name: "LSAT Essentials Course" })).toHaveClass(
-      "student-sidebar-link--active",
-    )
-    expect(screen.getByRole("link", { name: "LR Mastery Course" })).not.toHaveClass(
       "student-sidebar-link--active",
     )
   })
@@ -251,8 +246,8 @@ describe("StudentAppSidebar", () => {
     await user.click(screen.getByRole("button", { name: "Prep Courses" }))
 
     expect(screen.getByRole("link", { name: "LSAT Essentials Course" })).toBeInTheDocument()
-    expect(screen.getByRole("link", { name: "LR Mastery Course" })).toBeInTheDocument()
-    expect(screen.getByRole("link", { name: "RC Mastery Course" })).toBeInTheDocument()
+    expect(screen.getByLabelText("LR Mastery Course (coming soon)")).toBeInTheDocument()
+    expect(screen.getByLabelText("RC Mastery Course (coming soon)")).toBeInTheDocument()
   })
 
   it("shows logout and version in the footer", () => {
@@ -276,18 +271,19 @@ describe("StudentAppSidebar", () => {
     expect(screen.getByRole("img", { name: "betterLSAT" })).toHaveClass("dark:brightness-0", "dark:invert")
   })
 
-  it("expands Diagnostic Results to Mini and Full Section history links", async () => {
-    const user = userEvent.setup()
+  it("links Diagnostic Results to the combined history page without a dropdown", () => {
     render(
       <MemoryRouter initialEntries={["/app"]}>
         <StudentAppSidebar mobileOpen={false} onMobileClose={() => {}} />
       </MemoryRouter>,
     )
 
+    expect(screen.getByRole("link", { name: /Diagnostic Results/i })).toHaveAttribute(
+      "href",
+      "/app/diagnostic/results",
+    )
     expect(screen.queryByRole("link", { name: "Mini" })).not.toBeInTheDocument()
-    await user.click(screen.getByRole("button", { name: /Diagnostic Results/i }))
-    expect(screen.getByRole("link", { name: "Mini" })).toHaveAttribute("href", "/app/diagnostic/results/mini")
-    expect(screen.getByRole("link", { name: "Full Section" })).toHaveAttribute("href", "/app/diagnostic/results/full")
+    expect(screen.queryByRole("link", { name: "Full Section" })).not.toBeInTheDocument()
   })
 
   it("collapses to icon rail and expands again", async () => {

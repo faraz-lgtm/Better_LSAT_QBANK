@@ -27,7 +27,10 @@ describe("GuestFreePlanSidebar", () => {
 
     expect(screen.getByRole("link", { name: "Dashboard" })).toHaveAttribute("href", "/app")
     expect(screen.getByRole("link", { name: "Diagnostic Test" })).toHaveAttribute("href", "/intent")
-    expect(screen.getByRole("button", { name: /Diagnostic Results/i })).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: /Diagnostic Results/i })).toHaveAttribute(
+      "href",
+      "/app/diagnostic/results",
+    )
 
     expect(screen.getByRole("button", { name: "Prep Courses" })).toBeInTheDocument()
     expect(screen.queryByRole("button", { name: "Prep Courses (locked)" })).not.toBeInTheDocument()
@@ -95,7 +98,7 @@ describe("GuestFreePlanSidebar", () => {
     expect(screen.getByTestId("path")).toHaveTextContent("/app")
   })
 
-  it("lets free students open LSAT Essentials Course and locks other prep courses", async () => {
+  it("lets free students open LSAT Essentials Course and shows mastery courses as coming soon", async () => {
     const user = userEvent.setup()
     render(
       <MemoryRouter initialEntries={["/app"]}>
@@ -112,29 +115,25 @@ describe("GuestFreePlanSidebar", () => {
       "/app/prep-course/betterlsat-core-syllabus-structure-content",
     )
 
-    await user.click(screen.getByRole("button", { name: "LR Mastery Course (locked)" }))
-    expect(screen.getByRole("dialog", { name: "Keep Learning with Full Access" })).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "View Plans" })).toBeInTheDocument()
+    expect(screen.getByLabelText("LR Mastery Course (coming soon)")).toBeInTheDocument()
+    expect(screen.getByLabelText("RC Mastery Course (coming soon)")).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "LR Mastery Course (locked)" })).not.toBeInTheDocument()
     expect(screen.getByTestId("path")).toHaveTextContent("/app")
   })
 
-  it("still expands Diagnostic Results to Mini and Full Section", async () => {
-    const user = userEvent.setup()
+  it("links Diagnostic Results to the combined history page without a dropdown", () => {
     render(
       <MemoryRouter initialEntries={["/app"]}>
         <GuestFreePlanSidebar mobileOpen={false} onMobileClose={() => {}} />
       </MemoryRouter>,
     )
 
-    await user.click(screen.getByRole("button", { name: /Diagnostic Results/i }))
-    expect(screen.getByRole("link", { name: "Mini" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: /Diagnostic Results/i })).toHaveAttribute(
       "href",
-      "/app/diagnostic/results/mini",
+      "/app/diagnostic/results",
     )
-    expect(screen.getByRole("link", { name: "Full Section" })).toHaveAttribute(
-      "href",
-      "/app/diagnostic/results/full",
-    )
+    expect(screen.queryByRole("link", { name: "Mini" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("link", { name: "Full Section" })).not.toBeInTheDocument()
   })
 
   it("hides the upgrade card markup class when collapsed styles apply", async () => {

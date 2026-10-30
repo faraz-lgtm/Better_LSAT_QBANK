@@ -3585,6 +3585,9 @@ select.ds-input option {
 
 /* Figma student sidebar menu (node 19484:36055) */
 .student-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
   font-family: var(--sans);
   font-synthesis: none;
   -webkit-font-smoothing: antialiased;
@@ -3718,6 +3721,11 @@ select.ds-input option {
   object-fit: contain;
 }
 
+/* Active nav icons tint to primary (#0D47A1), matching Figma active Prep Course. */
+.student-sidebar-link--active .student-sidebar-link-icon img {
+  filter: brightness(0) saturate(100%) invert(18%) sepia(84%) saturate(2148%) hue-rotate(201deg) brightness(92%) contrast(96%);
+}
+
 /* Dark mode: inactive nav icons white; active icons --primary #75A1E8. */
 .dark .student-sidebar-link-icon img {
   filter: brightness(0) invert(1);
@@ -3802,12 +3810,12 @@ select.ds-input option {
   width: 100%;
   height: 42px;
   align-items: center;
-  justify-content: space-between;
   padding: 9px 12px;
 }
 
 .student-sidebar-logout {
   display: flex;
+  width: 100%;
   align-items: center;
   gap: 4px;
   font-size: 14px;
@@ -3838,7 +3846,14 @@ select.ds-input option {
   color: var(--color-student-heading);
 }
 
+.student-sidebar-logout .student-sidebar-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: left;
+}
+
 .student-sidebar-version {
+  margin-left: auto;
   font-size: 8px;
   font-weight: 600;
   line-height: 1.5;

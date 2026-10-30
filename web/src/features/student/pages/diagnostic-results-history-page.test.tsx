@@ -11,17 +11,24 @@ describe("DiagnosticResultsHistoryPage", () => {
     localStorage.clear()
   })
 
-  it("shows an empty Mini history state", () => {
+  it("shows Mini history above Full Section history on one page", () => {
     render(
       <MemoryRouter>
-        <DiagnosticResultsHistoryPage section="mini" />
+        <DiagnosticResultsHistoryPage />
       </MemoryRouter>,
     )
-    expect(screen.getByRole("heading", { name: "Mini History" })).toBeInTheDocument()
+    const miniHeading = screen.getByRole("heading", { name: "Mini History" })
+    const fullHeading = screen.getByRole("heading", { name: "Full Section History" })
+    expect(miniHeading.compareDocumentPosition(fullHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(screen.getByText(/No Mini diagnostics yet/i)).toBeInTheDocument()
+    expect(screen.getByText(/No Full Section diagnostics yet/i)).toBeInTheDocument()
     expect(screen.getByRole("link", { name: "Start Mini" })).toHaveAttribute(
       "href",
       "/diagnostic/start?intent=mini",
+    )
+    expect(screen.getByRole("link", { name: "Start Full Section" })).toHaveAttribute(
+      "href",
+      "/diagnostic/start?intent=quick",
     )
   })
 
@@ -29,7 +36,7 @@ describe("DiagnosticResultsHistoryPage", () => {
     const saved = writeGuestDiagnosticResult(buildDefaultGuestDiagnosticResult("quick"))
     render(
       <MemoryRouter>
-        <DiagnosticResultsHistoryPage section="full" />
+        <DiagnosticResultsHistoryPage />
       </MemoryRouter>,
     )
     expect(screen.getByRole("heading", { name: "Full Section History" })).toBeInTheDocument()

@@ -14,12 +14,15 @@ export function diagnosticResultsSectionFromIntent(intentId: GuestDiagnosticInte
   return intentId === "mini" ? "mini" : "full"
 }
 
-export function diagnosticHistoryHref(section: DiagnosticResultsSection): string {
-  return section === "mini" ? DIAGNOSTIC_RESULTS_MINI_HREF : DIAGNOSTIC_RESULTS_FULL_HREF
+/** Combined Mini + Full history lives at the results root. */
+export function diagnosticHistoryHref(_section?: DiagnosticResultsSection): string {
+  return DIAGNOSTIC_RESULTS_ROOT
 }
 
 export function diagnosticAttemptHref(intentId: GuestDiagnosticIntentId, attemptId: string): string {
-  return `${diagnosticHistoryHref(diagnosticResultsSectionFromIntent(intentId))}/${attemptId}`
+  const section = diagnosticResultsSectionFromIntent(intentId)
+  const sectionRoot = section === "mini" ? DIAGNOSTIC_RESULTS_MINI_HREF : DIAGNOSTIC_RESULTS_FULL_HREF
+  return `${sectionRoot}/${attemptId}`
 }
 
 export function isDiagnosticResultsPath(pathname: string): boolean {

@@ -113,9 +113,9 @@ const DiagnosticResultsHistoryPage = lazyNamed(
   () => import("@/features/student/pages/diagnostic-results-history-page"),
   "DiagnosticResultsHistoryPage",
 )
-const DiagnosticResultsIndexRedirect = lazyNamed(
+const DiagnosticResultsSectionRedirect = lazyNamed(
   () => import("@/features/student/pages/diagnostic-results-history-page"),
-  "DiagnosticResultsIndexRedirect",
+  "DiagnosticResultsSectionRedirect",
 )
 const PrepCourseCoursePage = lazyNamed(
   () => import("@/features/prep-course/pages/prep-course-course-page"),
@@ -800,7 +800,7 @@ const router = createBrowserRouter([
             path: "diagnostic/results",
             element: (
               <LazyPage>
-                <DiagnosticResultsIndexRedirect />
+                <DiagnosticResultsHistoryPage />
               </LazyPage>
             ),
           },
@@ -808,7 +808,7 @@ const router = createBrowserRouter([
             path: "diagnostic/results/mini",
             element: (
               <LazyPage>
-                <DiagnosticResultsHistoryPage section="mini" />
+                <DiagnosticResultsSectionRedirect />
               </LazyPage>
             ),
           },
@@ -824,7 +824,7 @@ const router = createBrowserRouter([
             path: "diagnostic/results/full",
             element: (
               <LazyPage>
-                <DiagnosticResultsHistoryPage section="full" />
+                <DiagnosticResultsSectionRedirect />
               </LazyPage>
             ),
           },
