@@ -49,6 +49,14 @@ describe("StudentAppSidebar", () => {
     expect(screen.getByRole("link", { name: "Explanations" })).toBeInTheDocument()
     expect(screen.queryByRole("link", { name: "Untimed Review" })).not.toBeInTheDocument()
     expect(screen.getByRole("link", { name: "Overview" })).toBeInTheDocument()
+    expect(screen.getByText("TUTORING")).toBeInTheDocument()
+    expect(screen.getByText("NEW")).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "Book 1 on 1 Sessions" })).toHaveAttribute(
+      "href",
+      "/app/tutoring/sessions",
+    )
+    expect(screen.getByLabelText("Live Classes (coming soon)")).toBeInTheDocument()
+    expect(screen.getByText("Coming Soon")).toBeInTheDocument()
     expect(screen.getByText("COMMUNITY")).toBeInTheDocument()
     expect(screen.getByRole("link", { name: "Feedback" })).toHaveAttribute("href", "/app/feedback")
     expect(screen.getByRole("link", { name: "Roadmap" })).toHaveAttribute("href", "/app/roadmap")
@@ -102,18 +110,48 @@ describe("StudentAppSidebar", () => {
     )
   })
 
-  it("keeps nav-explanations on the locked free-plan Explanations button", () => {
+  it("keeps nav-explanations clickable for free-plan Explanations browsing", () => {
     render(
       <MemoryRouter initialEntries={["/app"]}>
         <StudentAppSidebar mobileOpen={false} onMobileClose={() => {}} lockPremiumNav />
       </MemoryRouter>,
     )
 
-    expect(screen.getByRole("button", { name: "Explanations (locked)" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Explanations" })).toHaveAttribute(
       "data-tour-target",
       "nav-explanations",
     )
-    expect(screen.queryByRole("link", { name: "Explanations" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Explanations (locked)" })).not.toBeInTheDocument()
+  })
+
+  it("keeps nav-drills clickable for free-plan Prep Drills browsing", () => {
+    render(
+      <MemoryRouter initialEntries={["/app"]}>
+        <StudentAppSidebar mobileOpen={false} onMobileClose={() => {}} lockPremiumNav />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByRole("link", { name: "Drills" })).toHaveAttribute("data-tour-target", "nav-drills")
+    expect(screen.getByRole("link", { name: "Drills" })).toHaveAttribute("href", "/app/practice/drills")
+    expect(screen.getByRole("button", { name: "Drills (locked)" })).toBeInTheDocument()
+  })
+
+  it("keeps nav-sections clickable for free-plan Prep Sections browsing", () => {
+    render(
+      <MemoryRouter initialEntries={["/app"]}>
+        <StudentAppSidebar mobileOpen={false} onMobileClose={() => {}} lockPremiumNav />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByRole("link", { name: "Sections" })).toHaveAttribute(
+      "data-tour-target",
+      "nav-sections",
+    )
+    expect(screen.getByRole("link", { name: "Sections" })).toHaveAttribute(
+      "href",
+      "/app/practice/sections",
+    )
+    expect(screen.getByRole("button", { name: "Sections (locked)" })).toBeInTheDocument()
   })
 
   it("places Get Started above MAIN and starts the Produktly tour on /app", async () => {

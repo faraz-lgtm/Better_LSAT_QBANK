@@ -54,6 +54,13 @@ describe("student-nav-config", () => {
     expect(getStudentPageTitle("/app/roadmap")).toBe("Roadmap")
   })
 
+  it("maps tutoring routes", () => {
+    expect(getActiveSectionKey("/app/tutoring/sessions")).toBe("tutoring")
+    expect(getActiveSectionKey("/app/tutoring/live-classes")).toBe("tutoring")
+    expect(getStudentPageTitle("/app/tutoring/sessions")).toBe("Book 1 on 1 Sessions")
+    expect(getStudentPageTitle("/app/tutoring/live-classes")).toBe("Live Classes")
+  })
+
   it("matches analytics tab query params", () => {
     expect(isNavItemActive("/app/analytics", "/app/analytics?tab=priorities", "?tab=priorities")).toBe(true)
     expect(isNavItemActive("/app/analytics", "/app/analytics?tab=priorities", "")).toBe(false)

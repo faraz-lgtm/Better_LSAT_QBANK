@@ -14,9 +14,11 @@ import {
   STUDENT_GET_STARTED_ICON,
   STUDENT_GET_STARTED_LABEL,
   STUDENT_MAIN_NAV_SECTION,
+  STUDENT_LIVE_CLASSES_HREF,
   STUDENT_NAV_ITEM_ICON_SRC,
   STUDENT_NAV_LOGOUT_ICON_SRC,
   STUDENT_NAV_SECTIONS,
+  STUDENT_TUTORING_SESSIONS_HREF,
   type StudentNavItem,
   type StudentNavItemIconKey,
 } from "@/features/app-shell/student-nav-config"
@@ -26,7 +28,10 @@ import {
   type LockedContentVariant,
 } from "@/features/guest/pricing/guest-locked-content-copy"
 import { useGuestPricingModal } from "@/features/guest/pricing/guest-pricing-modal-provider"
+import { PRACTICE_DRILLS_LIST_HREF } from "@/features/student/drills/drill-routes"
+import { EXPLANATIONS_LIST_HREF } from "@/features/student/explanation-detail/explanation-routes"
 import { PREPTEST_LIST_HREF, shouldForceParentNav } from "@/features/student/preptests/preptest-routes"
+import { PRACTICE_SECTIONS_LIST_HREF } from "@/features/student/sections/section-routes"
 import { PREP_COURSE_ESSENTIALS_SLUG, PREP_COURSE_NAV_ITEMS } from "@/features/prep-course/lib/prep-course-nav"
 import {
   DIAGNOSTIC_EXPLANATIONS_HREF,
@@ -66,6 +71,8 @@ const NAV_HREF_TOUR_TARGETS: Record<string, string> = {
   "/app/analytics/preptests": "nav-insights-preptest",
   "/app/feedback": "nav-feedback",
   "/app/roadmap": "nav-roadmap",
+  [STUDENT_TUTORING_SESSIONS_HREF]: "nav-tutoring-sessions",
+  [STUDENT_LIVE_CLASSES_HREF]: "nav-live-classes",
 }
 
 function tourTargetForNavHref(href: string): string {
@@ -97,10 +104,16 @@ function isPrepCourseNavItem(item: StudentNavItem): boolean {
   return item.href === PREP_COURSE_HREF
 }
 
-/** Free-plan: keep Prep Course + community links clickable (Diagnostic items live under DIAGNOSTIC). */
+/** Free-plan: keep Prep Course, Explanations, PrepTest, Prep Drills/Sections, tutoring, + community links clickable (Diagnostic items live under DIAGNOSTIC). */
 function isUnlockedOnFreePlan(item: StudentNavItem): boolean {
   return (
     isPrepCourseNavItem(item) ||
+    item.href === EXPLANATIONS_LIST_HREF ||
+    item.href === PREPTEST_LIST_HREF ||
+    item.href === PRACTICE_DRILLS_LIST_HREF ||
+    item.href === PRACTICE_SECTIONS_LIST_HREF ||
+    item.href === STUDENT_TUTORING_SESSIONS_HREF ||
+    item.href === STUDENT_LIVE_CLASSES_HREF ||
     item.href === "/app/feedback" ||
     item.href === "/app/roadmap"
   )
@@ -449,9 +462,32 @@ function StudentAppSidebar({
 
             {STUDENT_NAV_SECTIONS.map((section) => (
               <div key={section.key} className="student-sidebar-section">
-                <p className="student-sidebar-heading">{section.label}</p>
+                <div className="student-sidebar-heading-row">
+                  <p className="student-sidebar-heading">{section.label}</p>
+                  {section.badge ? (
+                    <span className="student-sidebar-section-badge">{section.badge}</span>
+                  ) : null}
+                </div>
                 {section.items.map((item) => {
                   const tourTarget = tourTargetForNavHref(item.href)
+
+                  if (item.status === "coming_soon") {
+                    return (
+                      <div
+                        key={item.href}
+                        data-tour-target={tourTarget}
+                        className="student-sidebar-link student-sidebar-link--with-trailing student-sidebar-link--coming-soon w-full justify-between"
+                        aria-label={`${item.label} (coming soon)`}
+                        title={`${item.label} (coming soon)`}
+                      >
+                        <span className="student-sidebar-link-content flex min-w-0 items-center gap-2.5">
+                          <SidebarNavIcon icon={item.icon} />
+                          <span className="student-sidebar-label truncate">{item.label}</span>
+                        </span>
+                        <span className="student-sidebar-item-badge">Coming Soon</span>
+                      </div>
+                    )
+                  }
 
                   if (lockPremiumNav && !isUnlockedOnFreePlan(item)) {
                     return (
@@ -510,11 +546,11 @@ function StudentAppSidebar({
                       aria-label={item.label}
                       title={item.label}
                       onPointerEnter={() => {
-                        if (item.href === "/app/learn/explanations") prefetchExplanationList()
+                        if (item.href === EXPLANATIONS_LIST_HREF) prefetchExplanationList()
                         if (item.href === PREPTEST_LIST_HREF) prefetchPrepTestPool()
                       }}
                       onFocus={() => {
-                        if (item.href === "/app/learn/explanations") prefetchExplanationList()
+                        if (item.href === EXPLANATIONS_LIST_HREF) prefetchExplanationList()
                         if (item.href === PREPTEST_LIST_HREF) prefetchPrepTestPool()
                       }}
                       onClick={(event) => {

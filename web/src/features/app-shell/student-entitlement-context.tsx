@@ -109,6 +109,8 @@ function isLsacLockedNavItem(href: string): boolean {
   }
   // Produktly feedback / roadmap are available without LawHub coach link.
   if (href === "/app/feedback" || href === "/app/roadmap") return false
+  // Tutoring hub pages do not require LawHub coach link.
+  if (href === "/app/tutoring" || href.startsWith("/app/tutoring/")) return false
   return true
 }
 

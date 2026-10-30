@@ -7,8 +7,16 @@ import { PracticePrepTestsListPage } from "@/features/student/pages/practice-pre
 import { clearPrepTestPoolCache } from "@/features/student/preptests/prep-test-pool-cache"
 import type { PrepTestPoolItem, PrepTestPoolSort } from "@/features/student/preptests/preptest-types"
 
-const { listPrepTestPool } = vi.hoisted(() => ({
+const { listPrepTestPool, entitlementMock, openLockedContentModal } = vi.hoisted(() => ({
   listPrepTestPool: vi.fn(),
+  openLockedContentModal: vi.fn(),
+  entitlementMock: {
+    entitlement: {
+      hasActiveCore: false,
+      accessState: "FULL_ACCESS" as "FULL_ACCESS" | "PAYMENT_REQUIRED",
+    },
+    isPaymentRequired: false,
+  },
 }))
 
 vi.mock("@/lib/supabase/client", () => ({
@@ -22,6 +30,18 @@ vi.mock("@/lib/api/practice", () => ({
     startBlindReview: vi.fn(),
     getBlindReviewDetail: vi.fn(),
     prefetchPrepTestDetail: vi.fn(),
+  }),
+}))
+
+vi.mock("@/features/app-shell/student-entitlement-context", () => ({
+  useStudentEntitlementOptional: () => entitlementMock,
+}))
+
+vi.mock("@/features/guest/pricing/guest-pricing-modal-provider", () => ({
+  useGuestPricingModal: () => ({
+    openPricingModal: vi.fn(),
+    openLockedContentModal,
+    closePricingModal: vi.fn(),
   }),
 }))
 
@@ -77,6 +97,10 @@ function renderPage() {
 beforeEach(() => {
   clearPrepTestPoolCache()
   listPrepTestPool.mockReset()
+  openLockedContentModal.mockReset()
+  entitlementMock.entitlement.hasActiveCore = false
+  entitlementMock.entitlement.accessState = "FULL_ACCESS"
+  entitlementMock.isPaymentRequired = false
 })
 
 describe("PracticePrepTestsListPage loading shell", () => {
@@ -319,5 +343,48 @@ describe("PracticePrepTestsListPage see more", () => {
     expect(screen.getByText("2nd take")).toBeInTheDocument()
     expect(screen.getAllByText("Score: 139")).toHaveLength(2)
     expect(screen.getAllByRole("button", { name: "Result" })).toHaveLength(2)
+  })
+})
+
+describe("PracticePrepTestsListPage free plan", () => {
+  it("locks every PrepTest and opens the upgrade modal on row click", async () => {
+    const user = userEvent.setup()
+    entitlementMock.entitlement.accessState = "PAYMENT_REQUIRED"
+    entitlementMock.isPaymentRequired = true
+
+    const items = [
+      poolItem("pt-103", "103"),
+      poolItem("pt-102", "102"),
+      poolItem("pt-101", "101"),
+    ]
+    listPrepTestPool.mockImplementation((input: { pageSize?: number; sort?: PrepTestPoolSort } = {}) => {
+      const pageSize = input.pageSize ?? 5
+      const prepTests =
+        input.sort === "oldest" ? [...items].reverse().slice(0, pageSize) : items.slice(0, pageSize)
+      return Promise.resolve({
+        prepTests,
+        total: items.length,
+        page: 1,
+        pageSize,
+        statusCounts: { all: 3, fresh: 3, in_progress: 0, completed: 0, blind_review: 0 },
+      })
+    })
+
+    renderPage()
+
+    expect(
+      await screen.findByText(/Try a free PrepTest to gauge your starting point/i),
+    ).toBeInTheDocument()
+
+    for (const id of ["pt-103", "pt-102", "pt-101"]) {
+      const row = await screen.findByTestId(`preptest-list-row-${id}`)
+      expect(row).toHaveAttribute("data-locked", "true")
+      expect(row.querySelector("[data-pt-lock-badge]")).toBeTruthy()
+    }
+    expect(screen.queryByRole("button", { name: "Start" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Subscribe Now" })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole("button", { name: "Unlock PrepTest 103" }))
+    expect(openLockedContentModal).toHaveBeenCalledWith("preptests")
   })
 })

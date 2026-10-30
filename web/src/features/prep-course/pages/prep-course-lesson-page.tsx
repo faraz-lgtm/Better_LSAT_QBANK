@@ -35,7 +35,11 @@ import {
   startLessonDrillRequest,
 } from "@/features/prep-course/lib/start-lesson-drill-request"
 import { isPrepCourseComingSoonSlug } from "@/features/prep-course/lib/prep-course-nav"
-import { isPrepCourseLessonLockedForFreePlan, shouldLimitFreePrepCourseAccess } from "@/features/prep-course/lib/prep-course-free-access"
+import {
+  collectLockedLessonSlugsForFreePlan,
+  isPrepCourseLessonLockedForFreePlan,
+  shouldLimitFreePrepCourseAccess,
+} from "@/features/prep-course/lib/prep-course-free-access"
 import { usePrepCourseBookmarks } from "@/features/prep-course/lib/use-prep-course-bookmarks"
 import { PrepCourseComingSoonPage } from "@/features/prep-course/pages/prep-course-coming-soon-page"
 import { StudentMain } from "@/features/student/components/student-main"
@@ -186,6 +190,11 @@ function PrepCourseLessonPage() {
     return `Module ${safeModuleNumber} · Lesson ${lessonSequence.current} of ${lessonSequence.total}`
   }, [curriculum.modules, lessonContext, lessonSequence])
 
+  const lockedLessonSlugs = useMemo(
+    () => collectLockedLessonSlugsForFreePlan(curriculum, courseSlug, limitFreeAccess),
+    [courseSlug, curriculum, limitFreeAccess],
+  )
+
   const prevSlug = useMemo(
     () => (lesson ? prevLessonSlug(sidebarLessons, lesson.slug) : null),
     [lesson, sidebarLessons],
@@ -254,7 +263,15 @@ function PrepCourseLessonPage() {
         setActiveDrillAttempt(mergedAttempt)
       } catch (e) {
         if (!alive) return
-        setError(e instanceof Error ? e.message : "Failed to load lesson")
+        const message = e instanceof Error ? e.message : "Failed to load lesson"
+        const isPaywall = /subscribe to access this prep course content/i.test(message)
+        if (isPaywall) {
+          redirected = true
+          openLockedContentModal("courses")
+          navigate(`/app/prep-course/${courseSlug}`, { replace: true })
+          return
+        }
+        setError(message)
       } finally {
         if (alive && !redirected) setLoading(false)
       }
@@ -485,10 +502,12 @@ function PrepCourseLessonPage() {
                         lessons={sidebarLessons}
                         activeLessonSlug={lesson.slug}
                         completedLessonSlugs={completedLessonSlugs}
+                        lockedLessonSlugs={lockedLessonSlugs}
                         progressPercent={sectionProgressPercent}
                         sectionTitle={sectionTitle}
                         sectionSubtitle={sectionRemainingLabel}
                         onSelectLesson={(slug) => navigate(`/app/prep-course/${course.slug}/${slug}`)}
+                        onLockedLessonClick={() => openLockedContentModal("courses")}
                         onClose={() => setShowSidebar(false)}
                       />
                     </div>
@@ -536,10 +555,12 @@ function PrepCourseLessonPage() {
                         lessons={sidebarLessons}
                         activeLessonSlug={lesson.slug}
                         completedLessonSlugs={completedLessonSlugs}
+                        lockedLessonSlugs={lockedLessonSlugs}
                         progressPercent={sectionProgressPercent}
                         sectionTitle={sectionTitle}
                         sectionSubtitle={sectionRemainingLabel}
                         onSelectLesson={(slug) => navigate(`/app/prep-course/${course.slug}/${slug}`)}
+                        onLockedLessonClick={() => openLockedContentModal("courses")}
                         onClose={() => setShowSidebar(false)}
                       />
                     </div>

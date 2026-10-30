@@ -19,9 +19,24 @@ describe("guest-locked-content-copy", () => {
     })
   })
 
-  it("returns feature unlock copy for drills, analytics, explanations, preptests, courses, and study plan", () => {
-    expect(getLockedContentCopy("drills").title).toBe("Unlock Targeted Drills")
-    expect(getLockedContentCopy("drills").ctaLabel).toBe("Unlock Drills")
+  it("returns feature unlock copy for drills, sections, analytics, explanations, preptests, courses, and study plan", () => {
+    expect(getLockedContentCopy("drills")).toEqual({
+      title: "Unlock More Ways to Practice",
+      paragraphs: [
+        "Get access to Section drills, official LSAT questions, text explanations, and the full set of BetterLSAT practice tools.",
+      ],
+      ctaLabel: "View Plans",
+      dismissLabel: "Back",
+    })
+
+    expect(getLockedContentCopy("sections")).toEqual({
+      title: "Unlock More Ways to Practice",
+      paragraphs: [
+        "Get access to Section drills, official LSAT questions, text explanations, and the full set of BetterLSAT practice tools.",
+      ],
+      ctaLabel: "View Plans",
+      dismissLabel: "Back",
+    })
 
     expect(getLockedContentCopy("analytics")).toEqual({
       title: "See What's Costing You Points",
@@ -33,30 +48,30 @@ describe("guest-locked-content-copy", () => {
     })
 
     expect(getLockedContentCopy("explanations")).toEqual({
-      title: "See Why the Answer Works",
+      title: "Ready for More Practice?",
       paragraphs: [
-        "Unlock full explanations to understand the right answer, the trap, and where your reasoning went off track.",
-        FREE_INCLUDES,
+        "Unlock official LSAT questions from PrepTests 101–159, with text explanations and focused practice.",
       ],
-      ctaLabel: "Unlock Explanations",
+      ctaLabel: "Unlock Practice",
+      dismissLabel: "Back",
     })
 
     expect(getLockedContentCopy("preptests")).toEqual({
       title: "Unlock Official LSAT PrepTests",
       paragraphs: [
-        "Get access to official PrepTests and practice in a test-like environment. LawHub Advantage is required for official LSAT content.",
-        FREE_INCLUDES,
+        "Practice with official LSAT content from PrepTests 101–159. LawHub Advantage is required for official LSAT content.",
       ],
-      ctaLabel: "Unlock PrepTests",
+      ctaLabel: "View Plans",
+      dismissLabel: "Back",
     })
 
     expect(getLockedContentCopy("courses")).toEqual({
-      title: "Unlock the Full Course",
+      title: "Keep Learning with Full Access",
       paragraphs: [
-        "Continue beyond Foundations with the full BetterLSAT course library.",
-        FREE_INCLUDES,
+        "Your free access includes Foundations, Module 1. Upgrade to continue through the full BetterLSAT course.",
       ],
-      ctaLabel: "Unlock Course",
+      ctaLabel: "View Plans",
+      dismissLabel: "Back to Course",
     })
 
     expect(getLockedContentCopy("studyPlan")).toEqual({
@@ -78,7 +93,7 @@ describe("guest-locked-content-copy", () => {
     expect(lockedContentVariantForNavHref("/app/analytics/preptests")).toBe("preptests")
     expect(lockedContentVariantForNavHref("/app/prep-course")).toBe("courses")
     expect(lockedContentVariantForNavHref("/app/prep-course/lr-mastery-course")).toBe("courses")
-    expect(lockedContentVariantForNavHref("/app/practice/sections")).toBe("studyPlan")
+    expect(lockedContentVariantForNavHref("/app/practice/sections")).toBe("sections")
     expect(lockedContentVariantForNavHref("/app/analytics/sections")).toBe("studyPlan")
   })
 })

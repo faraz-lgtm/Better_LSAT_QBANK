@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from "react"
 import { Navigate, useParams, useSearchParams } from "react-router-dom"
 
+import { useStudentEntitlementOptional } from "@/features/app-shell/student-entitlement-context"
 import { StudentMain } from "@/features/student/components/student-main"
 import { buildExplanationQuestionDetailView } from "@/features/student/explanation-detail/build-explanation-detail-view"
 import { buildExplanationQuestionNav } from "@/features/student/explanation-detail/build-explanation-question-nav"
 import { ExplanationAnalyticsTabPanel } from "@/features/student/explanation-detail/explanation-analytics-tab-panel"
 import { ExplanationDetailTabBar } from "@/features/student/explanation-detail/explanation-detail-tab-bar"
+import { shouldLimitFreeExplanationAccess } from "@/features/student/explanation-detail/explanation-free-access"
 import { ExplanationExplainTabPanel } from "@/features/student/explanation-detail/explanation-explain-tab-panel"
 import { ExplanationQuestionTabPanel } from "@/features/student/explanation-detail/explanation-question-tab-panel"
 import {
@@ -13,6 +15,7 @@ import {
   getCachedExplanationPrepTestTree,
 } from "@/features/student/explanation-detail/explanation-tree-cache"
 import { locateExplanationQuestion } from "@/features/student/explanation-detail/explanation-question-index"
+import { EXPLANATIONS_LIST_HREF } from "@/features/student/explanation-detail/explanation-routes"
 import type { ExplanationDetailTabId } from "@/features/student/explanation-detail/types"
 import { createExplanationsApi, type ExplanationDetailPayload } from "@/lib/api/explanations"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
@@ -34,6 +37,11 @@ function neighborHref(questionId: string | null, tab: ExplanationDetailTabId): s
 function ExplanationQuestionDetailPage() {
   const { questionId: questionIdParam } = useParams<{ questionId: string }>()
   const [searchParams, setSearchParams] = useSearchParams()
+  const entitlement = useStudentEntitlementOptional()
+  const limitFreeAccess = shouldLimitFreeExplanationAccess({
+    accessState: entitlement?.entitlement?.accessState,
+    hasActiveCore: entitlement?.entitlement?.hasActiveCore,
+  })
 
   const questionId = questionIdParam ? decodeURIComponent(questionIdParam) : ""
 
@@ -105,7 +113,11 @@ function ExplanationQuestionDetailPage() {
     [resolvedLoc],
   )
 
-  if (!questionId) return <Navigate to="/app/learn/explanations" replace />
+  if (!questionId) return <Navigate to={EXPLANATIONS_LIST_HREF} replace />
+
+  if (limitFreeAccess) {
+    return <Navigate to={EXPLANATIONS_LIST_HREF} replace />
+  }
 
   if (!explanationsApi) {
     return (
@@ -116,7 +128,7 @@ function ExplanationQuestionDetailPage() {
   }
 
   if (detailError && !resolvedLoc) {
-    return <Navigate to="/app/learn/explanations" replace />
+    return <Navigate to={EXPLANATIONS_LIST_HREF} replace />
   }
 
   if (!resolvedLoc && detailLoading) {
@@ -128,7 +140,7 @@ function ExplanationQuestionDetailPage() {
   }
 
   if (!resolvedLoc || !view) {
-    return <Navigate to="/app/learn/explanations" replace />
+    return <Navigate to={EXPLANATIONS_LIST_HREF} replace />
   }
 
   return (

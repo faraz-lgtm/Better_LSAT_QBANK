@@ -4,6 +4,8 @@ import { Navigate, useNavigate, useSearchParams } from "react-router-dom"
 
 import { FigmaDropdown } from "@/components/ui/figma-dropdown"
 import { cn } from "@/lib/utils"
+import { useStudentEntitlementOptional } from "@/features/app-shell/student-entitlement-context"
+import { useGuestPricingModal } from "@/features/guest/pricing/guest-pricing-modal-provider"
 import { StudentMain } from "@/features/student/components/student-main"
 import type {
   PrepTestPoolAttempt,
@@ -18,6 +20,10 @@ import {
   firstBlindReviewSectionSessionId,
 } from "@/features/student/blind-review/blind-review-navigation"
 import { prepTestHubHref } from "@/features/student/preptests/preptest-hub-navigation"
+import {
+  FREE_INTRO_COPY,
+  shouldLimitFreePrepTestAccess,
+} from "@/features/student/preptests/preptest-free-access"
 import {
   buildPoolHistoryRows,
   getAttemptDisplayScores,
@@ -74,6 +80,10 @@ const BLIND_REVIEW_ACTION_CLASS =
   "inline-flex h-8 w-auto min-w-0 shrink-0 items-center justify-center whitespace-nowrap rounded-[10px] border border-[#ffe5b7] bg-[#ffbd4c] px-2.5 py-1.5 text-[11px] font-semibold leading-[1.35] tracking-[0.22px] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#f5b03f] disabled:opacity-60 md:h-10 md:rounded-[12px] md:px-4 md:py-2 md:text-[14px] md:leading-[1.5] md:tracking-[0.28px]"
 const RESULT_ACTION_CLASS =
   "inline-flex h-8 w-auto min-w-0 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-[10px] border border-[var(--primary)] bg-[var(--primary-0)] px-2.5 py-1.5 text-[12px] font-semibold leading-[1.5] tracking-[0.24px] text-[var(--primary)] shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[var(--primary-25)] md:h-10 md:w-[106px] md:gap-2 md:rounded-[12px] md:px-4 md:py-2 md:text-[14px] md:tracking-[0.28px]"
+const START_ACTION_CLASS =
+  "inline-flex h-8 w-auto min-w-0 shrink-0 items-center justify-center whitespace-nowrap rounded-[10px] border border-[#0b4e6e] bg-[var(--primary)] px-2.5 py-1.5 text-[12px] font-semibold leading-[1.5] tracking-[0.24px] text-white shadow-[0px_1px_1px_rgba(13,13,18,0.06)] transition-colors hover:bg-[#0b3d8a] disabled:opacity-60 md:h-10 md:w-[106px] md:rounded-[12px] md:px-4 md:py-2 md:text-[14px] md:tracking-[0.28px]"
+const PAID_INTRO_COPY =
+  "Here you can find all official Prep Tests from the Law School Admission Council. When you're finished a PT, our Insights will tell you what to work on"
 
 /** Default white card; Figma `19956:59132` on hover (collapsed only). */
 const PREPTEST_CARD_SHELL_CLASS =
@@ -239,6 +249,19 @@ function PtBadge({ number, tone = "default" }: { number: number; tone?: BadgeTon
   )
 }
 
+/** Figma `19976:21285` free-plan locked leading icon (32×32). */
+function PrepTestLockBadge() {
+  return (
+    <div
+      data-pt-lock-badge
+      className="flex size-8 shrink-0 items-center justify-center rounded-[8px] border border-[var(--primary)] bg-[var(--primary-0)] p-px"
+      aria-hidden
+    >
+      <FigmaIcon name="lock" width={20} height={20} className="size-5" />
+    </div>
+  )
+}
+
 function MoreMenuButton() {
   return (
     <button
@@ -260,20 +283,29 @@ function PrepTestIdentity({
   title,
   titleClass,
   subtitle,
+  locked = false,
 }: {
   ptNumber: number
   badgeTone: BadgeTone
   title: string
   titleClass: string
   subtitle: string
+  locked?: boolean
 }) {
   return (
     <>
-      <PtBadge number={ptNumber} tone={badgeTone} />
+      {locked ? <PrepTestLockBadge /> : <PtBadge number={ptNumber} tone={badgeTone} />}
       <div className="flex min-w-0 flex-1 flex-col items-start justify-center gap-1 overflow-hidden md:gap-2">
         <p className={cn("w-full truncate text-[14px] font-semibold leading-[1.5] tracking-[0.28px] md:text-[16px] md:tracking-[0.32px]", titleClass)}>{title}</p>
         {subtitle ? (
-          <p className="w-full truncate text-[13px] font-medium leading-[1.5] tracking-[0.26px] text-[var(--greyscale-500)]">
+          <p
+            className={cn(
+              "w-full truncate tracking-[0.26px] text-[var(--greyscale-500)]",
+              locked
+                ? "text-[14px] font-semibold leading-[1.5] tracking-[0.28px]"
+                : "text-[13px] font-medium leading-[1.5]",
+            )}
+          >
             {subtitle}
           </p>
         ) : null}
@@ -298,6 +330,7 @@ function PrepTestListCardShell({
   actions,
   expanded,
   expandedContent,
+  locked = false,
 }: {
   testId: string
   ptNumber: number
@@ -314,6 +347,7 @@ function PrepTestListCardShell({
   actions: ReactNode
   expanded?: boolean
   expandedContent?: ReactNode
+  locked?: boolean
 }) {
   const hasPrimaryAction = actions != null
   const identityClass = cn(
@@ -329,6 +363,7 @@ function PrepTestListCardShell({
       title={title}
       titleClass={titleClass}
       subtitle={subtitle}
+      locked={locked}
     />
   )
   const identityNode = interactive ? (
@@ -336,7 +371,11 @@ function PrepTestListCardShell({
       type="button"
       disabled={starting}
       aria-busy={starting || undefined}
-      aria-label={`Take PrepTest ${ptNumber || ""}`.trim()}
+      aria-label={
+        locked
+          ? `Unlock PrepTest ${ptNumber || ""}`.trim()
+          : `Take PrepTest ${ptNumber || ""}`.trim()
+      }
       onClick={onActivate}
       className={cn(identityClass, "bg-transparent text-left")}
     >
@@ -355,6 +394,7 @@ function PrepTestListCardShell({
       )}
       data-testid={`preptest-list-row-${testId}`}
       data-muted={badgeTone === "muted" ? "true" : undefined}
+      data-locked={locked ? "true" : undefined}
       onMouseEnter={onPrefetch}
       onFocus={onPrefetch}
     >
@@ -420,6 +460,9 @@ function PrepTestListCard({
   onPrefetch,
   onBlindReview,
   onViewResult,
+  subscriptionLocked = false,
+  onLockedClick,
+  showStartButton = false,
 }: {
   item: PrepTestPoolItem
   starting: boolean
@@ -430,6 +473,9 @@ function PrepTestListCard({
   onPrefetch?: () => void
   onBlindReview: () => void
   onViewResult: (sessionId: string) => void
+  subscriptionLocked?: boolean
+  onLockedClick?: () => void
+  showStartButton?: boolean
 }) {
   const ptNum = displayPrepTestNumber(item)
   const isCompleted = item.status === "completed"
@@ -447,6 +493,24 @@ function PrepTestListCard({
     : isCompleted
       ? "text-[#287f6e]"
       : "text-[var(--primary)]"
+
+  if (subscriptionLocked) {
+    return (
+      <PrepTestListCardShell
+        testId={item.id}
+        ptNumber={ptNum}
+        badgeTone="default"
+        title={`PT ${ptNum || "—"}`}
+        titleClass="text-[var(--primary)]"
+        subtitle="100% Fresh"
+        hoverShellClass={PREPTEST_CARD_SHELL_CLASS}
+        interactive
+        onActivate={onLockedClick}
+        actions={null}
+        locked
+      />
+    )
+  }
   const historyRows = buildPoolHistoryRows(item, { includeFallback: isCompleted })
   const latestAttempt = historyRows[0] ?? null
   const displayScore = poolCardDisplayScore(item, latestAttempt, historyRows)
@@ -482,7 +546,13 @@ function PrepTestListCard({
       </span>
       {starting ? "…" : "Retake"}
     </button>
-  ) : isReadyToTake ? null : (
+  ) : isReadyToTake ? (
+    showStartButton ? (
+      <button type="button" disabled={starting} onClick={onPrimary} className={START_ACTION_CLASS}>
+        {starting ? "…" : "Start"}
+      </button>
+    ) : null
+  ) : (
     <button type="button" disabled={starting} onClick={onPrimary} className={CONTINUE_ACTION_CLASS}>
       {starting ? "…" : "Continue"}
     </button>
@@ -592,8 +662,15 @@ function PrepTestListCard({
 function PracticePrepTestsListPage() {
   const navigate = useNavigate()
   const practiceApi = useMemo(() => createPracticeApi(getSupabaseBrowserClient()), [])
+  const entitlement = useStudentEntitlementOptional()
+  const { openLockedContentModal } = useGuestPricingModal()
   const [searchParams] = useSearchParams()
   const legacyTestId = searchParams.get("testId")
+
+  const limitFreeAccess = shouldLimitFreePrepTestAccess({
+    accessState: entitlement?.entitlement?.accessState,
+    hasActiveCore: entitlement?.entitlement?.hasActiveCore,
+  })
 
   const [filter, setFilter] = useState<PrepTestPoolFilter>("all")
   const [sort, setSort] = useState<(typeof SORT_OPTIONS)[number]>("Newest")
@@ -725,7 +802,15 @@ function PracticePrepTestsListPage() {
     }
   }
 
+  function handleLockedContent() {
+    openLockedContentModal("preptests")
+  }
+
   function handlePrimary(item: PrepTestPoolItem) {
+    if (limitFreeAccess) {
+      handleLockedContent()
+      return
+    }
     // Navigate immediately — hub paints from cache / list prefetch while refreshing.
     if (item.status === "in_progress") practiceApi.prefetchPrepTestDetail(item.id)
     navigate(
@@ -774,9 +859,15 @@ function PracticePrepTestsListPage() {
   return (
     <StudentMain>
       <div className="flex flex-col gap-6">
-        <p className="max-w-[756px] text-[12px] font-normal leading-[1.5] tracking-[0.24px] text-[var(--greyscale-500)]">
-          Here you can find all official Prep Tests from the Law School Admission Council. When you're finished a PT,
-          our Insights will tell you what to work on
+        <p
+          className={cn(
+            "max-w-[908px] tracking-[0.28px] text-[var(--greyscale-500)]",
+            limitFreeAccess
+              ? "text-[14px] font-medium leading-[1.5]"
+              : "max-w-[756px] text-[12px] font-normal leading-[1.5] tracking-[0.24px]",
+          )}
+        >
+          {limitFreeAccess ? FREE_INTRO_COPY : PAID_INTRO_COPY}
         </p>
 
         <PrepTestListFilters
@@ -837,22 +928,24 @@ function PracticePrepTestsListPage() {
           <>
             <div className="flex flex-col gap-6">
               {visiblePrepTests.map((item) => (
-                <PrepTestListCard
-                  key={item.id}
-                  item={item}
-                  starting={false}
-                  startingBlindReview={startingBlindReviewId === item.id}
-                  expanded={expandedIds.has(item.id)}
-                  onToggleExpanded={() => toggleExpanded(item.id)}
-                  onPrimary={() => handlePrimary(item)}
-                  onPrefetch={
-                    item.status === "in_progress"
-                      ? () => practiceApi.prefetchPrepTestDetail(item.id)
-                      : undefined
-                  }
-                  onBlindReview={() => void handleBlindReview(item)}
-                  onViewResult={viewResult}
-                />
+                  <PrepTestListCard
+                    key={item.id}
+                    item={item}
+                    starting={false}
+                    startingBlindReview={startingBlindReviewId === item.id}
+                    expanded={expandedIds.has(item.id)}
+                    onToggleExpanded={() => toggleExpanded(item.id)}
+                    onPrimary={() => handlePrimary(item)}
+                    onPrefetch={
+                      item.status === "in_progress" && !limitFreeAccess
+                        ? () => practiceApi.prefetchPrepTestDetail(item.id)
+                        : undefined
+                    }
+                    onBlindReview={() => void handleBlindReview(item)}
+                    onViewResult={viewResult}
+                    subscriptionLocked={limitFreeAccess}
+                    onLockedClick={handleLockedContent}
+                  />
               ))}
             </div>
             {hasMore ? (
@@ -891,7 +984,7 @@ function PrepTestListFilters({
 }) {
   return (
     <div className="flex w-full flex-col gap-3 md:flex-row md:flex-wrap md:items-center md:justify-between md:gap-4">
-      <h2 className="shrink-0 text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-[var(--primary-800)]">
+      <h2 className="shrink-0 text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-[var(--primary-800)] md:text-[24px] md:font-bold md:leading-[1.3] md:tracking-normal">
         Start your PrepTest
       </h2>
       <div className="flex w-full min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4 md:w-auto md:gap-6">

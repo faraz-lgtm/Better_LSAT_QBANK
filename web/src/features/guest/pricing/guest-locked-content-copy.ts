@@ -1,6 +1,7 @@
 export type LockedContentVariant =
   | "default"
   | "drills"
+  | "sections"
   | "analytics"
   | "explanations"
   | "preptests"
@@ -11,6 +12,8 @@ export type LockedContentCopy = {
   title: string
   paragraphs: string[]
   ctaLabel: string
+  /** Secondary dismiss button label (Figma course lock uses "Back to Course"). */
+  dismissLabel?: string
 }
 
 const FREE_INCLUDES_LINE =
@@ -24,13 +27,23 @@ const LOCKED_CONTENT_COPY: Record<LockedContentVariant, LockedContentCopy> = {
     ],
     ctaLabel: "Subscribe Now",
   },
+  /** Figma `21587:36586` — Prep Drills free-user lock modal */
   drills: {
-    title: "Unlock Targeted Drills",
+    title: "Unlock More Ways to Practice",
     paragraphs: [
-      "Practice the question types that need the most work and build accuracy with focused sets.",
-      FREE_INCLUDES_LINE,
+      "Get access to Section drills, official LSAT questions, text explanations, and the full set of BetterLSAT practice tools.",
     ],
-    ctaLabel: "Unlock Drills",
+    ctaLabel: "View Plans",
+    dismissLabel: "Back",
+  },
+  /** Figma `21587:36609` (overlay `21587:36585`) — Sections free-user lock modal */
+  sections: {
+    title: "Unlock More Ways to Practice",
+    paragraphs: [
+      "Get access to Section drills, official LSAT questions, text explanations, and the full set of BetterLSAT practice tools.",
+    ],
+    ctaLabel: "View Plans",
+    dismissLabel: "Back",
   },
   analytics: {
     title: "See What's Costing You Points",
@@ -40,29 +53,32 @@ const LOCKED_CONTENT_COPY: Record<LockedContentVariant, LockedContentCopy> = {
     ],
     ctaLabel: "Unlock Analytics",
   },
+  /** Figma `21587:34268` — Explanations free-user lock */
   explanations: {
-    title: "See Why the Answer Works",
+    title: "Ready for More Practice?",
     paragraphs: [
-      "Unlock full explanations to understand the right answer, the trap, and where your reasoning went off track.",
-      FREE_INCLUDES_LINE,
+      "Unlock official LSAT questions from PrepTests 101–159, with text explanations and focused practice.",
     ],
-    ctaLabel: "Unlock Explanations",
+    ctaLabel: "Unlock Practice",
+    dismissLabel: "Back",
   },
+  /** Figma `21587:32455` — PrepTest subscriber-only lock */
   preptests: {
     title: "Unlock Official LSAT PrepTests",
     paragraphs: [
-      "Get access to official PrepTests and practice in a test-like environment. LawHub Advantage is required for official LSAT content.",
-      FREE_INCLUDES_LINE,
+      "Practice with official LSAT content from PrepTests 101–159. LawHub Advantage is required for official LSAT content.",
     ],
-    ctaLabel: "Unlock PrepTests",
+    ctaLabel: "View Plans",
+    dismissLabel: "Back",
   },
+  /** Figma `19939:8388` — Expand Lock / Upgrade to Keep Going */
   courses: {
-    title: "Unlock the Full Course",
+    title: "Keep Learning with Full Access",
     paragraphs: [
-      "Continue beyond Foundations with the full BetterLSAT course library.",
-      FREE_INCLUDES_LINE,
+      "Your free access includes Foundations, Module 1. Upgrade to continue through the full BetterLSAT course.",
     ],
-    ctaLabel: "Unlock Course",
+    ctaLabel: "View Plans",
+    dismissLabel: "Back to Course",
   },
   studyPlan: {
     title: "Know What to Study Next",
@@ -86,7 +102,8 @@ function getLockedContentCopy(variant: LockedContentVariant = "default"): Locked
 function lockedContentVariantForNavHref(href: string): LockedContentVariant {
   const path = href.split("?")[0] ?? href
   if (path === "/app/practice/drills" || path === "/app/analytics/drills") return "drills"
-  if (path === "/app/practice/sections" || path === "/app/analytics/sections") return "studyPlan"
+  if (path === "/app/practice/sections") return "sections"
+  if (path === "/app/analytics/sections") return "studyPlan"
   if (path === "/app/analytics") return "analytics"
   if (path === "/app/learn/explanations") return "explanations"
   if (path === "/app/preptest" || path === "/app/analytics/preptests") return "preptests"

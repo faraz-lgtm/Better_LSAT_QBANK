@@ -25,6 +25,7 @@ type PrepCourseSectionAccordionProps = {
   onToggleLessonBookmark?: (lessonSlug: string, next: boolean) => void
   onToggle: () => void
   lessonsLocked?: boolean
+  lockedLessonSlugs?: ReadonlySet<string>
   onLockedLessonClick?: () => void
 }
 
@@ -38,6 +39,7 @@ function PrepCourseSectionAccordion({
   onToggleLessonBookmark,
   onToggle,
   lessonsLocked = false,
+  lockedLessonSlugs,
   onLockedLessonClick,
 }: PrepCourseSectionAccordionProps) {
   const totalMinutes = sectionDurationMinutes(section)
@@ -52,11 +54,24 @@ function PrepCourseSectionAccordion({
       <button
         type="button"
         className="flex h-[100px] w-full items-center justify-between gap-3 p-[24px] text-left transition-colors"
-        onClick={onToggle}
-        aria-expanded={expanded}
+        onClick={() => {
+          if (lessonsLocked) {
+            onLockedLessonClick?.()
+            return
+          }
+          onToggle()
+        }}
+        aria-expanded={lessonsLocked ? false : expanded}
+        aria-label={lessonsLocked ? `${section.title} (locked)` : undefined}
       >
         <div className="flex min-w-0 items-center gap-3">
-          <ProgressRing value={progressPercent} size="sm" ringBg="var(--greyscale-25)" />
+          {lessonsLocked ? (
+            <span className="flex size-9 shrink-0 items-center justify-center" aria-hidden>
+              <PrepCourseFigmaIcon src={`${PREP_COURSE_FIGMA}/icon-lock.svg`} className="size-6" />
+            </span>
+          ) : (
+            <ProgressRing value={progressPercent} size="sm" ringBg="var(--greyscale-25)" />
+          )}
           <p className="truncate text-lg font-bold leading-[1.35] text-[var(--color-student-heading)]" title={section.title}>
             {section.title}
           </p>
@@ -79,25 +94,28 @@ function PrepCourseSectionAccordion({
           />
         </div>
       </button>
-      {expanded ? (
+      {expanded && !lessonsLocked ? (
         <div className="bg-[var(--greyscale-0)]">
-          {section.lessons.map((lesson) => (
-            <PrepCourseLessonRow
-              key={lesson.id}
-              course={course}
-              lesson={lesson}
-              active={lesson.slug === activeLessonSlug}
-              completed={completedLessonSlugs.has(lesson.slug)}
-              bookmarked={bookmarkedLessonSlugs.has(lesson.slug)}
-              locked={lessonsLocked}
-              onLockedClick={onLockedLessonClick}
-              onToggleBookmark={
-                onToggleLessonBookmark
-                  ? (next) => onToggleLessonBookmark(lesson.slug, next)
-                  : undefined
-              }
-            />
-          ))}
+          {section.lessons.map((lesson) => {
+            const lessonLocked = lockedLessonSlugs?.has(lesson.slug) ?? false
+            return (
+              <PrepCourseLessonRow
+                key={lesson.id}
+                course={course}
+                lesson={lesson}
+                active={lesson.slug === activeLessonSlug}
+                completed={completedLessonSlugs.has(lesson.slug)}
+                bookmarked={bookmarkedLessonSlugs.has(lesson.slug)}
+                locked={lessonLocked}
+                onLockedClick={onLockedLessonClick}
+                onToggleBookmark={
+                  onToggleLessonBookmark
+                    ? (next) => onToggleLessonBookmark(lesson.slug, next)
+                    : undefined
+                }
+              />
+            )
+          })}
         </div>
       ) : null}
     </div>

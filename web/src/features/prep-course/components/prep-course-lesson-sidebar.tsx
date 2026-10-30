@@ -16,10 +16,12 @@ type PrepCourseLessonSidebarProps = {
   lessons: PrepLesson[]
   activeLessonSlug?: string
   completedLessonSlugs: Set<string>
+  lockedLessonSlugs?: ReadonlySet<string>
   progressPercent: number
   sectionTitle: string
   sectionSubtitle: string
   onSelectLesson: (slug: string) => void
+  onLockedLessonClick?: () => void
   onClose: () => void
 }
 
@@ -110,10 +112,12 @@ function PrepCourseLessonSidebar({
   lessons,
   activeLessonSlug,
   completedLessonSlugs,
+  lockedLessonSlugs,
   progressPercent,
   sectionTitle,
   sectionSubtitle,
   onSelectLesson,
+  onLockedLessonClick,
   onClose,
 }: PrepCourseLessonSidebarProps) {
   return (
@@ -155,6 +159,7 @@ function PrepCourseLessonSidebar({
           {lessons.map((lesson, index) => {
             const isActive = lesson.slug === activeLessonSlug
             const isComplete = completedLessonSlugs.has(lesson.slug)
+            const isLocked = lockedLessonSlugs?.has(lesson.slug) ?? false
             const { title, subtitle } = resolveLessonRowDisplay(lesson)
             const drillKind = resolveDrillLessonType(lesson)
 
@@ -164,13 +169,26 @@ function PrepCourseLessonSidebar({
                 ? "bg-[var(--primary-0)]"
                 : "bg-[var(--greyscale-25)]"
 
-            const markerVariant = isActive ? "active" : isComplete ? "complete" : "incomplete"
+            const markerVariant = isLocked
+              ? "locked"
+              : isActive
+                ? "active"
+                : isComplete
+                  ? "complete"
+                  : "incomplete"
 
             return (
               <li key={lesson.id}>
                 <button
                   type="button"
-                  onClick={() => onSelectLesson(lesson.slug)}
+                  aria-label={isLocked ? `${title} (locked)` : undefined}
+                  onClick={() => {
+                    if (isLocked) {
+                      onLockedLessonClick?.()
+                      return
+                    }
+                    onSelectLesson(lesson.slug)
+                  }}
                   className={cn(
                     "flex w-full items-center gap-3 rounded-[14px] px-3 py-3 text-left transition-colors",
                     subtitle ? "min-h-16" : "h-16",

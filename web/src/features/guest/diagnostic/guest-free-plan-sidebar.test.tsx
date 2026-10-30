@@ -31,12 +31,22 @@ describe("GuestFreePlanSidebar", () => {
 
     expect(screen.getByRole("button", { name: "Prep Courses" })).toBeInTheDocument()
     expect(screen.queryByRole("button", { name: "Prep Courses (locked)" })).not.toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Explanations (locked)" })).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "Explanations" })).toHaveAttribute("href", "/app/learn/explanations")
+    expect(screen.queryByRole("button", { name: "Explanations (locked)" })).not.toBeInTheDocument()
     expect(screen.queryByRole("button", { name: "Untimed Review (locked)" })).not.toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Analytics (locked)" })).toBeInTheDocument()
-    expect(screen.getAllByRole("button", { name: "Drills (locked)" })).toHaveLength(2)
+    expect(screen.getByRole("link", { name: "Drills" })).toHaveAttribute("href", "/app/practice/drills")
+    expect(screen.getByRole("button", { name: "Drills (locked)" })).toBeInTheDocument()
     expect(screen.getAllByRole("button", { name: "Sections (locked)" })).toHaveLength(2)
-    expect(screen.getAllByRole("button", { name: "PrepTest (locked)" })).toHaveLength(2)
+    expect(screen.getByRole("link", { name: "PrepTest" })).toHaveAttribute("href", "/app/preptest")
+    expect(screen.getByRole("button", { name: "PrepTest (locked)" })).toBeInTheDocument()
+    expect(screen.getByText("TUTORING")).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "Book 1 on 1 Sessions" })).toHaveAttribute(
+      "href",
+      "/app/tutoring/sessions",
+    )
+    expect(screen.getByLabelText("Live Classes (coming soon)")).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Book 1 on 1 Sessions (locked)" })).not.toBeInTheDocument()
     expect(screen.getByRole("link", { name: "Feedback" })).toHaveAttribute("href", "/app/feedback")
     expect(screen.getByRole("link", { name: "Roadmap" })).toHaveAttribute("href", "/app/roadmap")
     expect(screen.queryByRole("button", { name: "Feedback (locked)" })).not.toBeInTheDocument()
@@ -53,7 +63,7 @@ describe("GuestFreePlanSidebar", () => {
     expect(screen.queryByRole("button", { name: /\$79/ })).not.toBeInTheDocument()
   })
 
-  it("opens the locked-content popup for locked items", async () => {
+  it("opens feature-specific locked-content copy for Insights Drills, Sections, Analytics, and PrepTest", async () => {
     const user = userEvent.setup()
     render(
       <MemoryRouter initialEntries={["/app"]}>
@@ -64,26 +74,9 @@ describe("GuestFreePlanSidebar", () => {
       </MemoryRouter>,
     )
 
-    await user.click(screen.getByRole("button", { name: "Explanations (locked)" }))
-    expect(screen.getByRole("dialog", { name: "See Why the Answer Works" })).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Unlock Explanations" })).toBeInTheDocument()
-    expect(screen.getByTestId("path")).toHaveTextContent("/app")
-  })
-
-  it("opens feature-specific locked-content copy for Drills, Sections, Analytics, and PrepTest", async () => {
-    const user = userEvent.setup()
-    render(
-      <MemoryRouter initialEntries={["/app"]}>
-        <GuestPricingModalProvider>
-          <GuestFreePlanSidebar mobileOpen={false} onMobileClose={() => {}} />
-        </GuestPricingModalProvider>
-        <PathProbe />
-      </MemoryRouter>,
-    )
-
-    await user.click(screen.getAllByRole("button", { name: "Drills (locked)" })[0]!)
-    expect(screen.getByRole("dialog", { name: "Unlock Targeted Drills" })).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Unlock Drills" })).toBeInTheDocument()
+    await user.click(screen.getByRole("button", { name: "Drills (locked)" }))
+    expect(screen.getByRole("dialog", { name: "Unlock More Ways to Practice" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "View Plans" })).toBeInTheDocument()
     await user.click(screen.getByRole("button", { name: "Back" }))
 
     await user.click(screen.getAllByRole("button", { name: "Sections (locked)" })[0]!)
@@ -96,9 +89,9 @@ describe("GuestFreePlanSidebar", () => {
     expect(screen.getByRole("button", { name: "Unlock Analytics" })).toBeInTheDocument()
     await user.click(screen.getByRole("button", { name: "Back" }))
 
-    await user.click(screen.getAllByRole("button", { name: "PrepTest (locked)" })[0]!)
+    await user.click(screen.getByRole("button", { name: "PrepTest (locked)" }))
     expect(screen.getByRole("dialog", { name: "Unlock Official LSAT PrepTests" })).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Unlock PrepTests" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "View Plans" })).toBeInTheDocument()
     expect(screen.getByTestId("path")).toHaveTextContent("/app")
   })
 
@@ -120,8 +113,8 @@ describe("GuestFreePlanSidebar", () => {
     )
 
     await user.click(screen.getByRole("button", { name: "LR Mastery Course (locked)" }))
-    expect(screen.getByRole("dialog", { name: "Unlock the Full Course" })).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Unlock Course" })).toBeInTheDocument()
+    expect(screen.getByRole("dialog", { name: "Keep Learning with Full Access" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "View Plans" })).toBeInTheDocument()
     expect(screen.getByTestId("path")).toHaveTextContent("/app")
   })
 
