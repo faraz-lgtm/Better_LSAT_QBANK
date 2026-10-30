@@ -110,8 +110,7 @@ function FreePlanUpgradeBanner() {
           Unlock full practice and analytics
         </p>
         <p className="text-base leading-[1.5] tracking-[0.32px] text-[var(--greyscale-500)]">
-          Monthly, 3 Months, 6 Months, and 12 Months plans include practice sets, analytics, and
-          LawHub PrepPlus linking.
+          Get access to drills, analytics, and LawHub PrepPlus linking.
         </p>
         <p className="pt-0.5 text-sm leading-[1.5] tracking-[0.28px] text-[var(--greyscale-500)]">
           The LawHub fee is paid to LSAC separately. One PrepPlus subscription works across prep platforms.

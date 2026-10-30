@@ -3403,7 +3403,7 @@ select.ds-input option {
   pointer-events: none;
 }
 
-/* Figma `20593:34154` — Upgrade to LSAT (header + sidebar free-plan card) */
+/* Figma `20593:34154` — Upgrade (header + sidebar free-plan card) */
 .ds-btn.guest-upgrade-cta-primary {
   height: auto;
   min-height: 0;

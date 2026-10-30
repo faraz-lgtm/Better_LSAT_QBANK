@@ -44,7 +44,7 @@ describe("GuestFreePlanSidebar", () => {
 
     expect(screen.queryByRole("button", { name: /Practice Exams/i })).not.toBeInTheDocument()
     expect(screen.queryByRole("button", { name: /Question Bank/i })).not.toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Upgrade to LSAT" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Upgrade" })).toBeInTheDocument()
     expect(screen.getByText("Unlock Analytics")).toBeInTheDocument()
     expect(
       screen.getByText("Track weak areas, trends, and score progress."),

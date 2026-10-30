@@ -52,7 +52,7 @@ describe("GuestUpgradeCta", () => {
       </MemoryRouter>,
     )
 
-    await user.click(screen.getByRole("button", { name: "Upgrade to LSAT" }))
+    await user.click(screen.getByRole("button", { name: "Upgrade" }))
     expect(openPricingModal).toHaveBeenCalledTimes(1)
   })
 
@@ -99,6 +99,6 @@ describe("GuestUpgradeCta", () => {
       </MemoryRouter>,
     )
 
-    expect(screen.queryByRole("button", { name: /Upgrade to LSAT|Link LSAC/ })).toBeNull()
+    expect(screen.queryByRole("button", { name: /^(Upgrade|Link LSAC)$/ })).toBeNull()
   })
 })
