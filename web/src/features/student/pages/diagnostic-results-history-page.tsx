@@ -9,14 +9,10 @@ import {
 } from "@/features/guest/diagnostic/guest-diagnostic-result-storage"
 import { StudentMain } from "@/features/student/components/student-main"
 import {
-  DIAGNOSTIC_RESULTS_MINI_HREF,
+  DIAGNOSTIC_RESULTS_ROOT,
   diagnosticAttemptHref,
   type DiagnosticResultsSection,
 } from "@/features/student/diagnostic/diagnostic-results-routes"
-
-type DiagnosticResultsHistoryPageProps = {
-  section: DiagnosticResultsSection
-}
 
 function sectionCopy(section: DiagnosticResultsSection) {
   if (section === "mini") {
@@ -70,12 +66,12 @@ function HistoryRow({ attempt }: { attempt: GuestDiagnosticResult }) {
   )
 }
 
-function DiagnosticResultsHistoryPage({ section }: DiagnosticResultsHistoryPageProps) {
+function SectionHistory({ section }: { section: DiagnosticResultsSection }) {
   const copy = sectionCopy(section)
   const attempts = listDiagnosticHistoryBySection(section)
 
   return (
-    <StudentMain className="bg-[var(--primary-0)]" contentClassName="flex min-h-0 flex-1 flex-col bg-[var(--primary-0)] pt-6 pb-6">
+    <div className="flex flex-col">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="student-page-heading">{copy.title}</h1>
         <Link
@@ -103,14 +99,24 @@ function DiagnosticResultsHistoryPage({ section }: DiagnosticResultsHistoryPageP
           </div>
         )}
       </section>
+    </div>
+  )
+}
+
+function DiagnosticResultsHistoryPage() {
+  return (
+    <StudentMain className="bg-[var(--primary-0)]" contentClassName="flex min-h-0 flex-1 flex-col gap-10 bg-[var(--primary-0)] pt-6 pb-6">
+      <SectionHistory section="mini" />
+      <SectionHistory section="full" />
     </StudentMain>
   )
 }
 
-function DiagnosticResultsIndexRedirect() {
+/** Old `/mini` and `/full` history URLs redirect to the combined results page. */
+function DiagnosticResultsSectionRedirect() {
   const [params] = useSearchParams()
   const qs = params.toString()
-  return <Navigate to={`${DIAGNOSTIC_RESULTS_MINI_HREF}${qs ? `?${qs}` : ""}`} replace />
+  return <Navigate to={`${DIAGNOSTIC_RESULTS_ROOT}${qs ? `?${qs}` : ""}`} replace />
 }
 
-export { DiagnosticResultsHistoryPage, DiagnosticResultsIndexRedirect }
+export { DiagnosticResultsHistoryPage, DiagnosticResultsSectionRedirect }

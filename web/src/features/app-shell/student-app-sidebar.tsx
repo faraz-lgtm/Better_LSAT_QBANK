@@ -8,6 +8,7 @@ import {
   STUDENT_APP_VERSION,
   STUDENT_DASHBOARD_HREF,
   STUDENT_DASHBOARD_ICON,
+  STUDENT_DIAGNOSTIC_EXPLANATION_ICON,
   STUDENT_DIAGNOSTIC_HREF,
   STUDENT_DIAGNOSTIC_ICON,
   STUDENT_DIAGNOSTIC_NAV_SECTION,
@@ -192,6 +193,19 @@ function PrepCourseNavItem({
           {PREP_COURSE_NAV_ITEMS.map((course) => {
             const href = `${PREP_COURSE_HREF}/${course.slug}`
             const active = isCourseNavActive(pathname, course.slug)
+            if (course.status === "coming_soon") {
+              return (
+                <div
+                  key={course.slug}
+                  className="student-sidebar-link student-sidebar-sublink student-sidebar-link--coming-soon student-sidebar-link--with-trailing w-full justify-between"
+                  aria-label={`${course.title} (coming soon)`}
+                  title={`${course.title} (coming soon)`}
+                >
+                  <span className="truncate">{course.title}</span>
+                  <span className="student-sidebar-item-badge">Coming Soon</span>
+                </div>
+              )
+            }
             const locked = lockNonEssentialCourses && course.slug !== PREP_COURSE_ESSENTIALS_SLUG
             if (locked) {
               return (
@@ -371,7 +385,7 @@ function StudentAppSidebar({
               src="/betterLSAT_LOGO.png"
               alt="betterLSAT"
               className={cn(
-                "h-auto w-[140px] object-contain dark:brightness-0 dark:invert",
+                "h-[18px] w-[144px] object-contain dark:brightness-0 dark:invert",
                 collapsed && "lg:hidden",
               )}
             />
@@ -439,11 +453,7 @@ function StudentAppSidebar({
                   <SidebarNavIcon icon={STUDENT_DIAGNOSTIC_ICON} />
                   <span className="student-sidebar-label">Diagnostic Test</span>
                 </Link>
-                <DiagnosticResultsNavItem
-                  showIcon
-                  collapsed={collapsed}
-                  onExpandSidebar={() => setCollapsed(false)}
-                />
+                <DiagnosticResultsNavItem showIcon />
                 <Link
                   to={DIAGNOSTIC_EXPLANATIONS_HREF}
                   data-tour-target={TOUR_TARGET.diagnosticExplanation}
@@ -454,7 +464,7 @@ function StudentAppSidebar({
                   aria-label="Diagnostic Explanation"
                   title="Diagnostic Explanation"
                 >
-                  <SidebarNavIcon icon="explanations" />
+                  <SidebarNavIcon icon={STUDENT_DIAGNOSTIC_EXPLANATION_ICON} />
                   <span className="student-sidebar-label">Diagnostic Explanation</span>
                 </Link>
               </div>
@@ -476,14 +486,12 @@ function StudentAppSidebar({
                       <div
                         key={item.href}
                         data-tour-target={tourTarget}
-                        className="student-sidebar-link student-sidebar-link--with-trailing student-sidebar-link--coming-soon w-full justify-between"
+                        className="student-sidebar-link student-sidebar-link--coming-soon w-full"
                         aria-label={`${item.label} (coming soon)`}
                         title={`${item.label} (coming soon)`}
                       >
-                        <span className="student-sidebar-link-content flex min-w-0 items-center gap-2.5">
-                          <SidebarNavIcon icon={item.icon} />
-                          <span className="student-sidebar-label truncate">{item.label}</span>
-                        </span>
+                        <SidebarNavIcon icon={item.icon} />
+                        <span className="student-sidebar-label truncate">{item.label}</span>
                         <span className="student-sidebar-item-badge">Coming Soon</span>
                       </div>
                     )
@@ -570,7 +578,7 @@ function StudentAppSidebar({
           {beforeFooter}
         </nav>
 
-        <div className="student-sidebar-footer flex shrink-0 flex-col gap-4 px-4 pb-6">
+        <div className="student-sidebar-footer flex shrink-0 flex-col px-4 pb-6">
           <div className="student-sidebar-logout-row">
             <button
               type="button"
@@ -583,8 +591,8 @@ function StudentAppSidebar({
                 <img src={STUDENT_NAV_LOGOUT_ICON_SRC} alt="" width={16} height={16} />
               </span>
               <span className="student-sidebar-label">Logout</span>
+              <span className="student-sidebar-version">Version {STUDENT_APP_VERSION}</span>
             </button>
-            <span className="student-sidebar-version">Version {STUDENT_APP_VERSION}</span>
           </div>
         </div>
       </aside>

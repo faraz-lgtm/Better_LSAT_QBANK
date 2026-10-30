@@ -2,16 +2,19 @@ import { PREPTEST_LIST_HREF, isPrepTestHubDetailPath, isPrepTestStudentPath } fr
 import {
   DIAGNOSTIC_RESULTS_FULL_HREF,
   DIAGNOSTIC_RESULTS_MINI_HREF,
+  DIAGNOSTIC_RESULTS_ROOT,
 } from "@/features/student/diagnostic/diagnostic-results-routes"
 import { isDiagnosticExplanationsPath } from "@/features/student/diagnostic/diagnostic-explanations-routes"
 
 export type StudentNavSectionKey = "academy" | "prep" | "insights" | "tutoring" | "community"
 
-/** Per-item icons from Figma sidebar node `19640:23125` (+ tutoring `21593:37079`). */
+/** Per-item icons from Figma sidebar node `19939:3385`. */
 export type StudentNavItemIconKey =
   | "get-started"
   | "dashboard"
   | "diagnostic"
+  | "diagnostic-results"
+  | "diagnostic-explanation"
   | "prep-course"
   | "explanations"
   | "drills"
@@ -29,7 +32,9 @@ export type StudentNavItemIconKey =
 export const STUDENT_NAV_ITEM_ICON_SRC: Record<StudentNavItemIconKey, string> = {
   "get-started": "/nav/rocket.svg",
   dashboard: "/nav/dashboard.svg",
-  diagnostic: "/nav/test.svg",
+  diagnostic: "/nav/drills.svg",
+  "diagnostic-results": "/nav/diagnostic-results.svg",
+  "diagnostic-explanation": "/nav/diagnostic-explanation.svg",
   "prep-course": "/nav/prep-course.svg",
   explanations: "/nav/explanations.svg",
   drills: "/nav/drills.svg",
@@ -84,9 +89,14 @@ export const STUDENT_DIAGNOSTIC_HREF = "/intent"
 
 export const STUDENT_DIAGNOSTIC_ICON: StudentNavItemIconKey = "diagnostic"
 
+export const STUDENT_DIAGNOSTIC_RESULTS_ICON: StudentNavItemIconKey = "diagnostic-results"
+
+export const STUDENT_DIAGNOSTIC_EXPLANATION_ICON: StudentNavItemIconKey = "diagnostic-explanation"
+
 export const STUDENT_TUTORING_SESSIONS_HREF = "/app/tutoring/sessions"
 export const STUDENT_LIVE_CLASSES_HREF = "/app/tutoring/live-classes"
 
+/** Section order matches Figma sidebar `19939:3385`. */
 export const STUDENT_NAV_SECTIONS: StudentNavSection[] = [
   {
     key: "academy",
@@ -94,6 +104,24 @@ export const STUDENT_NAV_SECTIONS: StudentNavSection[] = [
     items: [
       { label: "Prep Courses", href: "/app/prep-course", icon: "prep-course" },
       { label: "Explanations", href: "/app/learn/explanations", icon: "explanations" },
+    ],
+  },
+  {
+    key: "tutoring",
+    label: "TUTORING",
+    badge: "NEW",
+    items: [
+      {
+        label: "Book 1 on 1 Sessions",
+        href: STUDENT_TUTORING_SESSIONS_HREF,
+        icon: "tutoring-sessions",
+      },
+      {
+        label: "Live Classes",
+        href: STUDENT_LIVE_CLASSES_HREF,
+        icon: "live-classes",
+        status: "coming_soon",
+      },
     ],
   },
   {
@@ -113,24 +141,6 @@ export const STUDENT_NAV_SECTIONS: StudentNavSection[] = [
       { label: "Drills", href: "/app/analytics/drills", icon: "insights-drills" },
       { label: "Sections", href: "/app/analytics/sections", icon: "insights-sections" },
       { label: "PrepTest", href: "/app/analytics/preptests", icon: "insights-preptest" },
-    ],
-  },
-  {
-    key: "tutoring",
-    label: "TUTORING",
-    badge: "NEW",
-    items: [
-      {
-        label: "Book 1 on 1 Sessions",
-        href: STUDENT_TUTORING_SESSIONS_HREF,
-        icon: "tutoring-sessions",
-      },
-      {
-        label: "Live Classes",
-        href: STUDENT_LIVE_CLASSES_HREF,
-        icon: "live-classes",
-        status: "coming_soon",
-      },
     ],
   },
   {
@@ -212,8 +222,9 @@ function sectionLabel(label: string): string {
 
 export function getStudentPageTitle(pathname: string, search = ""): string | null {
   if (isDashboardActive(pathname)) return "Dashboard"
-  if (pathname === DIAGNOSTIC_RESULTS_MINI_HREF) return "Mini History"
-  if (pathname === DIAGNOSTIC_RESULTS_FULL_HREF) return "Full Section History"
+  if (pathname === DIAGNOSTIC_RESULTS_ROOT || pathname === DIAGNOSTIC_RESULTS_MINI_HREF || pathname === DIAGNOSTIC_RESULTS_FULL_HREF) {
+    return "Diagnostic Results"
+  }
   if (pathname.startsWith("/app/diagnostic/results/")) return "Diagnostic Results"
   if (pathname === "/app/account") return "Account"
   if (pathname === "/app/settings") return "Settings"
