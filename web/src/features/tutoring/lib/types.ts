@@ -9,6 +9,10 @@ export type TutoringPackage = {
   description: string
   features: string[]
   popular?: boolean
+  /** Label for the package card booking CTA. */
+  ctaLabel: string
+  /** Checkout/booking page embedded in the package modal iframe. */
+  bookingUrl: string
 }
 
 export type TutoringTestimonial = {

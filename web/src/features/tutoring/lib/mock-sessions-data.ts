@@ -8,6 +8,8 @@ export const TUTORING_PACKAGES: TutoringPackage[] = [
     compareAtPrice: "$200",
     description: "For one specific section, problem area, or practice test review.",
     features: ["1 private session", "No long-term commitment", "Target one immediate problem"],
+    ctaLabel: "Book a Single Session",
+    bookingUrl: "https://old.betterlsat.com/booking/60-minute-single-prep-session-webflow/",
   },
   {
     id: "pack-5",
@@ -18,6 +20,8 @@ export const TUTORING_PACKAGES: TutoringPackage[] = [
     description: "For students who want structure, regular feedback, and a clear plan.",
     features: ["5 private sessions", "Regular check-ins", "Great for shorter prep timelines"],
     popular: true,
+    ctaLabel: "Book a 5-Session Pack",
+    bookingUrl: "https://old.betterlsat.com/booking/5-sessions-pack-webflow/",
   },
   {
     id: "pack-10",
@@ -27,6 +31,8 @@ export const TUTORING_PACKAGES: TutoringPackage[] = [
     saveLabel: "Save $150",
     description: "For deeper support across weak areas, strategy, and timing.",
     features: ["10 private sessions", "Broader skill support", "More time to adjust and improve"],
+    ctaLabel: "Book a 10-Session Pack",
+    bookingUrl: "https://old.betterlsat.com/booking/10-sessions-pack-webflow/",
   },
   {
     id: "pack-20",
@@ -41,6 +47,8 @@ export const TUTORING_PACKAGES: TutoringPackage[] = [
       "Full practice test guidance",
       "Ongoing progress support",
     ],
+    ctaLabel: "Book a 20-Session Pack",
+    bookingUrl: "https://old.betterlsat.com/booking/20-sessions-pack-webflow/",
   },
 ]
 

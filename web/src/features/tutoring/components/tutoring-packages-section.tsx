@@ -1,6 +1,8 @@
+import { useState } from "react"
 import { Check } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { PackageBookingModal } from "@/features/tutoring/components/package-booking-modal"
 import type { TutoringPackage } from "@/features/tutoring/lib/types"
 import { cn } from "@/lib/utils"
 
@@ -27,6 +29,8 @@ function TutoringPackagesSection({
   selectedPackageId,
   onSelectPackage,
 }: TutoringPackagesSectionProps) {
+  const [bookingPackage, setBookingPackage] = useState<TutoringPackage | null>(null)
+
   return (
     <section className="flex w-full flex-col gap-4">
       <div>
@@ -38,10 +42,8 @@ function TutoringPackagesSection({
         {packages.map((pkg) => {
           const selected = selectedPackageId === pkg.id || (!selectedPackageId && pkg.popular)
           return (
-            <button
+            <div
               key={pkg.id}
-              type="button"
-              onClick={() => onSelectPackage?.(pkg.id)}
               className={cn(
                 "relative flex h-full flex-col gap-3.5 rounded-[16px] border bg-[var(--greyscale-0)] px-[22px] py-6 text-left transition-shadow",
                 selected
@@ -81,7 +83,19 @@ function TutoringPackagesSection({
                   </li>
                 ))}
               </ul>
-            </button>
+              <button
+                type="button"
+                className="mt-auto hidden h-11 w-full items-center justify-center rounded-[12px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-3 text-xs font-bold tracking-[0.01em] text-[var(--primary)]"
+                onClick={(event) => {
+                  event.preventDefault()
+                  event.stopPropagation()
+                  onSelectPackage?.(pkg.id)
+                  setBookingPackage(pkg)
+                }}
+              >
+                {pkg.ctaLabel}
+              </button>
+            </div>
           )
         })}
       </div>
@@ -112,6 +126,15 @@ function TutoringPackagesSection({
           {helperLinkLabel}
         </button>
       </div>
+
+      <PackageBookingModal
+        open={bookingPackage != null}
+        onOpenChange={(open) => {
+          if (!open) setBookingPackage(null)
+        }}
+        title={bookingPackage?.ctaLabel ?? "Book a session"}
+        bookingUrl={bookingPackage?.bookingUrl ?? null}
+      />
     </section>
   )
 }
