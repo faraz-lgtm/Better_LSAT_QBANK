@@ -46,10 +46,15 @@ describe("GuestFreePlanSidebar", () => {
     expect(screen.getByText("TUTORING")).toBeInTheDocument()
     expect(screen.getByRole("link", { name: "Book 1 on 1 Sessions" })).toHaveAttribute(
       "href",
+      "/app/tutoring/book",
+    )
+    expect(screen.getByRole("link", { name: "My Sessions" })).toHaveAttribute(
+      "href",
       "/app/tutoring/sessions",
     )
     expect(screen.getByLabelText("Live Classes (coming soon)")).toBeInTheDocument()
     expect(screen.queryByRole("button", { name: "Book 1 on 1 Sessions (locked)" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "My Sessions (locked)" })).not.toBeInTheDocument()
     expect(screen.getByRole("link", { name: "Feedback" })).toHaveAttribute("href", "/app/feedback")
     expect(screen.getByRole("link", { name: "Roadmap" })).toHaveAttribute("href", "/app/roadmap")
     expect(screen.queryByRole("button", { name: "Feedback (locked)" })).not.toBeInTheDocument()

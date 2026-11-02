@@ -93,8 +93,15 @@ export const STUDENT_DIAGNOSTIC_RESULTS_ICON: StudentNavItemIconKey = "diagnosti
 
 export const STUDENT_DIAGNOSTIC_EXPLANATION_ICON: StudentNavItemIconKey = "diagnostic-explanation"
 
+export const STUDENT_TUTORING_BOOK_HREF = "/app/tutoring/book"
+export const STUDENT_TUTORING_AFTER_BOOKING_HREF = "/app/tutoring/after-booking"
 export const STUDENT_TUTORING_SESSIONS_HREF = "/app/tutoring/sessions"
+export const STUDENT_TUTORING_SESSIONS_ALL_HREF = "/app/tutoring/sessions/all"
 export const STUDENT_LIVE_CLASSES_HREF = "/app/tutoring/live-classes"
+
+export function studentTutoringSessionTranscriptHref(sessionId: string): string {
+  return `/app/tutoring/sessions/${sessionId}/transcript`
+}
 
 /** Section order matches Figma sidebar `19939:3385`. */
 export const STUDENT_NAV_SECTIONS: StudentNavSection[] = [
@@ -113,6 +120,11 @@ export const STUDENT_NAV_SECTIONS: StudentNavSection[] = [
     items: [
       {
         label: "Book 1 on 1 Sessions",
+        href: STUDENT_TUTORING_BOOK_HREF,
+        icon: "tutoring-sessions",
+      },
+      {
+        label: "My Sessions",
         href: STUDENT_TUTORING_SESSIONS_HREF,
         icon: "tutoring-sessions",
       },
@@ -228,6 +240,7 @@ export function getStudentPageTitle(pathname: string, search = ""): string | nul
   if (pathname.startsWith("/app/diagnostic/results/")) return "Diagnostic Results"
   if (pathname === "/app/account") return "Account"
   if (pathname === "/app/settings") return "Settings"
+  if (/^\/app\/tutoring\/sessions\/[^/]+\/transcript$/.test(pathname)) return "Session Transcript"
   if (isPrepTestHubDetailPath(pathname)) return null
   if (pathname.startsWith("/app/prep-course/") && pathname !== "/app/prep-course") return null
   if (pathname.startsWith("/app/prep-course")) return "Prep Courses"
@@ -237,7 +250,6 @@ export function getStudentPageTitle(pathname: string, search = ""): string | nul
   if (pathname === "/app/practice/drills/lr/new" || pathname === "/app/practice/drills/rc/new") return null
   if (pathname.startsWith("/app/practice/results/")) return null
   if (pathname.startsWith("/app/practice/blind-review")) return "Untimed Review"
-
   const activeItem = findActiveNavItem(pathname, search)
   if (activeItem) return activeItem.label
 

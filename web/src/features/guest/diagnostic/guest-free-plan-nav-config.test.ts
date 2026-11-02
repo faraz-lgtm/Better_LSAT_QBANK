@@ -26,7 +26,9 @@ describe("isFreePlanLockedNavHref", () => {
   })
 
   it("keeps tutoring and community destinations unlocked", () => {
+    expect(isFreePlanLockedNavHref("/app/tutoring/book")).toBe(false)
     expect(isFreePlanLockedNavHref("/app/tutoring/sessions")).toBe(false)
+    expect(isFreePlanLockedNavHref("/app/tutoring/sessions/all")).toBe(false)
     expect(isFreePlanLockedNavHref("/app/tutoring/live-classes")).toBe(false)
     expect(isFreePlanLockedNavHref("/app/feedback")).toBe(false)
     expect(isFreePlanLockedNavHref("/app/roadmap")).toBe(false)
