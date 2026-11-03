@@ -17,8 +17,10 @@ export type TutoringPackage = {
 
 export type TutoringTestimonial = {
   id: string
-  quote: string
   name: string
+  /** Gumlet (or other) embed URL for the student video. */
+  videoEmbedSrc: string
+  quote?: string
 }
 
 export type PackageSlotStatus = "completed" | "scheduled" | "unscheduled"

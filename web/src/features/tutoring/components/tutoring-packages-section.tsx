@@ -121,7 +121,7 @@ function TutoringPackagesSection({
         <button
           type="button"
           onClick={onHelperClick}
-          className="shrink-0 text-sm font-semibold tracking-[0.02em] text-[var(--primary)] hover:underline"
+          className="shrink-0 text-sm font-semibold tracking-[0.02em] text-[var(--primary)] underline-offset-2 hover:underline focus-visible:rounded-sm focus-visible:outline focus-visible:outline-1 focus-visible:outline-[var(--greyscale-300)]"
         >
           {helperLinkLabel}
         </button>

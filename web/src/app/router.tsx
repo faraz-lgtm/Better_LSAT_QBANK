@@ -85,6 +85,10 @@ const PrepTestPoolsPage = lazyNamed(
 const DashboardPage = lazyNamed(() => import("@/features/dashboard/pages/dashboard-page"), "DashboardPage")
 const FeedbackPage = lazyNamed(() => import("@/features/feedback/pages/feedback-page"), "FeedbackPage")
 const RoadmapPage = lazyNamed(() => import("@/features/feedback/pages/roadmap-page"), "RoadmapPage")
+const FreeStrategyCallPage = lazyNamed(
+  () => import("@/features/tutoring/pages/free-strategy-call-page"),
+  "FreeStrategyCallPage",
+)
 const BookSessionsPage = lazyNamed(
   () => import("@/features/tutoring/pages/book-sessions-page"),
   "BookSessionsPage",
@@ -849,6 +853,14 @@ const router = createBrowserRouter([
             element: (
               <LazyPage>
                 <GuestDiagnosticResultsPage section="full" />
+              </LazyPage>
+            ),
+          },
+          {
+            path: "free-strategy-call",
+            element: (
+              <LazyPage>
+                <FreeStrategyCallPage />
               </LazyPage>
             ),
           },

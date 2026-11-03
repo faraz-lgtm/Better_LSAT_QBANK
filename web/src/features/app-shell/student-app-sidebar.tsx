@@ -4,6 +4,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom"
 
 import {
   isDashboardActive,
+  isFreeStrategyCallActive,
   isNavItemActive,
   STUDENT_APP_VERSION,
   STUDENT_DASHBOARD_HREF,
@@ -12,6 +13,9 @@ import {
   STUDENT_DIAGNOSTIC_HREF,
   STUDENT_DIAGNOSTIC_ICON,
   STUDENT_DIAGNOSTIC_NAV_SECTION,
+  STUDENT_FREE_STRATEGY_CALL_HREF,
+  STUDENT_FREE_STRATEGY_CALL_ICON,
+  STUDENT_FREE_STRATEGY_CALL_LABEL,
   STUDENT_GET_STARTED_ICON,
   STUDENT_GET_STARTED_LABEL,
   STUDENT_MAIN_NAV_SECTION,
@@ -19,7 +23,6 @@ import {
   STUDENT_NAV_ITEM_ICON_SRC,
   STUDENT_NAV_LOGOUT_ICON_SRC,
   STUDENT_NAV_SECTIONS,
-  STUDENT_TUTORING_BOOK_HREF,
   STUDENT_TUTORING_SESSIONS_HREF,
   type StudentNavItem,
   type StudentNavItemIconKey,
@@ -73,7 +76,7 @@ const NAV_HREF_TOUR_TARGETS: Record<string, string> = {
   "/app/analytics/preptests": "nav-insights-preptest",
   "/app/feedback": "nav-feedback",
   "/app/roadmap": "nav-roadmap",
-  [STUDENT_TUTORING_BOOK_HREF]: "nav-tutoring-book",
+  [STUDENT_FREE_STRATEGY_CALL_HREF]: "nav-free-strategy-call",
   [STUDENT_TUTORING_SESSIONS_HREF]: "nav-tutoring-sessions",
   [STUDENT_LIVE_CLASSES_HREF]: "nav-live-classes",
 }
@@ -115,7 +118,7 @@ function isUnlockedOnFreePlan(item: StudentNavItem): boolean {
     item.href === PREPTEST_LIST_HREF ||
     item.href === PRACTICE_DRILLS_LIST_HREF ||
     item.href === PRACTICE_SECTIONS_LIST_HREF ||
-    item.href === STUDENT_TUTORING_BOOK_HREF ||
+    item.href === STUDENT_FREE_STRATEGY_CALL_HREF ||
     item.href === STUDENT_TUTORING_SESSIONS_HREF ||
     item.href === STUDENT_LIVE_CLASSES_HREF ||
     item.href === "/app/feedback" ||
@@ -431,6 +434,19 @@ function StudentAppSidebar({
                 <span className="student-sidebar-label">{STUDENT_GET_STARTED_LABEL}</span>
               </button>
             ) : null}
+            <Link
+              to={STUDENT_FREE_STRATEGY_CALL_HREF}
+              data-tour-target={tourTargetForNavHref(STUDENT_FREE_STRATEGY_CALL_HREF)}
+              className={cn(
+                "student-sidebar-link",
+                isFreeStrategyCallActive(pathname) && "student-sidebar-link--active",
+              )}
+              aria-label={STUDENT_FREE_STRATEGY_CALL_LABEL}
+              title={STUDENT_FREE_STRATEGY_CALL_LABEL}
+            >
+              <SidebarNavIcon icon={STUDENT_FREE_STRATEGY_CALL_ICON} />
+              <span className="student-sidebar-label">{STUDENT_FREE_STRATEGY_CALL_LABEL}</span>
+            </Link>
             <p className="student-sidebar-heading">{STUDENT_MAIN_NAV_SECTION.label}</p>
             <Link
               to={dashboardHref}

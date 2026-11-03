@@ -17,7 +17,7 @@ export const TUTORING_PACKAGES: TutoringPackage[] = [
     price: "$699",
     compareAtPrice: "$749",
     saveLabel: "Save $50",
-    description: "For students who want structure, regular feedback, and a clear plan.",
+    description: "For students who want structure, regular feedback, and short-term momentum.",
     features: ["5 private sessions", "Regular check-ins", "Great for shorter prep timelines"],
     popular: true,
     ctaLabel: "Book a 5-Session Pack",
@@ -258,19 +258,19 @@ export const MOCK_TUTORING_SESSIONS: TutoringSessionsViewModel = {
   packages: TUTORING_PACKAGES,
   testimonials: [
     {
-      id: "t1",
-      name: "Maggie Watt",
-      quote: "I felt like I got my money's worth and focused on what mattered most.",
-    },
-    {
-      id: "t2",
-      name: "Lexi Meador",
-      quote: "Talking through my thinking helped me see exactly where I was going wrong.",
-    },
-    {
-      id: "t3",
+      id: "t-samantha",
       name: "Samantha Espiridion",
-      quote: "I finally found an LSAT platform that worked for me and helped me make real progress.",
+      videoEmbedSrc: "https://play.gumlet.io/embed/6ad20b293df6b6f5c982165a",
+    },
+    {
+      id: "t-celina",
+      name: "Celina Silva",
+      videoEmbedSrc: "https://play.gumlet.io/embed/6ad20b29942ca93b73b8be8d",
+    },
+    {
+      id: "t-alicia",
+      name: "Alicia Back",
+      videoEmbedSrc: "https://play.gumlet.io/embed/6ad20b2996ed0821d526ad8d",
     },
   ],
 }

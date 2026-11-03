@@ -57,7 +57,8 @@ describe("student-nav-config", () => {
   it("maps tutoring routes", () => {
     expect(getActiveSectionKey("/app/tutoring/sessions")).toBe("tutoring")
     expect(getActiveSectionKey("/app/tutoring/live-classes")).toBe("tutoring")
-    expect(getStudentPageTitle("/app/tutoring/book")).toBe("Book 1 on 1 Sessions")
+    expect(getStudentPageTitle("/app/free-strategy-call")).toBe("Free Strategy Call")
+    expect(getStudentPageTitle("/app/tutoring/book")).toBe("Free Strategy Call")
     expect(getStudentPageTitle("/app/tutoring/sessions")).toBe("My Sessions")
     expect(getStudentPageTitle("/app/tutoring/sessions/past-1/transcript")).toBe("Session Transcript")
     expect(getStudentPageTitle("/app/tutoring/live-classes")).toBe("Live Classes")

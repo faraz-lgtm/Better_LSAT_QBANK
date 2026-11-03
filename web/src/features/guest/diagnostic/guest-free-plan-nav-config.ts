@@ -36,6 +36,7 @@ function isFreePlanLockedNavHref(href: string): boolean {
   if (path === PRACTICE_DRILLS_LIST_HREF || path.startsWith(`${PRACTICE_DRILLS_LIST_HREF}/`)) return false
   if (path === PRACTICE_SECTIONS_LIST_HREF || path.startsWith(`${PRACTICE_SECTIONS_LIST_HREF}/`)) return false
   if (path === "/app/tutoring" || path.startsWith("/app/tutoring/")) return false
+  if (path === "/app/free-strategy-call" || path.startsWith("/app/free-strategy-call/")) return false
   if (path === "/app/feedback" || path === "/app/roadmap") return false
   return true
 }
