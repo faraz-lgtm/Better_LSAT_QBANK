@@ -539,7 +539,7 @@ function StudentAppSidebar({
                   const siblingHrefs = section.items.map((entry) => entry.href)
                   const active = isNavItemActive(pathname, item.href, search, siblingHrefs)
 
-                  if (lockLsacNav && isLsacLockedNavItem(item.href)) {
+                  if (lockLsacNav && isLsacLockedNavItem(item.href) && !isUnlockedOnFreePlan(item)) {
                     return (
                       <button
                         key={item.href}

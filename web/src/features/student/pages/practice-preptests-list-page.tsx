@@ -670,6 +670,7 @@ function PracticePrepTestsListPage() {
   const limitFreeAccess = shouldLimitFreePrepTestAccess({
     accessState: entitlement?.entitlement?.accessState,
     hasActiveCore: entitlement?.entitlement?.hasActiveCore,
+    isLsacSetupRequired: entitlement?.isLsacSetupRequired,
   })
 
   const [filter, setFilter] = useState<PrepTestPoolFilter>("all")
@@ -984,9 +985,18 @@ function PrepTestListFilters({
 }) {
   return (
     <div className="flex w-full flex-col gap-3 md:flex-row md:flex-wrap md:items-center md:justify-between md:gap-4">
-      <h2 className="shrink-0 text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-[var(--primary-800)] md:text-[24px] md:font-bold md:leading-[1.3] md:tracking-normal">
-        Start your PrepTest
-      </h2>
+      <div className="flex shrink-0 items-center gap-3">
+        <img
+          src={`${PREPTEST_FIGMA}/lsac-logo.png`}
+          alt="LSAC"
+          width={33}
+          height={31}
+          className="h-[31px] w-[33px] shrink-0 object-contain"
+        />
+        <h2 className="text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-[var(--primary-800)] md:text-[24px] md:font-bold md:leading-[1.3] md:tracking-normal">
+          Start your PrepTest
+        </h2>
+      </div>
       <div className="flex w-full min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4 md:w-auto md:gap-6">
         <div
           className="flex min-w-0 flex-wrap items-center gap-2"

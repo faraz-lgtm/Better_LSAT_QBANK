@@ -65,16 +65,10 @@ function LessonStatusMarker({
 
   if (variant === "locked") {
     return (
-      <span
-        className={cn(
-          "flex items-center justify-center",
-          markerSizeClass,
-          "border-[var(--greyscale-100)] bg-[var(--greyscale-0)]",
-        )}
-        aria-hidden
-      >
-        <PrepCourseFigmaIcon src={`${PREP_COURSE_FIGMA}/icon-lock-sm.svg`} className="size-3.5" />
-      </span>
+      <PrepCourseFigmaIcon
+        src={`${PREP_COURSE_FIGMA}/icon-lock-sm.svg`}
+        className="size-6 shrink-0"
+      />
     )
   }
 

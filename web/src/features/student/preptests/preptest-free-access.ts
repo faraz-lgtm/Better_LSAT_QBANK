@@ -1,4 +1,5 @@
 import type { AccessState } from "@/lib/api/users"
+import { shouldLimitLockedBrowseAccess } from "@/lib/auth/should-limit-locked-browse-access"
 
 /** Free plan PrepTest allowance — all PrepTests stay locked until subscribe. */
 export const FREE_PREPTEST_ALLOWANCE = 0
@@ -34,9 +35,9 @@ function isFreePrepTestUnlocked(prepTestId: string, freeIds: ReadonlySet<string>
 function shouldLimitFreePrepTestAccess(input: {
   accessState?: AccessState | null
   hasActiveCore?: boolean | null
+  isLsacSetupRequired?: boolean | null
 }): boolean {
-  if (input.hasActiveCore) return false
-  return input.accessState === "PAYMENT_REQUIRED"
+  return shouldLimitLockedBrowseAccess(input)
 }
 
 export {

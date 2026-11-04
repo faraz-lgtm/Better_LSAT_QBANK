@@ -344,6 +344,7 @@ function AnalyticsDrillsPage() {
   const limitFreeAccess = shouldLimitFreeAnalyticsAccess({
     accessState: entitlement?.entitlement?.accessState,
     hasActiveCore: entitlement?.entitlement?.hasActiveCore,
+    isLsacSetupRequired: entitlement?.isLsacSetupRequired,
   })
   const analyticsApi = useAnalyticsApi()
   const practiceApi = usePracticeApi()

@@ -1,17 +1,18 @@
 import type { AccessState } from "@/lib/api/users"
+import { shouldLimitLockedBrowseAccess } from "@/lib/auth/should-limit-locked-browse-access"
 
 /**
- * Free-plan users may browse the Academy Explanations tree; every PrepTest /
- * section / passage / question stays gated in-page behind upgrade (allowance 0).
+ * Free-plan / LSAC-setup users may browse the Academy Explanations tree; every PrepTest /
+ * section / passage / question stays gated in-page (allowance 0).
  */
 export const FREE_EXPLANATION_ALLOWANCE = 0
 
 function shouldLimitFreeExplanationAccess(input: {
   accessState?: AccessState | null
   hasActiveCore?: boolean | null
+  isLsacSetupRequired?: boolean | null
 }): boolean {
-  if (input.hasActiveCore) return false
-  return input.accessState === "PAYMENT_REQUIRED"
+  return shouldLimitLockedBrowseAccess(input)
 }
 
 export { shouldLimitFreeExplanationAccess }

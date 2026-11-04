@@ -29,6 +29,19 @@ type StudentEntitlementContextValue = {
 
 const StudentEntitlementContext = createContext<StudentEntitlementContextValue | null>(null)
 
+/** Static entitlement for unauthenticated UI preview routes. */
+function StudentEntitlementPreviewProvider({
+  children,
+  value,
+}: {
+  children: ReactNode
+  value: StudentEntitlementContextValue
+}) {
+  return (
+    <StudentEntitlementContext.Provider value={value}>{children}</StudentEntitlementContext.Provider>
+  )
+}
+
 function StudentEntitlementProvider({ children }: { children: ReactNode }) {
   const dispatch = useAppDispatch()
   const entitlement = useAppSelector(selectEntitlement)
@@ -116,8 +129,10 @@ function isLsacLockedNavItem(href: string): boolean {
 
 export {
   StudentEntitlementProvider,
+  StudentEntitlementPreviewProvider,
   useStudentEntitlement,
   useStudentEntitlementOptional,
   isLsacContentPath,
   isLsacLockedNavItem,
 }
+export type { StudentEntitlementContextValue }

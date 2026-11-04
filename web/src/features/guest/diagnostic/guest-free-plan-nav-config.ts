@@ -20,6 +20,7 @@ const GUEST_FREE_PLAN_ESSENTIALS_HREF = `${GUEST_FREE_PLAN_PREP_COURSE_HREF}/${P
  * Academy Explanations + PrepTest list + Prep Drills + Sections + Insights
  * (actions / metrics locked in-page), tutoring links, and community. Other
  * Academy and Prep destinations stay locked until payment.
+ * Premium + LSAC-setup users reuse the same browse hrefs with Link LSAC gating.
  */
 function isFreePlanLockedNavHref(href: string): boolean {
   const path = href.split("?")[0] ?? href

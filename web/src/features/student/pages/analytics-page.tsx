@@ -650,6 +650,7 @@ function AnalyticsPage() {
   const limitFreeAccess = shouldLimitFreeAnalyticsAccess({
     accessState: entitlement?.entitlement?.accessState,
     hasActiveCore: entitlement?.entitlement?.hasActiveCore,
+    isLsacSetupRequired: entitlement?.isLsacSetupRequired,
   })
 
   return (

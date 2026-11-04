@@ -58,6 +58,8 @@ describe("PracticeDrillsPage free plan", () => {
     entitlementMock.entitlement.accessState = "PAYMENT_REQUIRED"
     entitlementMock.entitlement.hasActiveCore = false
     entitlementMock.isPaymentRequired = true
+    entitlementMock.isLsacSetupRequired = false
+    entitlementMock.canAccessLsacContent = false
   })
 
   it("renders the locked free preview and opens upgrade modal from gated actions", async () => {
@@ -65,6 +67,10 @@ describe("PracticeDrillsPage free plan", () => {
     renderPage()
 
     expect(screen.getByRole("heading", { name: "Start A New Drill" })).toBeInTheDocument()
+    expect(screen.getByRole("img", { name: "LSAC" })).toHaveAttribute(
+      "src",
+      "/figma/drills/lsac-logo.png",
+    )
     expect(screen.getByRole("heading", { name: "Drills by Types" })).toBeInTheDocument()
     expect(screen.getByText("Ranked by your past performance and score impact")).toBeInTheDocument()
     expect(screen.getByText("Causal reasoning drill")).toBeInTheDocument()
@@ -97,6 +103,23 @@ describe("PracticeDrillsPage free plan", () => {
     expect(screen.getAllByRole("button", { name: "Start LR Drill" }).length).toBeGreaterThan(0)
     expect(screen.queryByRole("button", { name: "Start RC Drill" })).not.toBeInTheDocument()
   })
+
+  it("renders the same locked preview for premium LSAC-setup users", async () => {
+    entitlementMock.entitlement.accessState = "LSAC_REQUIRED"
+    entitlementMock.entitlement.hasActiveCore = true
+    entitlementMock.isPaymentRequired = false
+    entitlementMock.isLsacSetupRequired = true
+    entitlementMock.canAccessLsacContent = false
+
+    const user = userEvent.setup()
+    renderPage()
+
+    expect(screen.getByRole("heading", { name: "Drills by Types" })).toBeInTheDocument()
+    expect(getPageBundle).not.toHaveBeenCalled()
+
+    await user.click(screen.getAllByRole("button", { name: "Start LR Drill" })[0]!)
+    expect(openLockedContentModal).toHaveBeenCalledWith("drills")
+  })
 })
 
 describe("PracticeDrillsPage paid plan", () => {
@@ -107,12 +130,18 @@ describe("PracticeDrillsPage paid plan", () => {
     entitlementMock.entitlement.accessState = "READY"
     entitlementMock.entitlement.hasActiveCore = true
     entitlementMock.isPaymentRequired = false
+    entitlementMock.isLsacSetupRequired = false
+    entitlementMock.canAccessLsacContent = true
   })
 
   it("loads analytics bundle and does not show free lock badges", async () => {
     renderPage()
 
     expect(await screen.findByRole("heading", { name: "Start A New Drill" })).toBeInTheDocument()
+    expect(screen.getByRole("img", { name: "LSAC" })).toHaveAttribute(
+      "src",
+      "/figma/drills/lsac-logo.png",
+    )
     expect(getPageBundle).toHaveBeenCalledWith("drills")
     expect(document.querySelector("[data-drills-locked-status]")).toBeNull()
     expect(screen.queryByRole("heading", { name: "Drills by Types" })).not.toBeInTheDocument()
