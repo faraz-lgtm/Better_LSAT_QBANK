@@ -5,6 +5,7 @@ import {
   isLsacContentPath,
   useStudentEntitlement,
 } from "@/features/app-shell/student-entitlement-context"
+import { isInsightsBrowsePath } from "@/features/student/analytics/analytics-routes"
 import { isPracticeDrillsListPath } from "@/features/student/drills/drill-routes"
 import { isExplanationsListPath } from "@/features/student/explanation-detail/explanation-routes"
 import { PREPTEST_LIST_HREF } from "@/features/student/preptests/preptest-routes"
@@ -18,8 +19,8 @@ function isFreePlanPrepTestPath(pathname: string): boolean {
  * Soft-locks Academy / Prep / Insights (LawHub pool) routes until coach is eligible.
  * Sends locked visits back to `/app`. Account, settings, dashboard, and setup stay reachable;
  * post-checkout soft-lands on `/app/lsac-link-step` with a Link LSAC header CTA.
- * Free-plan users may browse PrepTests, Academy Explanations, Prep Drills, and Sections
- * (all gated in-page behind upgrade).
+ * Free-plan users may browse PrepTests, Academy Explanations, Prep Drills, Sections,
+ * and Insights (all gated in-page behind upgrade).
  */
 function RequireLsacContentAccess({ children }: { children: ReactElement }) {
   const location = useLocation()
@@ -34,7 +35,8 @@ function RequireLsacContentAccess({ children }: { children: ReactElement }) {
     (isFreePlanPrepTestPath(location.pathname) ||
       isExplanationsListPath(location.pathname) ||
       isPracticeDrillsListPath(location.pathname) ||
-      isPracticeSectionsListPath(location.pathname))
+      isPracticeSectionsListPath(location.pathname) ||
+      isInsightsBrowsePath(location.pathname))
   ) {
     return children
   }

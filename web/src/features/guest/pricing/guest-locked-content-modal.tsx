@@ -11,6 +11,8 @@ type GuestLockedContentModalProps = {
   onOpenChange: (open: boolean) => void
   onSubscribe: () => void
   variant?: LockedContentVariant
+  /** When true, show LSAC-link reasoning instead of free-plan upgrade copy. */
+  lsacLinkRequired?: boolean
 }
 
 const LOCK_ICON_SRC = "/figma/guest/icon-lock-upgrade.svg"
@@ -21,8 +23,9 @@ function GuestLockedContentModal({
   onOpenChange,
   onSubscribe,
   variant = "default",
+  lsacLinkRequired = false,
 }: GuestLockedContentModalProps) {
-  const copy = getLockedContentCopy(variant)
+  const copy = getLockedContentCopy(variant, { lsacLinkRequired })
   const dismissLabel = copy.dismissLabel ?? "Back"
 
   useEffect(() => {

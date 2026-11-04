@@ -3674,15 +3674,6 @@ select.ds-input option {
   white-space: nowrap;
 }
 
-.student-sidebar-link--coming-soon {
-  cursor: default;
-  pointer-events: none;
-}
-
-.student-sidebar-link--coming-soon:hover {
-  background-color: transparent;
-}
-
 .student-sidebar-link {
   position: relative;
   display: flex;

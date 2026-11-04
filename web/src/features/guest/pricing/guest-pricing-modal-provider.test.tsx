@@ -109,7 +109,7 @@ describe("GuestPricingModalProvider", () => {
     expect(screen.getByTestId("path")).toHaveTextContent("/app")
   })
 
-  it("opens locked content by navigating to the LSAC link step when setup is required", async () => {
+  it("opens the locked-content modal with LSAC reasoning when setup is required", async () => {
     const user = userEvent.setup()
     entitlementState.value = {
       canAccessLsacContent: false,
@@ -125,16 +125,17 @@ describe("GuestPricingModalProvider", () => {
 
     await user.click(screen.getByRole("button", { name: "Open locked" }))
 
-    expect(screen.queryByRole("dialog", { name: "Subscriber-Only Content" })).not.toBeInTheDocument()
-    expect(screen.getByTestId("path")).toHaveTextContent("/app/lsac-link-step")
+    expect(screen.getByRole("dialog", { name: "Link your LSAC account first" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Link LSAC" })).toBeInTheDocument()
+    expect(screen.getByTestId("path")).toHaveTextContent("/app")
   })
 
-  it("sends Subscribe Now to the LSAC link step when setup becomes required", async () => {
+  it("sends Link LSAC to the LSAC link step from the locked modal", async () => {
     const user = userEvent.setup()
     entitlementState.value = {
       canAccessLsacContent: false,
-      isLsacSetupRequired: false,
-      isPaymentRequired: true,
+      isLsacSetupRequired: true,
+      isPaymentRequired: false,
     }
 
     render(
@@ -144,17 +145,10 @@ describe("GuestPricingModalProvider", () => {
     )
 
     await user.click(screen.getByRole("button", { name: "Open locked" }))
-    expect(screen.getByRole("dialog", { name: "Subscriber-Only Content" })).toBeInTheDocument()
+    expect(screen.getByRole("dialog", { name: "Link your LSAC account first" })).toBeInTheDocument()
+    await user.click(screen.getByRole("button", { name: "Link LSAC" }))
 
-    entitlementState.value = {
-      canAccessLsacContent: false,
-      isLsacSetupRequired: true,
-      isPaymentRequired: false,
-    }
-    await user.click(screen.getByRole("button", { name: "Sync entitlement" }))
-    await user.click(screen.getByRole("button", { name: "Subscribe Now" }))
-
-    expect(screen.queryByRole("dialog", { name: "Subscriber-Only Content" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("dialog", { name: "Link your LSAC account first" })).not.toBeInTheDocument()
     expect(screen.getByTestId("path")).toHaveTextContent("/app/lsac-link-step")
   })
 })

@@ -55,18 +55,12 @@ function GuestPricingModalProvider({
     if (useAuthenticatedCheckout) clearGuestPremiumAccount()
     setOpen(true)
   }, [useAuthenticatedCheckout])
-  const openLockedContentModal = useCallback(
-    (variant: LockedContentVariant = "default") => {
-      if (isLsacSetupRequired) {
-        navigate(LSAC_LINK_HREF)
-        return
-      }
-      // Ignore non-variant args (e.g. React mouse events when used as onClick={openLockedContentModal}).
-      setLockedContentVariant(isLockedContentVariant(variant) ? variant : "default")
-      setLockedContentOpen(true)
-    },
-    [isLsacSetupRequired, navigate],
-  )
+  const openLockedContentModal = useCallback((variant: LockedContentVariant = "default") => {
+    // Ignore non-variant args (e.g. React mouse events when used as onClick={openLockedContentModal}).
+    // Premium + LSAC-unlinked users get the same locked-sign modal as free users, with LSAC copy/CTA.
+    setLockedContentVariant(isLockedContentVariant(variant) ? variant : "default")
+    setLockedContentOpen(true)
+  }, [])
   const closePricingModal = useCallback(() => setOpen(false), [])
 
   useEffect(() => {
@@ -131,6 +125,7 @@ function GuestPricingModalProvider({
         onOpenChange={setLockedContentOpen}
         onSubscribe={handleSubscribeFromLockedContent}
         variant={lockedContentVariant}
+        lsacLinkRequired={isLsacSetupRequired}
       />
       <GuestPricingModal
         open={open}

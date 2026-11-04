@@ -15,7 +15,8 @@ vi.mock("@/features/app-shell/student-entitlement-context", () => ({
     pathname.startsWith("/app/learn") ||
     pathname.startsWith("/app/preptest") ||
     pathname.startsWith("/app/practice/drills") ||
-    pathname.startsWith("/app/practice/sections"),
+    pathname.startsWith("/app/practice/sections") ||
+    pathname.startsWith("/app/analytics"),
   useStudentEntitlement: () => entitlement,
 }))
 
@@ -226,6 +227,54 @@ describe("RequireLsacContentAccess", () => {
             element={
               <RequireLsacContentAccess>
                 <div>Section session</div>
+              </RequireLsacContentAccess>
+            }
+          />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByText("Dashboard")).toBeInTheDocument()
+  })
+
+  it("allows free-plan users to browse Insights pages", () => {
+    entitlement.loading = false
+    entitlement.canAccessLsacContent = false
+    entitlement.isPaymentRequired = true
+
+    render(
+      <MemoryRouter initialEntries={["/app/analytics"]}>
+        <Routes>
+          <Route path="/app" element={<div>Dashboard</div>} />
+          <Route
+            path="/app/analytics"
+            element={
+              <RequireLsacContentAccess>
+                <div>Insights overview</div>
+              </RequireLsacContentAccess>
+            }
+          />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByText("Insights overview")).toBeInTheDocument()
+  })
+
+  it("still redirects free-plan users away from Insights results routes", () => {
+    entitlement.loading = false
+    entitlement.canAccessLsacContent = false
+    entitlement.isPaymentRequired = true
+
+    render(
+      <MemoryRouter initialEntries={["/app/analytics/drills/results/abc"]}>
+        <Routes>
+          <Route path="/app" element={<div>Dashboard</div>} />
+          <Route
+            path="/app/analytics/drills/results/:sessionId"
+            element={
+              <RequireLsacContentAccess>
+                <div>Drill results</div>
               </RequireLsacContentAccess>
             }
           />

@@ -52,7 +52,10 @@ describe("GuestFreePlanSidebar", () => {
       "href",
       "/app/tutoring/sessions",
     )
-    expect(screen.getByLabelText("Live Classes (coming soon)")).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "Live Classes" })).toHaveAttribute(
+      "href",
+      "/app/tutoring/live-classes",
+    )
     expect(screen.queryByRole("link", { name: "Book 1 on 1 Sessions" })).not.toBeInTheDocument()
     expect(screen.queryByRole("button", { name: "Free Strategy Call (locked)" })).not.toBeInTheDocument()
     expect(screen.queryByRole("button", { name: "My Sessions (locked)" })).not.toBeInTheDocument()
@@ -104,7 +107,7 @@ describe("GuestFreePlanSidebar", () => {
     expect(screen.getByTestId("path")).toHaveTextContent("/app")
   })
 
-  it("lets free students open LSAT Essentials Course and shows mastery courses as coming soon", async () => {
+  it("lets free students open LSAT Essentials and mastery courses (coming soon pages)", async () => {
     const user = userEvent.setup()
     render(
       <MemoryRouter initialEntries={["/app"]}>
@@ -121,8 +124,14 @@ describe("GuestFreePlanSidebar", () => {
       "/app/prep-course/betterlsat-core-syllabus-structure-content",
     )
 
-    expect(screen.getByLabelText("LR Mastery Course (coming soon)")).toBeInTheDocument()
-    expect(screen.getByLabelText("RC Mastery Course (coming soon)")).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "LR Mastery Course" })).toHaveAttribute(
+      "href",
+      "/app/prep-course/lr-mastery-course",
+    )
+    expect(screen.getByRole("link", { name: "RC Mastery Course" })).toHaveAttribute(
+      "href",
+      "/app/prep-course/rc-mastery",
+    )
     expect(screen.queryByRole("button", { name: "LR Mastery Course (locked)" })).not.toBeInTheDocument()
     expect(screen.getByTestId("path")).toHaveTextContent("/app")
   })

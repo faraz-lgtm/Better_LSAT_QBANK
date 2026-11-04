@@ -3,6 +3,7 @@ import {
   STUDENT_DIAGNOSTIC_HREF,
 } from "@/features/app-shell/student-nav-config"
 import { PREP_COURSE_ESSENTIALS_SLUG } from "@/features/prep-course/lib/prep-course-nav"
+import { isInsightsBrowsePath } from "@/features/student/analytics/analytics-routes"
 import { PRACTICE_DRILLS_LIST_HREF } from "@/features/student/drills/drill-routes"
 import { EXPLANATIONS_LIST_HREF } from "@/features/student/explanation-detail/explanation-routes"
 import { PREPTEST_LIST_HREF } from "@/features/student/preptests/preptest-routes"
@@ -16,9 +17,9 @@ const GUEST_FREE_PLAN_ESSENTIALS_HREF = `${GUEST_FREE_PLAN_PREP_COURSE_HREF}/${P
 /**
  * Free-plan students keep Main (Dashboard), Diagnostic (Diagnostic Test, Results,
  * Explanation), limited Prep Course (LSAT Essential Course / Kickoff + Anatomy),
- * Academy Explanations + PrepTest list + Prep Drills + Sections (actions locked
- * in-page), tutoring links, and community. Other Academy, Prep, and Insights
- * destinations stay locked until payment.
+ * Academy Explanations + PrepTest list + Prep Drills + Sections + Insights
+ * (actions / metrics locked in-page), tutoring links, and community. Other
+ * Academy and Prep destinations stay locked until payment.
  */
 function isFreePlanLockedNavHref(href: string): boolean {
   const path = href.split("?")[0] ?? href
@@ -35,6 +36,7 @@ function isFreePlanLockedNavHref(href: string): boolean {
   if (path === PREPTEST_LIST_HREF || path.startsWith(`${PREPTEST_LIST_HREF}/`)) return false
   if (path === PRACTICE_DRILLS_LIST_HREF || path.startsWith(`${PRACTICE_DRILLS_LIST_HREF}/`)) return false
   if (path === PRACTICE_SECTIONS_LIST_HREF || path.startsWith(`${PRACTICE_SECTIONS_LIST_HREF}/`)) return false
+  if (isInsightsBrowsePath(path)) return false
   if (path === "/app/tutoring" || path.startsWith("/app/tutoring/")) return false
   if (path === "/app/free-strategy-call" || path.startsWith("/app/free-strategy-call/")) return false
   if (path === "/app/feedback" || path === "/app/roadmap") return false

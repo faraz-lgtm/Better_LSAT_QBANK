@@ -55,13 +55,18 @@ describe("isFreePlanLockedNavHref", () => {
     expect(isFreePlanLockedNavHref("/app/practice/sections/session/abc")).toBe(false)
   })
 
-  it("locks other Academy, Prep, and Insights destinations", () => {
+  it("keeps Insights browse pages unlocked for free browsing", () => {
+    expect(isFreePlanLockedNavHref("/app/analytics")).toBe(false)
+    expect(isFreePlanLockedNavHref("/app/analytics/drills")).toBe(false)
+    expect(isFreePlanLockedNavHref("/app/analytics/sections")).toBe(false)
+    expect(isFreePlanLockedNavHref("/app/analytics/preptests")).toBe(false)
+  })
+
+  it("locks other Academy and Prep destinations", () => {
     expect(isFreePlanLockedNavHref("/app/prep-course/lr-mastery-course")).toBe(true)
     expect(isFreePlanLockedNavHref("/app/prep-course/rc-mastery")).toBe(true)
     expect(isFreePlanLockedNavHref("/app/practice/blind-review")).toBe(true)
-    expect(isFreePlanLockedNavHref("/app/analytics")).toBe(true)
-    expect(isFreePlanLockedNavHref("/app/analytics/drills")).toBe(true)
-    expect(isFreePlanLockedNavHref("/app/analytics/sections")).toBe(true)
-    expect(isFreePlanLockedNavHref("/app/analytics/preptests")).toBe(true)
+    expect(isFreePlanLockedNavHref("/app/analytics/drills/results/abc")).toBe(true)
+    expect(isFreePlanLockedNavHref("/app/analytics/preptests/results/pt-1")).toBe(true)
   })
 })

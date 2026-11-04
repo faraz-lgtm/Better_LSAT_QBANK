@@ -2,6 +2,10 @@ import { useCallback, useEffect, useMemo, useState, type Dispatch, type SetState
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { Bookmark } from "lucide-react"
 
+import { useStudentEntitlementOptional } from "@/features/app-shell/student-entitlement-context"
+import { useGuestPricingModal } from "@/features/guest/pricing/guest-pricing-modal-provider"
+import { shouldLimitFreeAnalyticsAccess } from "@/features/student/analytics/analytics-free-access"
+import { AnalyticsInsightsFreePreview } from "@/features/student/components/analytics-insights-free-preview"
 import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 import { StudentMain } from "@/features/student/components/student-main"
 import {
@@ -641,12 +645,27 @@ function OverviewTab() {
 function AnalyticsPage() {
   const [params] = useSearchParams()
   const tab = tabFromSearch(params.get("tab"))
+  const entitlement = useStudentEntitlementOptional()
+  const { openLockedContentModal } = useGuestPricingModal()
+  const limitFreeAccess = shouldLimitFreeAnalyticsAccess({
+    accessState: entitlement?.entitlement?.accessState,
+    hasActiveCore: entitlement?.entitlement?.hasActiveCore,
+  })
 
   return (
     <StudentMain contentClassName="flex min-h-0 flex-1 flex-col pb-8">
-      {tab === "overview" ? <OverviewTab /> : null}
-      {tab === "priorities" ? <PrioritiesTab /> : null}
-      {tab === "history" ? <HistoryTab /> : null}
+      {limitFreeAccess ? (
+        <AnalyticsInsightsFreePreview
+          variant="overview"
+          onLockedAction={() => openLockedContentModal("analytics")}
+        />
+      ) : (
+        <>
+          {tab === "overview" ? <OverviewTab /> : null}
+          {tab === "priorities" ? <PrioritiesTab /> : null}
+          {tab === "history" ? <HistoryTab /> : null}
+        </>
+      )}
     </StudentMain>
   )
 }

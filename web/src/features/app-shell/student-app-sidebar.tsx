@@ -33,6 +33,12 @@ import {
   type LockedContentVariant,
 } from "@/features/guest/pricing/guest-locked-content-copy"
 import { useGuestPricingModal } from "@/features/guest/pricing/guest-pricing-modal-provider"
+import {
+  ANALYTICS_DRILLS_HREF,
+  ANALYTICS_OVERVIEW_HREF,
+  ANALYTICS_PREPTESTS_HREF,
+  ANALYTICS_SECTIONS_HREF,
+} from "@/features/student/analytics/analytics-routes"
 import { PRACTICE_DRILLS_LIST_HREF } from "@/features/student/drills/drill-routes"
 import { EXPLANATIONS_LIST_HREF } from "@/features/student/explanation-detail/explanation-routes"
 import { PREPTEST_LIST_HREF, shouldForceParentNav } from "@/features/student/preptests/preptest-routes"
@@ -93,7 +99,7 @@ type StudentAppSidebarProps = {
   onMobileClose: () => void
   dashboardHref?: string
   showDiagnosticNav?: boolean
-  /** Free-plan: Academy / Insights locked; Prep Course limited to LSAT Essentials Course. */
+  /** Free-plan: remaining Academy locks; Prep Course limited to LSAT Essentials Course. Insights browsable in-page. */
   lockPremiumNav?: boolean
   beforeFooter?: ReactNode
 }
@@ -110,7 +116,7 @@ function isPrepCourseNavItem(item: StudentNavItem): boolean {
   return item.href === PREP_COURSE_HREF
 }
 
-/** Free-plan: keep Prep Course, Explanations, PrepTest, Prep Drills/Sections, tutoring, + community links clickable (Diagnostic items live under DIAGNOSTIC). */
+/** Free-plan: keep Prep Course, Explanations, PrepTest, Prep Drills/Sections, Insights, tutoring, + community links clickable (Diagnostic items live under DIAGNOSTIC). */
 function isUnlockedOnFreePlan(item: StudentNavItem): boolean {
   return (
     isPrepCourseNavItem(item) ||
@@ -118,6 +124,10 @@ function isUnlockedOnFreePlan(item: StudentNavItem): boolean {
     item.href === PREPTEST_LIST_HREF ||
     item.href === PRACTICE_DRILLS_LIST_HREF ||
     item.href === PRACTICE_SECTIONS_LIST_HREF ||
+    item.href === ANALYTICS_OVERVIEW_HREF ||
+    item.href === ANALYTICS_DRILLS_HREF ||
+    item.href === ANALYTICS_SECTIONS_HREF ||
+    item.href === ANALYTICS_PREPTESTS_HREF ||
     item.href === STUDENT_FREE_STRATEGY_CALL_HREF ||
     item.href === STUDENT_TUTORING_SESSIONS_HREF ||
     item.href === STUDENT_LIVE_CLASSES_HREF ||
@@ -201,15 +211,17 @@ function PrepCourseNavItem({
             const active = isCourseNavActive(pathname, course.slug)
             if (course.status === "coming_soon") {
               return (
-                <div
+                <Link
                   key={course.slug}
-                  className="student-sidebar-link student-sidebar-sublink student-sidebar-link--coming-soon student-sidebar-link--with-trailing w-full justify-between"
-                  aria-label={`${course.title} (coming soon)`}
-                  title={`${course.title} (coming soon)`}
+                  to={href}
+                  className={cn(
+                    "student-sidebar-link student-sidebar-sublink",
+                    active && "student-sidebar-link--active",
+                  )}
+                  title={course.title}
                 >
                   <span className="truncate">{course.title}</span>
-                  <span className="student-sidebar-item-badge">Coming Soon</span>
-                </div>
+                </Link>
               )
             }
             const locked = lockNonEssentialCourses && course.slug !== PREP_COURSE_ESSENTIALS_SLUG
@@ -500,22 +512,6 @@ function StudentAppSidebar({
                 {section.items.map((item) => {
                   const tourTarget = tourTargetForNavHref(item.href)
 
-                  if (item.status === "coming_soon") {
-                    return (
-                      <div
-                        key={item.href}
-                        data-tour-target={tourTarget}
-                        className="student-sidebar-link student-sidebar-link--coming-soon w-full"
-                        aria-label={`${item.label} (coming soon)`}
-                        title={`${item.label} (coming soon)`}
-                      >
-                        <SidebarNavIcon icon={item.icon} />
-                        <span className="student-sidebar-label truncate">{item.label}</span>
-                        <span className="student-sidebar-item-badge">Coming Soon</span>
-                      </div>
-                    )
-                  }
-
                   if (lockPremiumNav && !isUnlockedOnFreePlan(item)) {
                     return (
                       <LockedPremiumNavItem
@@ -549,17 +545,13 @@ function StudentAppSidebar({
                         key={item.href}
                         type="button"
                         data-tour-target={tourTarget}
-                        aria-disabled="true"
                         aria-label={item.label}
-                        title="Link your LawHub coach to unlock"
+                        title="Link your LSAC account to unlock"
                         onClick={() => handleLockedContentClick(item)}
-                        className="student-sidebar-link student-sidebar-link--with-trailing w-full justify-between opacity-70 hover:opacity-100"
+                        className="student-sidebar-link w-full"
                       >
-                        <span className="student-sidebar-link-content flex min-w-0 items-center gap-2.5">
-                          <SidebarNavIcon icon={item.icon} />
-                          <span className="student-sidebar-label truncate">{item.label}</span>
-                        </span>
-                        <Lock className="student-sidebar-lock size-4 shrink-0 text-[#666d80]" aria-hidden />
+                        <SidebarNavIcon icon={item.icon} />
+                        <span className="student-sidebar-label">{item.label}</span>
                       </button>
                     )
                   }

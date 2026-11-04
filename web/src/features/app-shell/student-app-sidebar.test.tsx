@@ -11,8 +11,20 @@ vi.mock("@/lib/supabase/client", () => ({
   }),
 }))
 
-const { startProduktlyTour } = vi.hoisted(() => ({
+const { startProduktlyTour, openLockedContentModal, entitlementState } = vi.hoisted(() => ({
   startProduktlyTour: vi.fn(),
+  openLockedContentModal: vi.fn(),
+  entitlementState: {
+    value: null as null | {
+      canAccessLsacContent: boolean
+      isLsacSetupRequired: boolean
+      isPaymentRequired: boolean
+      entitlement: null
+      loading: boolean
+      error: null
+      refresh: () => Promise<null>
+    },
+  },
 }))
 
 vi.mock("@/lib/analytics/produktly", () => ({
@@ -23,9 +35,29 @@ vi.mock("@/lib/analytics/produktly-widgets", () => ({
   PRODUKTLY_PRODUCT_TOUR_ID: 11289,
 }))
 
+vi.mock("@/features/app-shell/student-entitlement-context", async () => {
+  const actual = await vi.importActual<typeof import("@/features/app-shell/student-entitlement-context")>(
+    "@/features/app-shell/student-entitlement-context",
+  )
+  return {
+    ...actual,
+    useStudentEntitlementOptional: () => entitlementState.value,
+  }
+})
+
+vi.mock("@/features/guest/pricing/guest-pricing-modal-provider", () => ({
+  useGuestPricingModal: () => ({
+    openPricingModal: vi.fn(),
+    openLockedContentModal,
+    closePricingModal: vi.fn(),
+  }),
+}))
+
 describe("StudentAppSidebar", () => {
   beforeEach(() => {
     startProduktlyTour.mockReset()
+    openLockedContentModal.mockReset()
+    entitlementState.value = null
   })
 
   it("shows premium navigation including diagnostic links", () => {
@@ -63,8 +95,11 @@ describe("StudentAppSidebar", () => {
       "href",
       "/app/tutoring/sessions",
     )
-    expect(screen.getByLabelText("Live Classes (coming soon)")).toBeInTheDocument()
-    expect(screen.getByText("Coming Soon")).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "Live Classes" })).toHaveAttribute(
+      "href",
+      "/app/tutoring/live-classes",
+    )
+    expect(screen.queryByText("Coming Soon")).not.toBeInTheDocument()
     expect(screen.getByText("COMMUNITY")).toBeInTheDocument()
     expect(screen.getByRole("link", { name: "Feedback" })).toHaveAttribute("href", "/app/feedback")
     expect(screen.getByRole("link", { name: "Roadmap" })).toHaveAttribute("href", "/app/roadmap")
@@ -118,6 +153,36 @@ describe("StudentAppSidebar", () => {
     )
   })
 
+  it("opens LSAC locked modal from gated nav without sidebar lock icons", async () => {
+    const user = userEvent.setup()
+    entitlementState.value = {
+      canAccessLsacContent: false,
+      isLsacSetupRequired: true,
+      isPaymentRequired: false,
+      entitlement: null,
+      loading: false,
+      error: null,
+      refresh: async () => null,
+    }
+
+    const { container } = render(
+      <MemoryRouter initialEntries={["/app"]}>
+        <StudentAppSidebar mobileOpen={false} onMobileClose={() => {}} />
+      </MemoryRouter>,
+    )
+
+    expect(screen.queryByRole("link", { name: "Explanations" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("link", { name: "Drills" })).not.toBeInTheDocument()
+    expect(container.querySelectorAll(".student-sidebar-lock")).toHaveLength(0)
+
+    await user.click(screen.getByRole("button", { name: "Explanations" }))
+    expect(openLockedContentModal).toHaveBeenCalledWith("explanations")
+
+    openLockedContentModal.mockClear()
+    await user.click(screen.getAllByRole("button", { name: "Drills" })[0]!)
+    expect(openLockedContentModal).toHaveBeenCalledWith("drills")
+  })
+
   it("keeps nav-explanations clickable for free-plan Explanations browsing", () => {
     render(
       <MemoryRouter initialEntries={["/app"]}>
@@ -133,33 +198,61 @@ describe("StudentAppSidebar", () => {
   })
 
   it("keeps nav-drills clickable for free-plan Prep Drills browsing", () => {
-    render(
+    const { container } = render(
       <MemoryRouter initialEntries={["/app"]}>
         <StudentAppSidebar mobileOpen={false} onMobileClose={() => {}} lockPremiumNav />
       </MemoryRouter>,
     )
 
-    expect(screen.getByRole("link", { name: "Drills" })).toHaveAttribute("data-tour-target", "nav-drills")
-    expect(screen.getByRole("link", { name: "Drills" })).toHaveAttribute("href", "/app/practice/drills")
-    expect(screen.getByRole("button", { name: "Drills (locked)" })).toBeInTheDocument()
+    expect(container.querySelector('[data-tour-target="nav-drills"]')).toHaveAttribute(
+      "href",
+      "/app/practice/drills",
+    )
+    expect(screen.queryByRole("button", { name: "Drills (locked)" })).not.toBeInTheDocument()
   })
 
   it("keeps nav-sections clickable for free-plan Prep Sections browsing", () => {
-    render(
+    const { container } = render(
       <MemoryRouter initialEntries={["/app"]}>
         <StudentAppSidebar mobileOpen={false} onMobileClose={() => {}} lockPremiumNav />
       </MemoryRouter>,
     )
 
-    expect(screen.getByRole("link", { name: "Sections" })).toHaveAttribute(
-      "data-tour-target",
-      "nav-sections",
-    )
-    expect(screen.getByRole("link", { name: "Sections" })).toHaveAttribute(
+    expect(container.querySelector('[data-tour-target="nav-sections"]')).toHaveAttribute(
       "href",
       "/app/practice/sections",
     )
-    expect(screen.getByRole("button", { name: "Sections (locked)" })).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Sections (locked)" })).not.toBeInTheDocument()
+  })
+
+  it("keeps Insights nav clickable for free-plan browsing without lock icons", () => {
+    const { container } = render(
+      <MemoryRouter initialEntries={["/app"]}>
+        <StudentAppSidebar mobileOpen={false} onMobileClose={() => {}} lockPremiumNav />
+      </MemoryRouter>,
+    )
+
+    expect(container.querySelector('[data-tour-target="nav-overview"]')).toHaveAttribute(
+      "href",
+      "/app/analytics",
+    )
+    expect(container.querySelector('[data-tour-target="nav-insights-drills"]')).toHaveAttribute(
+      "href",
+      "/app/analytics/drills",
+    )
+    expect(container.querySelector('[data-tour-target="nav-insights-sections"]')).toHaveAttribute(
+      "href",
+      "/app/analytics/sections",
+    )
+    expect(container.querySelector('[data-tour-target="nav-insights-preptest"]')).toHaveAttribute(
+      "href",
+      "/app/analytics/preptests",
+    )
+    expect(screen.queryByRole("button", { name: "Analytics (locked)" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Overview (locked)" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Drills (locked)" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Sections (locked)" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "PrepTest (locked)" })).not.toBeInTheDocument()
   })
 
   it("places Get Started above MAIN and starts the Produktly tour on /app", async () => {
@@ -235,9 +328,15 @@ describe("StudentAppSidebar", () => {
       "href",
       "/app/prep-course/betterlsat-core-syllabus-structure-content",
     )
-    expect(screen.getByLabelText("LR Mastery Course (coming soon)")).toBeInTheDocument()
-    expect(screen.getByLabelText("RC Mastery Course (coming soon)")).toBeInTheDocument()
-    expect(screen.getAllByText("Coming Soon").length).toBeGreaterThanOrEqual(2)
+    expect(screen.getByRole("link", { name: "LR Mastery Course" })).toHaveAttribute(
+      "href",
+      "/app/prep-course/lr-mastery-course",
+    )
+    expect(screen.getByRole("link", { name: "RC Mastery Course" })).toHaveAttribute(
+      "href",
+      "/app/prep-course/rc-mastery",
+    )
+    expect(screen.queryByText("Coming Soon")).not.toBeInTheDocument()
     expect(screen.getByRole("link", { name: "LSAT Essentials Course" })).toHaveClass(
       "student-sidebar-link--active",
     )
@@ -256,8 +355,8 @@ describe("StudentAppSidebar", () => {
     await user.click(screen.getByRole("button", { name: "Prep Courses" }))
 
     expect(screen.getByRole("link", { name: "LSAT Essentials Course" })).toBeInTheDocument()
-    expect(screen.getByLabelText("LR Mastery Course (coming soon)")).toBeInTheDocument()
-    expect(screen.getByLabelText("RC Mastery Course (coming soon)")).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "LR Mastery Course" })).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "RC Mastery Course" })).toBeInTheDocument()
   })
 
   it("shows logout and version in the footer", () => {

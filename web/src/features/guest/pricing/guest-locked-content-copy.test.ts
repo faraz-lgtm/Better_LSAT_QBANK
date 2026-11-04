@@ -84,6 +84,17 @@ describe("guest-locked-content-copy", () => {
     })
   })
 
+  it("returns LSAC-link reasoning copy when setup is required", () => {
+    expect(getLockedContentCopy("drills", { lsacLinkRequired: true })).toEqual({
+      title: "Link your LSAC account first",
+      paragraphs: [
+        "PrepTests, drills, sections, explanations, and other LSAC content unlock after you link your LSAC account with LawHub.",
+      ],
+      ctaLabel: "Link LSAC",
+      dismissLabel: "Back",
+    })
+  })
+
   it("maps locked nav hrefs to the matching copy variant", () => {
     expect(lockedContentVariantForNavHref("/app/practice/drills")).toBe("drills")
     expect(lockedContentVariantForNavHref("/app/analytics/drills")).toBe("drills")

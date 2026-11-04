@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 
+import { useStudentEntitlementOptional } from "@/features/app-shell/student-entitlement-context"
+import { useGuestPricingModal } from "@/features/guest/pricing/guest-pricing-modal-provider"
+import { shouldLimitFreeAnalyticsAccess } from "@/features/student/analytics/analytics-free-access"
+import { AnalyticsInsightsFreePreview } from "@/features/student/components/analytics-insights-free-preview"
 import { StudentMain } from "@/features/student/components/student-main"
 import {
   PrepTestExamTrajectoryPanel,
@@ -49,6 +53,12 @@ function seedPrepRecords(): PrepTestRecord[] {
 
 function AnalyticsPrepTestsPage() {
   const navigate = useNavigate()
+  const entitlement = useStudentEntitlementOptional()
+  const { openLockedContentModal } = useGuestPricingModal()
+  const limitFreeAccess = shouldLimitFreeAnalyticsAccess({
+    accessState: entitlement?.entitlement?.accessState,
+    hasActiveCore: entitlement?.entitlement?.hasActiveCore,
+  })
   const analyticsApi = useAnalyticsApi()
   const practiceApi = usePracticeApi()
   const [seededRecords] = useState(seedPrepRecords)
@@ -61,6 +71,10 @@ function AnalyticsPrepTestsPage() {
   const [historySort, setHistorySort] = useState<InsightHistorySort>("recent")
 
   useEffect(() => {
+    if (limitFreeAccess) {
+      setReady(true)
+      return
+    }
     if (!analyticsApi) {
       setReady(true)
       return
@@ -92,7 +106,7 @@ function AnalyticsPrepTestsPage() {
     return () => {
       cancelled = true
     }
-  }, [analyticsApi])
+  }, [analyticsApi, limitFreeAccess])
 
   const rangedRecords = useMemo(
     () => filterPrepTestsByTimeRange(prepRecords, timeRange),
@@ -126,6 +140,17 @@ function AnalyticsPrepTestsPage() {
     },
     [navigate],
   )
+
+  if (limitFreeAccess) {
+    return (
+      <StudentMain>
+        <AnalyticsInsightsFreePreview
+          variant="preptests"
+          onLockedAction={() => openLockedContentModal("preptests")}
+        />
+      </StudentMain>
+    )
+  }
 
   return (
     <StudentMain>
