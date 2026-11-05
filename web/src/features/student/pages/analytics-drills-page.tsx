@@ -2,6 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { ChevronDown, X } from "lucide-react"
 
+import { useStudentEntitlementOptional } from "@/features/app-shell/student-entitlement-context"
+import { useGuestPricingModal } from "@/features/guest/pricing/guest-pricing-modal-provider"
+import { shouldLimitFreeAnalyticsAccess } from "@/features/student/analytics/analytics-free-access"
+import { AnalyticsInsightsFreePreview } from "@/features/student/components/analytics-insights-free-preview"
 import { cn } from "@/lib/utils"
 import { StudentMain } from "@/features/student/components/student-main"
 import {
@@ -335,6 +339,12 @@ function DrillTypeMenu({
 
 function AnalyticsDrillsPage() {
   const navigate = useNavigate()
+  const entitlement = useStudentEntitlementOptional()
+  const { openLockedContentModal } = useGuestPricingModal()
+  const limitFreeAccess = shouldLimitFreeAnalyticsAccess({
+    accessState: entitlement?.entitlement?.accessState,
+    hasActiveCore: entitlement?.entitlement?.hasActiveCore,
+  })
   const analyticsApi = useAnalyticsApi()
   const practiceApi = usePracticeApi()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -366,6 +376,10 @@ function AnalyticsDrillsPage() {
   const [historySort, setHistorySort] = useState<HistorySort>("date-desc")
 
   useEffect(() => {
+    if (limitFreeAccess) {
+      setReady(true)
+      return
+    }
     if (!analyticsApi) {
       setReady(true)
       return
@@ -423,7 +437,7 @@ function AnalyticsDrillsPage() {
     return () => {
       cancelled = true
     }
-  }, [analyticsApi])
+  }, [analyticsApi, limitFreeAccess])
 
   const typesForSection = useMemo(
     () =>
@@ -528,6 +542,17 @@ function AnalyticsDrillsPage() {
   )
 
   const showColdSkeleton = !ready && drillRecords.length === 0
+
+  if (limitFreeAccess) {
+    return (
+      <StudentMain>
+        <AnalyticsInsightsFreePreview
+          variant="drills"
+          onLockedAction={() => openLockedContentModal("drills")}
+        />
+      </StudentMain>
+    )
+  }
 
   return (
     <StudentMain>

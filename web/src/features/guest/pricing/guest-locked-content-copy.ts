@@ -19,6 +19,16 @@ export type LockedContentCopy = {
 const FREE_INCLUDES_LINE =
   "Free includes your diagnostic, results, 5 explanations, and Foundations, Module 1."
 
+/** Premium user with plan access but LawHub / LSAC not linked yet. */
+const LSAC_LINK_REQUIRED_COPY: LockedContentCopy = {
+  title: "Link your LSAC account first",
+  paragraphs: [
+    "PrepTests, drills, sections, explanations, and other LSAC content unlock after you link your LSAC account with LawHub.",
+  ],
+  ctaLabel: "Link LSAC",
+  dismissLabel: "Back",
+}
+
 const LOCKED_CONTENT_COPY: Record<LockedContentVariant, LockedContentCopy> = {
   default: {
     title: "Subscriber-Only Content",
@@ -94,7 +104,11 @@ function isLockedContentVariant(value: unknown): value is LockedContentVariant {
   return typeof value === "string" && Object.hasOwn(LOCKED_CONTENT_COPY, value)
 }
 
-function getLockedContentCopy(variant: LockedContentVariant = "default"): LockedContentCopy {
+function getLockedContentCopy(
+  variant: LockedContentVariant = "default",
+  options?: { lsacLinkRequired?: boolean },
+): LockedContentCopy {
+  if (options?.lsacLinkRequired) return LSAC_LINK_REQUIRED_COPY
   return LOCKED_CONTENT_COPY[isLockedContentVariant(variant) ? variant : "default"]
 }
 

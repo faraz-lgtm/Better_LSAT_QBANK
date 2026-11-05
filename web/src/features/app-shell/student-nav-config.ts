@@ -136,7 +136,6 @@ export const STUDENT_NAV_SECTIONS: StudentNavSection[] = [
         label: "Live Classes",
         href: STUDENT_LIVE_CLASSES_HREF,
         icon: "live-classes",
-        status: "coming_soon",
       },
     ],
   },

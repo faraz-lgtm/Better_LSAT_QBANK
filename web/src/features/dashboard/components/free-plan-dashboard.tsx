@@ -14,6 +14,7 @@ import {
   diagnosticAttemptHref,
   diagnosticResultsSectionFromIntent,
 } from "@/features/student/diagnostic/diagnostic-results-routes"
+import { LockedMetricSkeleton } from "@/features/student/components/locked-metric-skeleton"
 import { cn } from "@/lib/utils"
 
 const FREE_START_FULL_HREF = "/diagnostic/start?intent=quick"
@@ -55,25 +56,6 @@ const LOCKED_PERFORMANCE_METRICS = [
   { id: "questions-drilled", label: "Questions Drilled", skeletonWidthClass: "w-16" },
   { id: "drilled-accuracy", label: "Drilled Accuracy", skeletonWidthClass: "w-14" },
 ] as const
-
-/** Empty blurred bar — no metric text in the DOM (real or fake). */
-function LockedMetricSkeleton({
-  widthClass,
-  className,
-}: {
-  widthClass: string
-  className?: string
-}) {
-  return (
-    <div
-      className={cn("h-8 blur-[7px] select-none", widthClass, className)}
-      aria-hidden
-      data-testid="locked-metric-skeleton"
-    >
-      <div className="h-full w-full rounded-md bg-[var(--primary-800,#041a44)]/35" />
-    </div>
-  )
-}
 
 type HistoryFilter = "all" | "full" | "mini"
 
