@@ -1,7 +1,15 @@
-import { Lock } from "lucide-react"
+import { Link } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
-import { LockedMetricSkeleton } from "@/features/student/components/locked-metric-skeleton"
+import {
+  STUDENT_DIAGNOSTIC_HREF,
+  STUDENT_FREE_STRATEGY_CALL_HREF,
+} from "@/features/app-shell/student-nav-config"
+import { SectionInitialBadge } from "@/features/student/drills/section-initial-badge"
+import {
+  OVERVIEW_TIME_RANGE_OPTIONS,
+  TimeRangeSegmented,
+} from "@/features/student/components/time-range-filter"
 import { cn } from "@/lib/utils"
 
 export type AnalyticsInsightsFreePreviewVariant = "overview" | "drills" | "sections" | "preptests"
@@ -11,238 +19,302 @@ type AnalyticsInsightsFreePreviewProps = {
   onLockedAction: () => void
 }
 
+const INSIGHTS_OVERVIEW_FIGMA = "/figma/insights-overview" as const
+const LSAC_LICENSE_HREF = "https://www.lsac.org/"
+
 const OVERVIEW_HEADLINE = [
-  { id: "best-score", label: "Best Score", skeletonWidthClass: "w-16" },
-  { id: "average-score", label: "Average Score", skeletonWidthClass: "w-16" },
+  { id: "best-score", label: "Best Score", showBar: true },
+  { id: "average-score", label: "Avg Score", showBar: true },
 ] as const
 
 const OVERVIEW_SECONDARY = [
-  { id: "avg-lr", label: "Logical Reasoning Average", skeletonWidthClass: "w-12" },
-  { id: "avg-rc", label: "Reading Comprehension Average", skeletonWidthClass: "w-12" },
-  { id: "avg-time", label: "Average Time per Question", skeletonWidthClass: "w-14" },
-  { id: "accuracy", label: "Question Accuracy", skeletonWidthClass: "w-12" },
+  { id: "avg-lr", label: "Logical Reasoning Mean" },
+  { id: "avg-rc", label: "Reading Comprehension Mean" },
+  { id: "avg-time", label: "Avg Time per Question" },
+  { id: "accuracy", label: "Question Accuracy" },
 ] as const
 
-const DRILLS_STATS = [
-  { id: "avg-score", label: "Avg Score", skeletonWidthClass: "w-14" },
-  { id: "accuracy", label: "Accuracy", skeletonWidthClass: "w-12" },
-  { id: "questions", label: "Questions", skeletonWidthClass: "w-14" },
-  { id: "avg-time", label: "Avg Time / Q", skeletonWidthClass: "w-12" },
+const DRILLS_EMPTY_STATS = [
+  { id: "drills-mean", label: "Drills Mean" },
+  { id: "accuracy", label: "Accuracy" },
+  { id: "question-drilled", label: "Question Drilled" },
+  { id: "question-accuracy", label: "Question Accuracy" },
 ] as const
 
-const SECTIONS_STATS = [
-  { id: "avg-correct", label: "Avg Correct", skeletonWidthClass: "w-14" },
-  { id: "avg-score", label: "Avg Score", skeletonWidthClass: "w-12" },
-  { id: "sections-done", label: "Sections Done", skeletonWidthClass: "w-14" },
-  { id: "avg-time", label: "Avg Time", skeletonWidthClass: "w-12" },
+const SECTIONS_EMPTY_STATS = [
+  { id: "peak-performance", label: "Peak Performance" },
+  { id: "trailing-average", label: "Trailing Average" },
+  { id: "accuracy", label: "Accuracy" },
+  { id: "momentum", label: "Momentum" },
 ] as const
 
-const PREPTEST_STATS = [
-  { id: "best-score", label: "Best Score", skeletonWidthClass: "w-14" },
-  { id: "avg-score", label: "Avg Score", skeletonWidthClass: "w-12" },
-  { id: "tests-done", label: "PrepTests Done", skeletonWidthClass: "w-14" },
-  { id: "percentile", label: "Percentile", skeletonWidthClass: "w-12" },
+const PREPTEST_EMPTY_STATS = [
+  { id: "peak-score", label: "Peak Score" },
+  { id: "target-gap", label: "Target Gap" },
+  { id: "score-variance", label: "Score Variance" },
+  { id: "section-drop-off", label: "Section Drop-off" },
 ] as const
 
-const PAGE_COPY: Record<
-  AnalyticsInsightsFreePreviewVariant,
-  { title: string; chartTitle: string; historyTitle: string }
-> = {
-  overview: {
-    title: "Overview",
-    chartTitle: "Test Performance History",
-    historyTitle: "Practice History",
-  },
-  drills: {
-    title: "Drills",
-    chartTitle: "Drill Score Progress",
-    historyTitle: "Drill History",
-  },
-  sections: {
-    title: "Sections",
-    chartTitle: "Section Trajectory",
-    historyTitle: "Section History",
-  },
-  preptests: {
-    title: "PrepTest",
-    chartTitle: "Exam Trajectory",
-    historyTitle: "PrepTest History",
-  },
-}
+const SECTION_KIND_CARDS = [
+  { id: "LR" as const, title: "Logical Reasoning", selected: true },
+  { id: "RC" as const, title: "Reading Comprehension", selected: false },
+]
 
-function InsightsUpgradeBanner({ onUnlock }: { onUnlock: () => void }) {
-  return (
-    <section className="flex w-full flex-col gap-[18px] rounded-[20px] border border-[var(--primary)] bg-[var(--greyscale-0)] px-[22px] py-[18px] shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)] sm:flex-row sm:items-center">
-      <div className="flex size-11 shrink-0 items-center justify-center rounded-[14px] bg-[var(--primary-25)]">
-        <Lock className="size-5 text-[var(--primary)]" strokeWidth={2} aria-hidden />
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="text-base font-bold leading-6 text-[var(--color-student-heading)]">
-          Unlock full analytics
-        </p>
-        <p className="text-base leading-[1.5] tracking-[0.32px] text-[var(--greyscale-500)]">
-          Track accuracy, timing, and performance patterns so you know what to work on next.
-        </p>
-      </div>
-      <Button
-        type="button"
-        className="h-10 shrink-0 rounded-[14px] border border-[var(--primary-border)] px-4 text-sm font-semibold tracking-[0.28px] shadow-[0px_1px_1px_rgba(13,13,18,0.06)]"
-        onClick={onUnlock}
-      >
-        Unlock Analytics
-      </Button>
-    </section>
-  )
-}
-
-function LockedStatCard({
+function EmptyOverviewStatCard({
   label,
-  skeletonWidthClass,
-  large = false,
+  showBar = false,
 }: {
   label: string
-  skeletonWidthClass: string
-  large?: boolean
+  showBar?: boolean
 }) {
   return (
-    <article
-      className={cn(
-        "flex min-w-0 flex-col rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] shadow-[0px_1px_2px_rgba(13,13,18,0.04)]",
-        large ? "min-h-[148px] justify-between gap-3 p-5" : "gap-1 px-4 py-3.5",
-      )}
-    >
-      <p
-        className={cn(
-          "m-0 font-semibold leading-[1.4] text-[var(--color-student-heading)]",
-          large ? "text-sm tracking-[0.01em]" : "text-[11px] tracking-[0.02em]",
-        )}
-      >
-        {label}
+    <article className="flex min-w-0 flex-col gap-[5px] rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-6">
+      <p className="m-0 text-sm font-semibold leading-[1.5] tracking-[0.28px] text-[#64748b]">{label}</p>
+      <p className="m-0 text-[32px] font-black leading-[1.25] text-[var(--greyscale-100)]" aria-hidden>
+        ---
       </p>
-      <LockedMetricSkeleton
-        widthClass={skeletonWidthClass}
-        className={large ? "h-10" : undefined}
-      />
+      {showBar ? (
+        <div className="flex h-[30px] items-center pt-2">
+          <div className="h-2.5 w-[120px] rounded-[8px] bg-[var(--greyscale-100)]" aria-hidden />
+        </div>
+      ) : null}
     </article>
   )
 }
 
-function LockedChartPanel({ title }: { title: string }) {
+/** Figma `21711:30401` — empty-state CTA inside the overview card. */
+function OverviewEmptyPracticePanel() {
   return (
-    <section className="w-full rounded-[20px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-5">
-      <h2 className="m-0 text-base font-bold leading-[1.3] text-[var(--color-student-heading)]">{title}</h2>
-      <div className="mt-4 flex h-[180px] flex-col justify-end gap-3 sm:h-[220px]">
-        <LockedMetricSkeleton widthClass="w-full" className="h-24 sm:h-32" />
-        <div className="flex gap-3">
-          <LockedMetricSkeleton widthClass="w-20" className="h-3" />
-          <LockedMetricSkeleton widthClass="w-24" className="h-3" />
-        </div>
+    <section className="flex w-full flex-col items-center gap-3 rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-8 py-14">
+      <div className="flex size-14 items-center justify-center rounded-[14px] bg-[#e4ecfb]">
+        <img
+          src={`${INSIGHTS_OVERVIEW_FIGMA}/empty-chart-icon.svg`}
+          alt=""
+          width={28}
+          height={28}
+          className="size-7 max-w-none shrink-0"
+          draggable={false}
+        />
+      </div>
+      <h3 className="m-0 text-center text-xl font-bold leading-normal text-[#0b1f4d]">
+        Start practicing to see your data
+      </h3>
+      <p className="m-0 max-w-[460px] text-center text-sm leading-[21px] text-[#475569]">
+        Your scores, section averages and performance history will appear here once you complete a
+        diagnostic, drill, section or PrepTest.
+      </p>
+      <div className="flex flex-col items-stretch gap-3 pt-4 sm:flex-row sm:items-center sm:justify-center">
+        <Button asChild className="h-12 rounded-[14px] px-4 text-base font-semibold tracking-[0.32px]">
+          <Link to={STUDENT_DIAGNOSTIC_HREF}>Take the Diagnostic Test</Link>
+        </Button>
+        <Button
+          asChild
+          variant="outline"
+          className="h-12 rounded-[14px] border-[var(--greyscale-100)] px-4 text-base font-semibold tracking-[0.32px] text-[var(--primary)] shadow-[0px_1px_2px_0px_rgba(13,13,18,0.06)] hover:text-white"
+        >
+          <Link to={STUDENT_FREE_STRATEGY_CALL_HREF}>Book Your Free 15-Minute Call</Link>
+        </Button>
       </div>
     </section>
   )
 }
 
-function LockedHistoryPanel({ title }: { title: string }) {
+/** Figma `21716:26331` — LSAC license strip. */
+function OverviewLsacLicenseBanner() {
   return (
-    <section className="w-full rounded-[20px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] p-5">
-      <h2 className="m-0 text-base font-bold leading-[1.3] text-[var(--color-student-heading)]">{title}</h2>
-      <div className="mt-4 flex flex-col gap-3">
-        {Array.from({ length: 3 }, (_, index) => (
-          <div
-            key={`locked-history-${index}`}
-            className="flex items-center justify-between gap-4 rounded-[14px] border border-[var(--greyscale-100)] px-4 py-3"
-          >
-            <div className="flex min-w-0 flex-1 flex-col gap-2">
-              <LockedMetricSkeleton widthClass="w-40" className="h-4" />
-              <LockedMetricSkeleton widthClass="w-24" className="h-3" />
-            </div>
-            <LockedMetricSkeleton widthClass="w-12" className="h-6" />
+    <section className="flex w-full flex-col gap-[18px] rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-[22px] py-[18px] sm:flex-row sm:items-center">
+      <img
+        src={`${INSIGHTS_OVERVIEW_FIGMA}/lsac-licensed.png`}
+        alt="Law School Admission Council"
+        width={154}
+        height={41}
+        className="h-[41px] w-[154px] shrink-0 object-contain"
+        draggable={false}
+      />
+      <div className="min-w-0 flex-1">
+        <p className="m-0 text-lg font-bold leading-[1.35] text-[#0e2a5c]">Official LSAC licensed prep</p>
+        <p className="m-0 pt-0.5 text-sm leading-[1.5] tracking-[0.28px] text-[#4a5b78]">
+          Practice questions and sections on betterLSAT are licensed from the Law School Admission
+          Council.
+        </p>
+      </div>
+      <a
+        href={LSAC_LICENSE_HREF}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex h-10 shrink-0 items-center justify-center rounded-[14px] px-4 text-sm font-semibold tracking-[0.28px] text-[var(--primary)] hover:underline"
+      >
+        About our license
+      </a>
+    </section>
+  )
+}
+
+function InsightsFreePreviewHeader({ title }: { title: string }) {
+  return (
+    <div className="flex min-h-[52px] flex-wrap items-center justify-between gap-3">
+      <h2 className="m-0 text-lg font-semibold leading-[1.4] tracking-[0.36px] text-[var(--color-student-heading)]">
+        {title}
+      </h2>
+      <div className="pointer-events-none opacity-40" aria-hidden>
+        <TimeRangeSegmented
+          value="all"
+          onChange={() => undefined}
+          options={OVERVIEW_TIME_RANGE_OPTIONS}
+        />
+      </div>
+    </div>
+  )
+}
+
+/** Figma `21711:31578` — static LR/RC empty switcher (LR selected). */
+function SectionsEmptyKindSwitcher() {
+  return (
+    <div className="grid gap-6 md:grid-cols-2" aria-hidden>
+      {SECTION_KIND_CARDS.map((card) => (
+        <div
+          key={card.id}
+          className={cn(
+            "flex flex-col items-start rounded-[18px] border border-solid p-6 shadow-[0px_5px_5px_rgba(13,13,18,0.04),0px_4px_4px_rgba(13,13,18,0.02)]",
+            card.selected
+              ? "border-[var(--primary)] bg-[var(--primary-25)]"
+              : "border-[var(--greyscale-100)] bg-[var(--greyscale-0)]",
+          )}
+        >
+          <div className="flex items-center gap-3">
+            <SectionInitialBadge section={card.id} variant="compact" />
+            <span className="text-base font-semibold leading-[1.35] text-[#64748b]">{card.title}</span>
           </div>
-        ))}
-      </div>
-    </section>
+          <p className="m-0 mt-1.5 pl-11 text-sm font-normal leading-[1.5] tracking-[0.28px] text-[var(--greyscale-100)]">
+            ---
+          </p>
+        </div>
+      ))}
+    </div>
   )
 }
 
-function statsForVariant(variant: AnalyticsInsightsFreePreviewVariant) {
-  if (variant === "drills") return DRILLS_STATS
-  if (variant === "sections") return SECTIONS_STATS
-  if (variant === "preptests") return PREPTEST_STATS
-  return OVERVIEW_SECONDARY
-}
-
-/** Free-plan Insights browse — real chrome, empty blurred metrics, upgrade modal on interact. */
-function AnalyticsInsightsFreePreview({
-  variant,
-  onLockedAction,
-}: AnalyticsInsightsFreePreviewProps) {
-  const copy = PAGE_COPY[variant]
-  const gridStats = statsForVariant(variant)
-
+/** Figma `21710:26227` — free Insights Overview empty state. */
+function OverviewInsightsFreePreview() {
   return (
     <div
       className="flex flex-col gap-6 pb-8"
       data-testid="analytics-insights-free-preview"
-      data-variant={variant}
+      data-variant="overview"
     >
-      <InsightsUpgradeBanner onUnlock={onLockedAction} />
+      <InsightsFreePreviewHeader title="Overview" />
 
-      <button
-        type="button"
-        className="flex w-full cursor-pointer flex-col gap-6 rounded-[8px] border-0 bg-transparent p-0 text-left"
-        aria-label={`Unlock ${copy.title} analytics`}
-        onClick={onLockedAction}
-      >
-        <section className="flex w-full flex-col gap-4">
-          <div className="flex min-h-[52px] flex-wrap items-center justify-between gap-3">
-            <h2 className="m-0 text-lg font-bold leading-[1.3] text-[var(--color-student-heading)]">
-              {copy.title}
-            </h2>
-            <span className="rounded-[10px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-3.5 py-2 text-[11px] font-semibold tracking-[0.02em] text-[var(--greyscale-500)]">
-              All time
-            </span>
-          </div>
+      <div className="flex flex-col gap-6">
+        <div className="grid gap-6 md:grid-cols-2">
+          {OVERVIEW_HEADLINE.map((stat) => (
+            <EmptyOverviewStatCard key={stat.id} label={stat.label} showBar={stat.showBar} />
+          ))}
+        </div>
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-6">
+          {OVERVIEW_SECONDARY.map((stat) => (
+            <EmptyOverviewStatCard key={stat.id} label={stat.label} />
+          ))}
+        </div>
 
-          {variant === "overview" ? (
-            <>
-              <div className="grid gap-4 md:grid-cols-2">
-                {OVERVIEW_HEADLINE.map((stat) => (
-                  <LockedStatCard
-                    key={stat.id}
-                    label={stat.label}
-                    skeletonWidthClass={stat.skeletonWidthClass}
-                    large
-                  />
-                ))}
-              </div>
-              <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
-                {OVERVIEW_SECONDARY.map((stat) => (
-                  <LockedStatCard
-                    key={stat.id}
-                    label={stat.label}
-                    skeletonWidthClass={stat.skeletonWidthClass}
-                  />
-                ))}
-              </div>
-            </>
-          ) : (
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
-              {gridStats.map((stat) => (
-                <LockedStatCard
-                  key={stat.id}
-                  label={stat.label}
-                  skeletonWidthClass={stat.skeletonWidthClass}
-                />
-              ))}
-            </div>
-          )}
-        </section>
-
-        <LockedChartPanel title={copy.chartTitle} />
-        <LockedHistoryPanel title={copy.historyTitle} />
-      </button>
+        <OverviewEmptyPracticePanel />
+        <OverviewLsacLicenseBanner />
+      </div>
     </div>
   )
+}
+
+/** Figma `21711:30432` — free Insights Drills empty state. */
+function DrillsInsightsFreePreview() {
+  return (
+    <div
+      className="flex flex-col gap-6 pb-8"
+      data-testid="analytics-insights-free-preview"
+      data-variant="drills"
+    >
+      <InsightsFreePreviewHeader title="Drills" />
+
+      <div className="flex flex-col gap-6">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-6">
+          {DRILLS_EMPTY_STATS.map((stat) => (
+            <EmptyOverviewStatCard key={stat.id} label={stat.label} />
+          ))}
+        </div>
+
+        <OverviewEmptyPracticePanel />
+        <OverviewLsacLicenseBanner />
+      </div>
+    </div>
+  )
+}
+
+/** Figma `21711:31565` — free Insights Sections empty state. */
+function SectionsInsightsFreePreview() {
+  return (
+    <div
+      className="flex flex-col gap-6 pb-8"
+      data-testid="analytics-insights-free-preview"
+      data-variant="sections"
+    >
+      <InsightsFreePreviewHeader title="Section Insights" />
+
+      <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-6">
+          <SectionsEmptyKindSwitcher />
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-6">
+            {SECTIONS_EMPTY_STATS.map((stat) => (
+              <EmptyOverviewStatCard key={stat.id} label={stat.label} />
+            ))}
+          </div>
+        </div>
+
+        <OverviewEmptyPracticePanel />
+        <OverviewLsacLicenseBanner />
+      </div>
+    </div>
+  )
+}
+
+/** Figma `21711:31405` — free Insights PrepTests empty state. */
+function PrepTestsInsightsFreePreview() {
+  return (
+    <div
+      className="flex flex-col gap-6 pb-8"
+      data-testid="analytics-insights-free-preview"
+      data-variant="preptests"
+    >
+      <InsightsFreePreviewHeader title="PrepTest Insights" />
+
+      <div className="flex flex-col gap-6">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-6">
+          {PREPTEST_EMPTY_STATS.map((stat) => (
+            <EmptyOverviewStatCard key={stat.id} label={stat.label} />
+          ))}
+        </div>
+
+        <OverviewEmptyPracticePanel />
+        <OverviewLsacLicenseBanner />
+      </div>
+    </div>
+  )
+}
+
+/** Free-plan Insights browse — empty-state previews for all Insights tabs. */
+function AnalyticsInsightsFreePreview({
+  variant,
+}: AnalyticsInsightsFreePreviewProps) {
+  if (variant === "overview") {
+    return <OverviewInsightsFreePreview />
+  }
+
+  if (variant === "drills") {
+    return <DrillsInsightsFreePreview />
+  }
+
+  if (variant === "sections") {
+    return <SectionsInsightsFreePreview />
+  }
+
+  return <PrepTestsInsightsFreePreview />
 }
 
 export { AnalyticsInsightsFreePreview }
