@@ -85,9 +85,25 @@ const PrepTestPoolsPage = lazyNamed(
 const DashboardPage = lazyNamed(() => import("@/features/dashboard/pages/dashboard-page"), "DashboardPage")
 const FeedbackPage = lazyNamed(() => import("@/features/feedback/pages/feedback-page"), "FeedbackPage")
 const RoadmapPage = lazyNamed(() => import("@/features/feedback/pages/roadmap-page"), "RoadmapPage")
+const BookSessionsPage = lazyNamed(
+  () => import("@/features/tutoring/pages/book-sessions-page"),
+  "BookSessionsPage",
+)
+const AfterBookingSessionsPage = lazyNamed(
+  () => import("@/features/tutoring/pages/after-booking-sessions-page"),
+  "AfterBookingSessionsPage",
+)
 const TutoringSessionsPage = lazyNamed(
   () => import("@/features/tutoring/pages/tutoring-sessions-page"),
   "TutoringSessionsPage",
+)
+const ViewAllSessionsPage = lazyNamed(
+  () => import("@/features/tutoring/pages/view-all-sessions-page"),
+  "ViewAllSessionsPage",
+)
+const SessionTranscriptPage = lazyNamed(
+  () => import("@/features/tutoring/pages/session-transcript-page"),
+  "SessionTranscriptPage",
 )
 const LiveClassesPage = lazyNamed(
   () => import("@/features/tutoring/pages/live-classes-page"),
@@ -833,6 +849,38 @@ const router = createBrowserRouter([
             element: (
               <LazyPage>
                 <GuestDiagnosticResultsPage section="full" />
+              </LazyPage>
+            ),
+          },
+          {
+            path: "tutoring/book",
+            element: (
+              <LazyPage>
+                <BookSessionsPage />
+              </LazyPage>
+            ),
+          },
+          {
+            path: "tutoring/after-booking",
+            element: (
+              <LazyPage>
+                <AfterBookingSessionsPage />
+              </LazyPage>
+            ),
+          },
+          {
+            path: "tutoring/sessions/all",
+            element: (
+              <LazyPage>
+                <ViewAllSessionsPage />
+              </LazyPage>
+            ),
+          },
+          {
+            path: "tutoring/sessions/:sessionId/transcript",
+            element: (
+              <LazyPage>
+                <SessionTranscriptPage />
               </LazyPage>
             ),
           },

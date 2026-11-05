@@ -56,6 +56,10 @@ describe("StudentAppSidebar", () => {
     expect(screen.getByText("NEW")).toBeInTheDocument()
     expect(screen.getByRole("link", { name: "Book 1 on 1 Sessions" })).toHaveAttribute(
       "href",
+      "/app/tutoring/book",
+    )
+    expect(screen.getByRole("link", { name: "My Sessions" })).toHaveAttribute(
+      "href",
       "/app/tutoring/sessions",
     )
     expect(screen.getByLabelText("Live Classes (coming soon)")).toBeInTheDocument()
