@@ -1,5 +1,4 @@
 import { render, screen } from "@testing-library/react"
-import userEvent from "@testing-library/user-event"
 import { MemoryRouter, Route, Routes } from "react-router-dom"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -75,32 +74,27 @@ describe("AnalyticsPage free plan", () => {
     entitlementMock.canAccessLsacContent = false
   })
 
-  it("shows blurred Insights preview and opens analytics upgrade modal", async () => {
-    const user = userEvent.setup()
+  it("shows Insights overview empty state without loading analytics bundle", () => {
     renderOverview()
 
     expect(screen.getByTestId("analytics-insights-free-preview")).toBeInTheDocument()
-    expect(screen.getByText("Unlock full analytics")).toBeInTheDocument()
+    expect(screen.getByText("Start practicing to see your data")).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "Take the Diagnostic Test" })).toBeInTheDocument()
     expect(getPageBundle).not.toHaveBeenCalled()
-
-    await user.click(screen.getByRole("button", { name: "Unlock Analytics" }))
-    expect(openLockedContentModal).toHaveBeenCalledWith("analytics")
+    expect(openLockedContentModal).not.toHaveBeenCalled()
   })
 
-  it("shows the same Insights preview for premium LSAC-setup users", async () => {
+  it("shows the same Insights empty state for premium LSAC-setup users", () => {
     entitlementMock.entitlement.accessState = "LSAC_REQUIRED"
     entitlementMock.entitlement.hasActiveCore = true
     entitlementMock.isPaymentRequired = false
     entitlementMock.isLsacSetupRequired = true
     entitlementMock.canAccessLsacContent = false
 
-    const user = userEvent.setup()
     renderOverview()
 
     expect(screen.getByTestId("analytics-insights-free-preview")).toBeInTheDocument()
+    expect(screen.getByText("Official LSAC licensed prep")).toBeInTheDocument()
     expect(getPageBundle).not.toHaveBeenCalled()
-
-    await user.click(screen.getByRole("button", { name: "Unlock Analytics" }))
-    expect(openLockedContentModal).toHaveBeenCalledWith("analytics")
   })
 })
