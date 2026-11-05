@@ -40,20 +40,21 @@ describe("GuestFreePlanSidebar", () => {
     expect(screen.getByRole("button", { name: "Analytics (locked)" })).toBeInTheDocument()
     expect(screen.getByRole("link", { name: "Drills" })).toHaveAttribute("href", "/app/practice/drills")
     expect(screen.getByRole("button", { name: "Drills (locked)" })).toBeInTheDocument()
-    expect(screen.getAllByRole("button", { name: "Sections (locked)" })).toHaveLength(2)
+    expect(screen.getByRole("button", { name: "Sections (locked)" })).toBeInTheDocument()
     expect(screen.getByRole("link", { name: "PrepTest" })).toHaveAttribute("href", "/app/preptest")
     expect(screen.getByRole("button", { name: "PrepTest (locked)" })).toBeInTheDocument()
-    expect(screen.getByText("TUTORING")).toBeInTheDocument()
-    expect(screen.getByRole("link", { name: "Book 1 on 1 Sessions" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Free Strategy Call" })).toHaveAttribute(
       "href",
-      "/app/tutoring/book",
+      "/app/free-strategy-call",
     )
+    expect(screen.getByText("TUTORING")).toBeInTheDocument()
     expect(screen.getByRole("link", { name: "My Sessions" })).toHaveAttribute(
       "href",
       "/app/tutoring/sessions",
     )
     expect(screen.getByLabelText("Live Classes (coming soon)")).toBeInTheDocument()
-    expect(screen.queryByRole("button", { name: "Book 1 on 1 Sessions (locked)" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("link", { name: "Book 1 on 1 Sessions" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Free Strategy Call (locked)" })).not.toBeInTheDocument()
     expect(screen.queryByRole("button", { name: "My Sessions (locked)" })).not.toBeInTheDocument()
     expect(screen.getByRole("link", { name: "Feedback" })).toHaveAttribute("href", "/app/feedback")
     expect(screen.getByRole("link", { name: "Roadmap" })).toHaveAttribute("href", "/app/roadmap")

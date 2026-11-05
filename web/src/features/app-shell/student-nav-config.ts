@@ -11,6 +11,7 @@ export type StudentNavSectionKey = "academy" | "prep" | "insights" | "tutoring" 
 /** Per-item icons from Figma sidebar node `19939:3385`. */
 export type StudentNavItemIconKey =
   | "get-started"
+  | "free-strategy-call"
   | "dashboard"
   | "diagnostic"
   | "diagnostic-results"
@@ -31,6 +32,7 @@ export type StudentNavItemIconKey =
 
 export const STUDENT_NAV_ITEM_ICON_SRC: Record<StudentNavItemIconKey, string> = {
   "get-started": "/nav/rocket.svg",
+  "free-strategy-call": "/nav/free-strategy-call.svg",
   dashboard: "/nav/dashboard.svg",
   diagnostic: "/nav/drills.svg",
   "diagnostic-results": "/nav/diagnostic-results.svg",
@@ -81,6 +83,12 @@ export const STUDENT_GET_STARTED_LABEL = "Get Started"
 
 export const STUDENT_GET_STARTED_ICON: StudentNavItemIconKey = "get-started"
 
+export const STUDENT_FREE_STRATEGY_CALL_LABEL = "Free Strategy Call"
+
+export const STUDENT_FREE_STRATEGY_CALL_HREF = "/app/free-strategy-call"
+
+export const STUDENT_FREE_STRATEGY_CALL_ICON: StudentNavItemIconKey = "free-strategy-call"
+
 export const STUDENT_DASHBOARD_HREF = "/app"
 
 export const STUDENT_DASHBOARD_ICON: StudentNavItemIconKey = "dashboard"
@@ -93,7 +101,8 @@ export const STUDENT_DIAGNOSTIC_RESULTS_ICON: StudentNavItemIconKey = "diagnosti
 
 export const STUDENT_DIAGNOSTIC_EXPLANATION_ICON: StudentNavItemIconKey = "diagnostic-explanation"
 
-export const STUDENT_TUTORING_BOOK_HREF = "/app/tutoring/book"
+/** @deprecated Prefer STUDENT_FREE_STRATEGY_CALL_HREF; kept for legacy links. */
+export const STUDENT_TUTORING_BOOK_HREF = STUDENT_FREE_STRATEGY_CALL_HREF
 export const STUDENT_TUTORING_AFTER_BOOKING_HREF = "/app/tutoring/after-booking"
 export const STUDENT_TUTORING_SESSIONS_HREF = "/app/tutoring/sessions"
 export const STUDENT_TUTORING_SESSIONS_ALL_HREF = "/app/tutoring/sessions/all"
@@ -118,11 +127,6 @@ export const STUDENT_NAV_SECTIONS: StudentNavSection[] = [
     label: "TUTORING",
     badge: "NEW",
     items: [
-      {
-        label: "Book 1 on 1 Sessions",
-        href: STUDENT_TUTORING_BOOK_HREF,
-        icon: "tutoring-sessions",
-      },
       {
         label: "My Sessions",
         href: STUDENT_TUTORING_SESSIONS_HREF,
@@ -184,6 +188,15 @@ export function getActiveSectionKey(pathname: string): StudentNavSectionKey | nu
   return null
 }
 
+export function isFreeStrategyCallActive(pathname: string): boolean {
+  return (
+    pathname === STUDENT_FREE_STRATEGY_CALL_HREF ||
+    pathname.startsWith(`${STUDENT_FREE_STRATEGY_CALL_HREF}/`) ||
+    pathname === "/app/tutoring/book" ||
+    pathname.startsWith("/app/tutoring/book/")
+  )
+}
+
 export function getActiveSection(pathname: string): StudentNavSection | null {
   const key = getActiveSectionKey(pathname)
   if (!key) return null
@@ -234,6 +247,7 @@ function sectionLabel(label: string): string {
 
 export function getStudentPageTitle(pathname: string, search = ""): string | null {
   if (isDashboardActive(pathname)) return "Dashboard"
+  if (isFreeStrategyCallActive(pathname)) return STUDENT_FREE_STRATEGY_CALL_LABEL
   if (pathname === DIAGNOSTIC_RESULTS_ROOT || pathname === DIAGNOSTIC_RESULTS_MINI_HREF || pathname === DIAGNOSTIC_RESULTS_FULL_HREF) {
     return "Diagnostic Results"
   }

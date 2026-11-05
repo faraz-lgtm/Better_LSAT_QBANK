@@ -370,7 +370,7 @@ const RepWorkEditableQuestion = memo(function RepWorkEditableQuestion({
         <p className="m-0 min-w-0 text-right text-[14px] font-normal leading-[1.5] tracking-[0.28px] text-[var(--greyscale-300)]">
           Click box to edit the text.
         </p>
-        {showAnswer || dirty ? (
+        {dirty ? (
           <button
             type="button"
             className="inline-flex h-[22px] shrink-0 items-center justify-center gap-2 rounded-[16px] text-[16px] font-semibold leading-[1.5] tracking-[0.32px] text-[var(--primary)] transition-opacity hover:opacity-80"

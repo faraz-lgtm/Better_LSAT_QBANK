@@ -52,12 +52,13 @@ describe("StudentAppSidebar", () => {
     expect(screen.getByRole("link", { name: "Explanations" })).toBeInTheDocument()
     expect(screen.queryByRole("link", { name: "Untimed Review" })).not.toBeInTheDocument()
     expect(screen.getByRole("link", { name: "Overview" })).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "Free Strategy Call" })).toHaveAttribute(
+      "href",
+      "/app/free-strategy-call",
+    )
     expect(screen.getByText("TUTORING")).toBeInTheDocument()
     expect(screen.getByText("NEW")).toBeInTheDocument()
-    expect(screen.getByRole("link", { name: "Book 1 on 1 Sessions" })).toHaveAttribute(
-      "href",
-      "/app/tutoring/book",
-    )
+    expect(screen.queryByRole("link", { name: "Book 1 on 1 Sessions" })).not.toBeInTheDocument()
     expect(screen.getByRole("link", { name: "My Sessions" })).toHaveAttribute(
       "href",
       "/app/tutoring/sessions",
@@ -171,15 +172,20 @@ describe("StudentAppSidebar", () => {
     )
 
     const getStarted = screen.getByRole("button", { name: "Get Started" })
+    const freeStrategy = screen.getByRole("link", { name: "Free Strategy Call" })
     const mainHeading = screen.getByText("MAIN")
     const dashboard = screen.getByRole("link", { name: "Dashboard" })
     expect(
-      getStarted.compareDocumentPosition(mainHeading) & Node.DOCUMENT_POSITION_FOLLOWING,
+      getStarted.compareDocumentPosition(freeStrategy) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+    expect(
+      freeStrategy.compareDocumentPosition(mainHeading) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy()
     expect(
       mainHeading.compareDocumentPosition(dashboard) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy()
     expect(getStarted.querySelector('img[src="/nav/rocket.svg"]')).toBeTruthy()
+    expect(freeStrategy.querySelector('img[src="/nav/free-strategy-call.svg"]')).toBeTruthy()
 
     await user.click(getStarted)
     expect(startProduktlyTour).toHaveBeenCalledWith({

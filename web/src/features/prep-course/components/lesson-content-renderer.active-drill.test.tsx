@@ -290,17 +290,32 @@ describe("LessonContentRenderer rep_work", () => {
     expect(screen.getByText("CORRECT")).toBeInTheDocument()
   })
 
+  it("hides reset until the question text is edited", async () => {
+    const user = userEvent.setup()
+    render(<LessonContentRenderer lesson={repWorkLesson} />)
+
+    expect(screen.queryByRole("button", { name: "Reset" })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole("switch", { name: "Show or hide answer for question 1" }))
+    expect(screen.queryByRole("button", { name: "Reset" })).not.toBeInTheDocument()
+
+    const box = screen.getByRole("textbox", { name: "Question 1 text" })
+    await user.clear(box)
+    await user.type(box, "Edited text")
+    expect(screen.getByRole("button", { name: "Reset" })).toBeInTheDocument()
+  })
+
   it("resets editable question text", async () => {
     const user = userEvent.setup()
     render(<LessonContentRenderer lesson={repWorkLesson} />)
 
     const box = screen.getByRole("textbox", { name: "Question 1 text" })
-    await user.click(screen.getByRole("switch", { name: "Show or hide answer for question 1" }))
     await user.clear(box)
     await user.type(box, "Edited text")
-    expect(box).toHaveValue("Edited text")
+    expect(box).toHaveTextContent("Edited text")
 
     await user.click(screen.getByRole("button", { name: "Reset" }))
-    expect(box).toHaveValue("All surgeons enjoy the sight of blood.")
+    expect(box).toHaveTextContent("All surgeons enjoy the sight of blood.")
+    expect(screen.queryByRole("button", { name: "Reset" })).not.toBeInTheDocument()
   })
 })

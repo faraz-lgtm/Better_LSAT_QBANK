@@ -17,16 +17,27 @@ function TutoringTestimonials({ testimonials }: TutoringTestimonialsProps) {
         {testimonials.map((item) => (
           <article
             key={item.id}
-            className="rounded-[9px] border border-[#e1e8ef] bg-[#f8fbfe] p-3"
+            className="flex flex-col gap-4 rounded-[9px] border border-[#e1e8ef] bg-[#f8fbfe] p-3"
           >
-            <p className="text-xs text-[var(--color-student-heading)]" aria-label="5 star rating">
-              ★★★★★
-            </p>
-            <p className="mt-2 text-xs tracking-[0.02em] text-[var(--greyscale-500)]">“{item.quote}”</p>
-            <p className="mt-2 text-xs font-bold tracking-[0.02em] text-[var(--color-student-heading)]">
-              {item.name}
-            </p>
-            <p className="mt-0.5 text-xs tracking-[0.02em] text-[var(--primary)]">BetterLSAT student</p>
+            <div className="relative w-full overflow-hidden rounded-[16px]" style={{ aspectRatio: "73 / 36" }}>
+              <iframe
+                loading="lazy"
+                title={`${item.name} testimonial video`}
+                src={item.videoEmbedSrc}
+                className="absolute inset-0 h-full w-full border-0"
+                referrerPolicy="origin"
+                allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture; fullscreen; clipboard-write"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <p className="text-xs leading-normal text-[#ffbd4c]" aria-label="5 star rating">
+                ★★★★★
+              </p>
+              <p className="text-xs font-bold tracking-[0.02em] text-[var(--color-student-heading)]">
+                {item.name}
+              </p>
+              <p className="text-xs tracking-[0.02em] text-[var(--primary)]">BetterLSAT student</p>
+            </div>
           </article>
         ))}
       </div>

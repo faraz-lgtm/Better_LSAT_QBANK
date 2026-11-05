@@ -2,9 +2,10 @@ import { Button } from "@/components/ui/button"
 
 type StrategyCallHeroProps = {
   onBookClick?: () => void
+  bookButtonExpanded?: boolean
 }
 
-function StrategyCallHero({ onBookClick }: StrategyCallHeroProps) {
+function StrategyCallHero({ onBookClick, bookButtonExpanded = false }: StrategyCallHeroProps) {
   return (
     <section className="rounded-[20px] border border-[#dbe5f3] bg-[var(--greyscale-0)] p-[30px]">
       <div className="flex flex-wrap gap-2">
@@ -16,12 +17,14 @@ function StrategyCallHero({ onBookClick }: StrategyCallHeroProps) {
         </span>
       </div>
 
-      <h2 className="mt-4 text-[20px] font-bold leading-[1.35] text-[var(--color-student-heading)]">
-        Know exactly what to work on next.
+      <h2 className="mt-3 text-[20px] font-bold leading-[1.35] text-[var(--color-student-heading)]">
+        Not sure what to fix first?
+        <br />
+        Ask someone who scored 175+ in LSAT.
       </h2>
       <p className="mt-2 max-w-[1014px] text-sm tracking-[0.02em] text-[var(--greyscale-500)]">
-        In 15 minutes, we&apos;ll review your current score, target score, test date, and biggest weak spots then
-        recommend the clearest next step for your prep.
+        In 15 minutes, we&apos;ll look at where you are, where you want to be, and how much time you have. Then
+        we&apos;ll show you the fastest way to close the gap.
       </p>
 
       <div className="mt-6 grid gap-4 md:grid-cols-2">
@@ -31,7 +34,7 @@ function StrategyCallHero({ onBookClick }: StrategyCallHeroProps) {
           </div>
           <div>
             <h3 className="text-base font-semibold tracking-[0.02em] text-[var(--color-student-heading)]">
-              Bring your numbers
+              Tell us where you are
             </h3>
             <p className="mt-1 text-sm tracking-[0.02em] text-[#5a718f]">
               Your current score, target score, test date, and the part of the LSAT giving you the most trouble.
@@ -44,21 +47,29 @@ function StrategyCallHero({ onBookClick }: StrategyCallHeroProps) {
           </div>
           <div>
             <h3 className="text-base font-semibold tracking-[0.02em] text-[var(--color-student-heading)]">
-              Leave with a plan
+              Leave with a clear next step
             </h3>
             <p className="mt-1 text-sm tracking-[0.02em] text-[#5a718f]">
-              Know what to prioritize next and whether 1-on-1 tutoring would actually help you reach your goal.
+              Know what to focus on for the next few weeks, and get an honest answer on whether you need tutoring
+              or can get there on your own.
             </p>
           </div>
         </div>
       </div>
 
       <div className="mt-6 flex flex-col items-center gap-2.5">
-        <Button type="button" size="lg" className="h-12 rounded-[10px] px-4" onClick={onBookClick}>
-          Book a Free Strategy Call
+        <Button
+          type="button"
+          size="lg"
+          className="h-12 rounded-[10px] px-4"
+          aria-expanded={bookButtonExpanded}
+          aria-controls="strategy-call-scheduler"
+          onClick={onBookClick}
+        >
+          Book Your Free 15-Minute Call
         </Button>
         <p className="text-sm tracking-[0.02em] text-[var(--greyscale-500)]">
-          15 minutes on Zoom. No cost, and nothing to buy on the call.
+          15 minutes with a 175+ scorer. No cost, and nothing to buy on the call.
         </p>
       </div>
     </section>
