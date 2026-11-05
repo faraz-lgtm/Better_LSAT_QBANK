@@ -624,6 +624,7 @@ function ExplanationsPage() {
   const limitFreeAccess = shouldLimitFreeExplanationAccess({
     accessState: entitlement?.entitlement?.accessState,
     hasActiveCore: entitlement?.entitlement?.hasActiveCore,
+    isLsacSetupRequired: entitlement?.isLsacSetupRequired,
   })
   const handleLockedContent = useCallback(() => {
     openLockedContentModal("explanations")

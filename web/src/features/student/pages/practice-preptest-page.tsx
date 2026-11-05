@@ -243,6 +243,7 @@ function PracticePrepTestPage() {
   const limitFreeAccess = shouldLimitFreePrepTestAccess({
     accessState: entitlement?.entitlement?.accessState,
     hasActiveCore: entitlement?.entitlement?.hasActiveCore,
+    isLsacSetupRequired: entitlement?.isLsacSetupRequired,
   })
 
   const [detail, setDetail] = useState<PrepTestDetailResponse | null>(() =>

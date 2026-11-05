@@ -24,4 +24,14 @@ describe("shouldLimitFreeDrillAccess", () => {
   it("does not limit for full access", () => {
     expect(shouldLimitFreeDrillAccess({ accessState: "FULL_ACCESS" })).toBe(false)
   })
+
+  it("limits premium users who still need LSAC setup", () => {
+    expect(
+      shouldLimitFreeDrillAccess({
+        accessState: "LSAC_REQUIRED",
+        hasActiveCore: true,
+        isLsacSetupRequired: true,
+      }),
+    ).toBe(true)
+  })
 })

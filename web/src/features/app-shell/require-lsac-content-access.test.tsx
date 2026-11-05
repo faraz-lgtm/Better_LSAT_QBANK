@@ -8,6 +8,7 @@ const entitlement = vi.hoisted(() => ({
   loading: true,
   canAccessLsacContent: false,
   isPaymentRequired: false,
+  isLsacSetupRequired: false,
 }))
 
 vi.mock("@/features/app-shell/student-entitlement-context", () => ({
@@ -25,6 +26,7 @@ describe("RequireLsacContentAccess", () => {
     entitlement.loading = true
     entitlement.canAccessLsacContent = false
     entitlement.isPaymentRequired = false
+    entitlement.isLsacSetupRequired = false
 
     render(
       <MemoryRouter initialEntries={["/app/learn/explanations"]}>
@@ -49,16 +51,17 @@ describe("RequireLsacContentAccess", () => {
     entitlement.loading = false
     entitlement.canAccessLsacContent = false
     entitlement.isPaymentRequired = false
+    entitlement.isLsacSetupRequired = false
 
     render(
-      <MemoryRouter initialEntries={["/app/learn/explanations"]}>
+      <MemoryRouter initialEntries={["/app/practice/drills/lr/new"]}>
         <Routes>
           <Route path="/app" element={<div>Dashboard</div>} />
           <Route
-            path="/app/learn/explanations"
+            path="/app/practice/drills/lr/new"
             element={
               <RequireLsacContentAccess>
-                <div>Explanations page</div>
+                <div>LR drill config</div>
               </RequireLsacContentAccess>
             }
           />
@@ -67,6 +70,50 @@ describe("RequireLsacContentAccess", () => {
     )
 
     expect(screen.getByText("Dashboard")).toBeInTheDocument()
+  })
+
+  it("allows premium LSAC-setup users to browse Prep Drills and Insights", () => {
+    entitlement.loading = false
+    entitlement.canAccessLsacContent = false
+    entitlement.isPaymentRequired = false
+    entitlement.isLsacSetupRequired = true
+
+    const { unmount } = render(
+      <MemoryRouter initialEntries={["/app/practice/drills"]}>
+        <Routes>
+          <Route path="/app" element={<div>Dashboard</div>} />
+          <Route
+            path="/app/practice/drills"
+            element={
+              <RequireLsacContentAccess>
+                <div>Drills list</div>
+              </RequireLsacContentAccess>
+            }
+          />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByText("Drills list")).toBeInTheDocument()
+    unmount()
+
+    render(
+      <MemoryRouter initialEntries={["/app/analytics"]}>
+        <Routes>
+          <Route path="/app" element={<div>Dashboard</div>} />
+          <Route
+            path="/app/analytics"
+            element={
+              <RequireLsacContentAccess>
+                <div>Insights overview</div>
+              </RequireLsacContentAccess>
+            }
+          />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByText("Insights overview")).toBeInTheDocument()
   })
 
   it("allows free-plan users to browse PrepTest routes", () => {

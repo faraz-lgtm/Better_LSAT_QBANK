@@ -31,4 +31,14 @@ describe("preptest-free-access", () => {
     ).toBe(false)
     expect(shouldLimitFreePrepTestAccess({ accessState: "FULL_ACCESS" })).toBe(false)
   })
+
+  it("limits premium users who still need LSAC setup", () => {
+    expect(
+      shouldLimitFreePrepTestAccess({
+        accessState: "LSAC_REQUIRED",
+        hasActiveCore: true,
+        isLsacSetupRequired: true,
+      }),
+    ).toBe(true)
+  })
 })

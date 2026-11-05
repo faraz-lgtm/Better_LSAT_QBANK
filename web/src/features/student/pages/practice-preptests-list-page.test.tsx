@@ -116,6 +116,10 @@ describe("PracticePrepTestsListPage loading shell", () => {
 
     expect(screen.getByText(/all official Prep Tests from the Law School Admission Council/i)).toBeInTheDocument()
     expect(screen.getByRole("heading", { name: "Start your PrepTest" })).toBeInTheDocument()
+    expect(screen.getByRole("img", { name: "LSAC" })).toHaveAttribute(
+      "src",
+      "/figma/preptest/lsac-logo.png",
+    )
     expect(screen.getByRole("button", { name: "All Test" })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "In Progress" })).toBeInTheDocument()
     expect(screen.getByLabelText("Loading PrepTests")).toBeInTheDocument()

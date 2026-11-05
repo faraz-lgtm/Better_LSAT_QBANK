@@ -83,6 +83,10 @@ const PrepTestPoolsPage = lazyNamed(
   "PrepTestPoolsPage",
 )
 const DashboardPage = lazyNamed(() => import("@/features/dashboard/pages/dashboard-page"), "DashboardPage")
+const DashboardLsacSetupPreviewPage = lazyNamed(
+  () => import("@/features/dashboard/pages/dashboard-lsac-setup-preview-page"),
+  "DashboardLsacSetupPreviewPage",
+)
 const FeedbackPage = lazyNamed(() => import("@/features/feedback/pages/feedback-page"), "FeedbackPage")
 const RoadmapPage = lazyNamed(() => import("@/features/feedback/pages/roadmap-page"), "RoadmapPage")
 const FreeStrategyCallPage = lazyNamed(
@@ -789,6 +793,14 @@ const router = createBrowserRouter([
     element: (
       <LazyPage>
         <RcQuestionNavPreviewPage />
+      </LazyPage>
+    ),
+  },
+  {
+    path: "/dashboard/lsac-setup/preview",
+    element: (
+      <LazyPage>
+        <DashboardLsacSetupPreviewPage />
       </LazyPage>
     ),
   },

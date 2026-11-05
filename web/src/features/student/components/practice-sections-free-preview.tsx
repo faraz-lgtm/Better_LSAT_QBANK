@@ -162,6 +162,13 @@ function PracticeSectionsFreePreview({ onLockedAction }: PracticeSectionsFreePre
     <>
       <div className="flex flex-wrap items-center justify-between gap-[12px]">
         <div className="flex flex-wrap items-center gap-[8px]">
+          <img
+            src="/figma/sections/lsac-logo.png"
+            alt="LSAC"
+            width={30}
+            height={29}
+            className="h-[29px] w-[30px] shrink-0 rounded-[5px] object-cover"
+          />
           <button
             type="button"
             onClick={() => setSectionFilter("all")}

@@ -24,4 +24,14 @@ describe("shouldLimitFreeAnalyticsAccess", () => {
   it("does not limit full-access users", () => {
     expect(shouldLimitFreeAnalyticsAccess({ accessState: "FULL_ACCESS" })).toBe(false)
   })
+
+  it("limits premium users who still need LSAC setup", () => {
+    expect(
+      shouldLimitFreeAnalyticsAccess({
+        accessState: "LSAC_REQUIRED",
+        hasActiveCore: true,
+        isLsacSetupRequired: true,
+      }),
+    ).toBe(true)
+  })
 })

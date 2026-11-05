@@ -26,4 +26,14 @@ describe("shouldLimitFreeExplanationAccess", () => {
       }),
     ).toBe(false)
   })
+
+  it("limits premium users who still need LSAC setup", () => {
+    expect(
+      shouldLimitFreeExplanationAccess({
+        accessState: "LSAC_REQUIRED",
+        hasActiveCore: true,
+        isLsacSetupRequired: true,
+      }),
+    ).toBe(true)
+  })
 })

@@ -72,6 +72,10 @@ describe("PracticeSectionsPage free plan", () => {
 
     expect(screen.getByRole("heading", { name: "Logical Reasoning" })).toBeInTheDocument()
     expect(screen.getByRole("heading", { name: "Reading Comprehension" })).toBeInTheDocument()
+    expect(screen.getByRole("img", { name: "LSAC" })).toHaveAttribute(
+      "src",
+      "/figma/sections/lsac-logo.png",
+    )
     expect(screen.getByText("16-20 Questions")).toBeInTheDocument()
     expect(screen.getByText("4 Passages")).toBeInTheDocument()
     expect(screen.getAllByText("Timing").length).toBe(2)
@@ -120,6 +124,10 @@ describe("PracticeSectionsPage paid plan", () => {
 
     expect(await screen.findByTestId("paid-section-card-LR")).toBeInTheDocument()
     expect(screen.getByTestId("paid-section-card-RC")).toBeInTheDocument()
+    expect(screen.getByRole("img", { name: "LSAC" })).toHaveAttribute(
+      "src",
+      "/figma/sections/lsac-logo.png",
+    )
     expect(getSessions).toHaveBeenCalledWith({ kind: "SECTION", limit: 50 })
     expect(document.querySelector("[data-sections-locked-status]")).toBeNull()
   })

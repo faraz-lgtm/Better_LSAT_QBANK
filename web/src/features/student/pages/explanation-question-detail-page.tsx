@@ -41,6 +41,7 @@ function ExplanationQuestionDetailPage() {
   const limitFreeAccess = shouldLimitFreeExplanationAccess({
     accessState: entitlement?.entitlement?.accessState,
     hasActiveCore: entitlement?.entitlement?.hasActiveCore,
+    isLsacSetupRequired: entitlement?.isLsacSetupRequired,
   })
 
   const questionId = questionIdParam ? decodeURIComponent(questionIdParam) : ""

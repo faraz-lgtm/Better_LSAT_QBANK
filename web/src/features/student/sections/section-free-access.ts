@@ -1,15 +1,15 @@
 import type { AccessState } from "@/lib/api/users"
+import { shouldLimitLockedBrowseAccess } from "@/lib/auth/should-limit-locked-browse-access"
 
 /**
- * Free-plan users may browse the Sections page; start/insight/lock actions
- * stay gated in-page behind upgrade (Figma `21587:35363`).
+ * Free-plan / LSAC-setup users may browse Prep Sections; start actions stay gated in-page.
  */
 function shouldLimitFreeSectionAccess(input: {
   accessState?: AccessState | null
   hasActiveCore?: boolean | null
+  isLsacSetupRequired?: boolean | null
 }): boolean {
-  if (input.hasActiveCore) return false
-  return input.accessState === "PAYMENT_REQUIRED"
+  return shouldLimitLockedBrowseAccess(input)
 }
 
 export { shouldLimitFreeSectionAccess }

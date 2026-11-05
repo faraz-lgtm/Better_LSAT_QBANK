@@ -153,8 +153,7 @@ describe("StudentAppSidebar", () => {
     )
   })
 
-  it("opens LSAC locked modal from gated nav without sidebar lock icons", async () => {
-    const user = userEvent.setup()
+  it("lets premium LSAC-setup users open locked browse screens without sidebar lock icons", () => {
     entitlementState.value = {
       canAccessLsacContent: false,
       isLsacSetupRequired: true,
@@ -171,16 +170,28 @@ describe("StudentAppSidebar", () => {
       </MemoryRouter>,
     )
 
-    expect(screen.queryByRole("link", { name: "Explanations" })).not.toBeInTheDocument()
-    expect(screen.queryByRole("link", { name: "Drills" })).not.toBeInTheDocument()
     expect(container.querySelectorAll(".student-sidebar-lock")).toHaveLength(0)
-
-    await user.click(screen.getByRole("button", { name: "Explanations" }))
-    expect(openLockedContentModal).toHaveBeenCalledWith("explanations")
-
-    openLockedContentModal.mockClear()
-    await user.click(screen.getAllByRole("button", { name: "Drills" })[0]!)
-    expect(openLockedContentModal).toHaveBeenCalledWith("drills")
+    expect(screen.getByRole("link", { name: "Explanations" })).toHaveAttribute(
+      "href",
+      "/app/learn/explanations",
+    )
+    expect(container.querySelector('[data-tour-target="nav-drills"]')).toHaveAttribute(
+      "href",
+      "/app/practice/drills",
+    )
+    expect(container.querySelector('[data-tour-target="nav-sections"]')).toHaveAttribute(
+      "href",
+      "/app/practice/sections",
+    )
+    expect(container.querySelector('[data-tour-target="nav-preptest"]')).toHaveAttribute(
+      "href",
+      "/app/preptest",
+    )
+    expect(container.querySelector('[data-tour-target="nav-overview"]')).toHaveAttribute(
+      "href",
+      "/app/analytics",
+    )
+    expect(openLockedContentModal).not.toHaveBeenCalled()
   })
 
   it("keeps nav-explanations clickable for free-plan Explanations browsing", () => {

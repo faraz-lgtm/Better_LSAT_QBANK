@@ -70,6 +70,9 @@ describe("AnalyticsPage free plan", () => {
     getPageBundle.mockReset()
     entitlementMock.entitlement.accessState = "PAYMENT_REQUIRED"
     entitlementMock.entitlement.hasActiveCore = false
+    entitlementMock.isPaymentRequired = true
+    entitlementMock.isLsacSetupRequired = false
+    entitlementMock.canAccessLsacContent = false
   })
 
   it("shows blurred Insights preview and opens analytics upgrade modal", async () => {
@@ -78,6 +81,23 @@ describe("AnalyticsPage free plan", () => {
 
     expect(screen.getByTestId("analytics-insights-free-preview")).toBeInTheDocument()
     expect(screen.getByText("Unlock full analytics")).toBeInTheDocument()
+    expect(getPageBundle).not.toHaveBeenCalled()
+
+    await user.click(screen.getByRole("button", { name: "Unlock Analytics" }))
+    expect(openLockedContentModal).toHaveBeenCalledWith("analytics")
+  })
+
+  it("shows the same Insights preview for premium LSAC-setup users", async () => {
+    entitlementMock.entitlement.accessState = "LSAC_REQUIRED"
+    entitlementMock.entitlement.hasActiveCore = true
+    entitlementMock.isPaymentRequired = false
+    entitlementMock.isLsacSetupRequired = true
+    entitlementMock.canAccessLsacContent = false
+
+    const user = userEvent.setup()
+    renderOverview()
+
+    expect(screen.getByTestId("analytics-insights-free-preview")).toBeInTheDocument()
     expect(getPageBundle).not.toHaveBeenCalled()
 
     await user.click(screen.getByRole("button", { name: "Unlock Analytics" }))
