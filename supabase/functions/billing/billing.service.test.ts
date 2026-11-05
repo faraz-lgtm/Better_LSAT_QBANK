@@ -656,6 +656,7 @@ Deno.test('billing service checkout.session.completed invokes onCheckoutComplete
     onCheckoutCompleted: async (ctx: CheckoutCompletedContext) => {
       seen.ctx = { ...ctx }
     },
+    notifySlackPaidUser: async () => true,
     stripe: {
       subscriptions: {
         retrieve: async () => ({
@@ -694,6 +695,121 @@ Deno.test('billing service checkout.session.completed invokes onCheckoutComplete
   assertEquals(seen.ctx?.email, 'buyer@example.com')
   assertEquals(seen.ctx?.includeLawHub, true)
   assertEquals(seen.ctx?.customerName, 'Buyer Name')
+})
+
+Deno.test('billing service checkout.session.completed notifies Slack paid user', async () => {
+  const seen: {
+    email: string
+    userId?: string
+    plan?: string | null
+    includeLawHub?: boolean
+    amountTotal?: number | null
+    currency?: string | null
+  } = {
+    email: '',
+  }
+  const service = createBillingService({
+    getEnv: () => env,
+    getAppBaseUrl: () => 'http://localhost:5173',
+    repository: makeRepo({
+      async upsertSubscription() {},
+      async setPrepPlusSource() {},
+    }),
+    notifySlackPaidUser: async (input) => {
+      seen.email = input.email
+      seen.userId = input.userId
+      seen.plan = input.plan
+      seen.includeLawHub = input.includeLawHub
+      seen.amountTotal = input.amountTotal
+      seen.currency = input.currency
+      return true
+    },
+    stripe: {
+      subscriptions: {
+        retrieve: async () => ({
+          id: 'sub_1',
+          status: 'active',
+          livemode: false,
+          cancel_at_period_end: false,
+          current_period_start: 1_700_000_000,
+          current_period_end: 1_700_086_400,
+          customer: 'cus_1',
+          items: { data: [{ price: { id: 'price_core_test' } }] },
+        }),
+      },
+    } as unknown as import('npm:stripe@17.7.0').default,
+  })
+
+  await service.handleWebhookEvent({
+    id: 'evt_paid_slack',
+    type: 'checkout.session.completed',
+    data: {
+      object: {
+        client_reference_id: 'u-1',
+        customer: 'cus_1',
+        subscription: 'sub_1',
+        customer_email: 'paid@example.com',
+        amount_total: 13800,
+        currency: 'usd',
+        created: 1_700_000_000,
+        metadata: { plan: 'monthly', include_lawhub: 'true' },
+      },
+    },
+  } as unknown as import('npm:stripe@17.7.0').default.Event)
+
+  assertEquals(seen.email, 'paid@example.com')
+  assertEquals(seen.userId, 'u-1')
+  assertEquals(seen.plan, 'monthly')
+  assertEquals(seen.includeLawHub, true)
+  assertEquals(seen.amountTotal, 13800)
+  assertEquals(seen.currency, 'usd')
+})
+
+Deno.test('billing service checkout.session.completed continues when Slack paid notify throws', async () => {
+  let upserted = false
+  const service = createBillingService({
+    getEnv: () => env,
+    getAppBaseUrl: () => 'http://localhost:5173',
+    repository: makeRepo({
+      async upsertSubscription() {
+        upserted = true
+      },
+      async setPrepPlusSource() {},
+    }),
+    notifySlackPaidUser: async () => {
+      throw new Error('slack down')
+    },
+    stripe: {
+      subscriptions: {
+        retrieve: async () => ({
+          id: 'sub_1',
+          status: 'active',
+          livemode: false,
+          cancel_at_period_end: false,
+          current_period_start: 1_700_000_000,
+          current_period_end: 1_700_086_400,
+          customer: 'cus_1',
+          items: { data: [{ price: { id: 'price_core_test' } }] },
+        }),
+      },
+    } as unknown as import('npm:stripe@17.7.0').default,
+  })
+
+  await service.handleWebhookEvent({
+    id: 'evt_paid_slack_fail',
+    type: 'checkout.session.completed',
+    data: {
+      object: {
+        client_reference_id: 'u-1',
+        customer: 'cus_1',
+        subscription: 'sub_1',
+        customer_email: 'paid@example.com',
+        metadata: { plan: 'monthly' },
+      },
+    },
+  } as unknown as import('npm:stripe@17.7.0').default.Event)
+
+  assertEquals(upserted, true)
 })
 
 Deno.test('getPaymentMethods returns empty when no stripe customer', async () => {

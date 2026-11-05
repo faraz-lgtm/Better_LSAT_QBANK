@@ -162,6 +162,91 @@ export async function notifySlackSignup(input: SlackSignupNotifyInput): Promise<
   }
 }
 
+export type SlackPaidNotifyInput = {
+  email: string
+  userId?: string
+  /** Checkout plan id (monthly, three_month, …). */
+  plan?: string | null
+  /** Whether LawHub PrepPlus fee was included in checkout. */
+  includeLawHub?: boolean
+  /** Stripe amount_total in the smallest currency unit (e.g. cents). */
+  amountTotal?: number | null
+  /** ISO 4217 currency code from Stripe (e.g. usd). */
+  currency?: string | null
+  /** ISO timestamp of payment / checkout completion. */
+  paidAt?: string | null
+
+  fetchImpl?: typeof fetch
+  getEnv?: (key: string) => string | undefined
+}
+
+/** Maps checkout plan id → Slack paid plan line. Defaults to Paid. */
+export function formatPaidPlanLabel(plan: string | null | undefined): string {
+  const key = typeof plan === 'string' ? plan.trim().toLowerCase() : ''
+  if (!key || key === 'free') return 'Paid'
+  return PLAN_LABELS[key] ?? `Paid (${key})`
+}
+
+/** Formats Stripe amount_total + currency for Slack (e.g. "$138.00 USD"). */
+export function formatPaidAmount(
+  amountTotal: number | null | undefined,
+  currency: string | null | undefined,
+): string | null {
+  if (amountTotal == null || !Number.isFinite(amountTotal)) return null
+  const code = typeof currency === 'string' ? currency.trim().toUpperCase() : ''
+  const major = amountTotal / 100
+  const formatted = major.toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })
+  if (code === 'USD' || !code) return `$${formatted}${code ? ` ${code}` : ''}`
+  return `${formatted} ${code}`
+}
+
+/**
+ * Posts a Slack alert when a user completes Stripe checkout (paid conversion).
+ * Uses the same SLACK_SIGNUP_WEBHOOK_URL channel as signup alerts.
+ */
+export async function notifySlackPaidUser(input: SlackPaidNotifyInput): Promise<boolean> {
+  const getEnv = input.getEnv ?? ((key: string) => Deno.env.get(key) ?? undefined)
+  const webhookUrl = getEnv('SLACK_SIGNUP_WEBHOOK_URL')?.trim()
+  const email = input.email.trim()
+  if (!webhookUrl || !email) return false
+
+  const fetchImpl = input.fetchImpl ?? fetch
+  const paidAt = formatSignupCreatedAtToronto(input.paidAt)
+  const amount = formatPaidAmount(input.amountTotal, input.currency)
+  const lawHub =
+    input.includeLawHub === undefined
+      ? null
+      : input.includeLawHub
+        ? 'included'
+        : 'not included'
+
+  const lines = [
+    '💰 *New paid user*',
+    '',
+    `• *Email:* \`${email}\``,
+    `• *Plan:* ${formatPaidPlanLabel(input.plan)}`,
+  ]
+  if (amount) lines.push(`• *Amount:* ${amount}`)
+  if (lawHub) lines.push(`• *LawHub:* ${lawHub}`)
+  if (paidAt) lines.push(`• *Paid:* ${paidAt} (Toronto)`)
+  if (input.userId?.trim()) lines.push(`• *User ID:* \`${input.userId.trim()}\``)
+
+  try {
+    const response = await fetchImpl(webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: lines.join('\n') }),
+    })
+    return response.ok
+  } catch (error) {
+    console.warn('Slack paid-user notify failed:', error)
+    return false
+  }
+}
+
 export function authorizeSignupWebhook(
   req: Request,
   getEnv: (key: string) => string | undefined = (key) => Deno.env.get(key) ?? undefined,

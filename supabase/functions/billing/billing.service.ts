@@ -24,6 +24,7 @@ import {
   mailerLitePackageFromCheckoutPlan,
   notifyMailerLiteSubscription,
 } from '../_shared/mailerlite-signup.ts'
+import { notifySlackPaidUser } from '../_shared/slack-signup.ts'
 import type { BillingRepository } from './billing.repository.ts'
 import { isActiveSubscriptionStatus } from './billing.repository.ts'
 import {
@@ -48,6 +49,8 @@ export type BillingServiceDeps = {
   onCheckoutCompleted?: (ctx: CheckoutCompletedContext) => Promise<void>
   /** Injected for tests; defaults to MailerLite subscription field sync. */
   notifyMailerLiteSubscription?: typeof notifyMailerLiteSubscription
+  /** Injected for tests; defaults to Slack paid-user webhook. */
+  notifySlackPaidUser?: typeof notifySlackPaidUser
 }
 
 /** Query param used when returning from a Replace payment-method portal flow. */
@@ -977,15 +980,40 @@ export function createBillingService(deps: BillingServiceDeps) {
             const subscription = await deps.stripe.subscriptions.retrieve(subscriptionId)
             await syncSubscription(userId, subscription, planHint)
           }
+          const includeLawHub = session.metadata?.include_lawhub !== 'false'
+          const email =
+            session.customer_email ??
+            session.customer_details?.email ??
+            null
+          const planLabel = session.metadata?.plan ?? planHint ?? null
           await capturePostHogEvent({
             distinctId: userId,
             event: 'subscription_completed',
             properties: {
               plan: planHint ?? session.metadata?.plan ?? null,
               stripe_event_type: event.type,
-              include_law_hub: session.metadata?.include_lawhub !== 'false',
+              include_law_hub: includeLawHub,
             },
           })
+          if (email?.trim()) {
+            const notifyPaid = deps.notifySlackPaidUser ?? notifySlackPaidUser
+            try {
+              await notifyPaid({
+                email,
+                userId,
+                plan: typeof planLabel === 'string' ? planLabel : null,
+                includeLawHub,
+                amountTotal: session.amount_total ?? null,
+                currency: session.currency ?? null,
+                paidAt:
+                  typeof session.created === 'number'
+                    ? new Date(session.created * 1000).toISOString()
+                    : new Date().toISOString(),
+              })
+            } catch (error) {
+              console.warn('Slack paid-user notify failed:', error)
+            }
+          }
           if (deps.onCheckoutCompleted) {
             let customerName = session.customer_details?.name ?? null
             if (!customerName?.trim() && customerId) {
@@ -998,11 +1026,6 @@ export function createBillingService(deps: BillingServiceDeps) {
                 console.warn('Failed to retrieve Stripe customer for LawHub name lookup:', error)
               }
             }
-            const includeLawHub = session.metadata?.include_lawhub !== 'false'
-            const email =
-              session.customer_email ??
-              session.customer_details?.email ??
-              null
             await deps.onCheckoutCompleted({
               userId,
               email,
