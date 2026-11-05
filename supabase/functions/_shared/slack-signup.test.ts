@@ -1,12 +1,15 @@
 import { assertEquals } from 'jsr:@std/assert@1'
 import {
   authorizeSignupWebhook,
+  formatPaidAmount,
+  formatPaidPlanLabel,
   formatSignupCountry,
   formatSignupCreatedAtToronto,
   formatSignupIntent,
   formatSignupLandingPage,
   formatSignupLocation,
   formatSignupUtms,
+  notifySlackPaidUser,
   notifySlackSignup,
   parseAuthUsersConfirmedSignup,
 } from './slack-signup.ts'
@@ -136,6 +139,78 @@ Deno.test('notifySlackSignup falls back to country when location absent', async 
     },
   })
   assertEquals(String(body.text ?? '').includes('*Location:* CA'), true)
+})
+
+Deno.test('formatPaidPlanLabel maps plan ids and defaults to Paid', () => {
+  assertEquals(formatPaidPlanLabel('monthly'), 'Paid (monthly)')
+  assertEquals(formatPaidPlanLabel('three_month'), 'Paid (3 months)')
+  assertEquals(formatPaidPlanLabel('six_month'), 'Paid (6 months)')
+  assertEquals(formatPaidPlanLabel('yearly'), 'Paid (yearly)')
+  assertEquals(formatPaidPlanLabel(null), 'Paid')
+  assertEquals(formatPaidPlanLabel('free'), 'Paid')
+  assertEquals(formatPaidPlanLabel('custom'), 'Paid (custom)')
+})
+
+Deno.test('formatPaidAmount formats cents and currency', () => {
+  assertEquals(formatPaidAmount(13800, 'usd'), '$138.00 USD')
+  assertEquals(formatPaidAmount(6900, null), '$69.00')
+  assertEquals(formatPaidAmount(1000, 'cad'), '10.00 CAD')
+  assertEquals(formatPaidAmount(null, 'usd'), null)
+})
+
+Deno.test('notifySlackPaidUser no-ops when webhook URL missing', async () => {
+  let called = false
+  const ok = await notifySlackPaidUser({
+    email: 'a@example.com',
+    getEnv: () => undefined,
+    fetchImpl: async () => {
+      called = true
+      return new Response('ok')
+    },
+  })
+  assertEquals(ok, false)
+  assertEquals(called, false)
+})
+
+Deno.test('notifySlackPaidUser posts to signup webhook URL', async () => {
+  let url = ''
+  let body: Record<string, unknown> = {}
+  const ok = await notifySlackPaidUser({
+    email: 'paid@example.com',
+    userId: 'u-paid',
+    plan: 'monthly',
+    includeLawHub: true,
+    amountTotal: 13800,
+    currency: 'usd',
+    paidAt: '2026-10-08T16:00:00.000Z',
+    getEnv: (key) => (key === 'SLACK_SIGNUP_WEBHOOK_URL' ? 'https://hooks.slack.com/services/x' : undefined),
+    fetchImpl: async (input, init) => {
+      url = String(input)
+      body = JSON.parse((init as { body?: string } | undefined)?.body ?? '{}') as Record<string, unknown>
+      return new Response('ok', { status: 200 })
+    },
+  })
+  assertEquals(ok, true)
+  assertEquals(url, 'https://hooks.slack.com/services/x')
+  const text = String(body.text ?? '')
+  assertEquals(text.includes('New paid user'), true)
+  assertEquals(text.includes('paid@example.com'), true)
+  assertEquals(text.includes('*Plan:* Paid (monthly)'), true)
+  assertEquals(text.includes('*Amount:* $138.00 USD'), true)
+  assertEquals(text.includes('*LawHub:* included'), true)
+  assertEquals(text.includes('(Toronto)'), true)
+  assertEquals(text.includes('u-paid'), true)
+})
+
+Deno.test('notifySlackPaidUser returns false on fetch failure', async () => {
+  const ok = await notifySlackPaidUser({
+    email: 'a@example.com',
+    getEnv: (key) => (key === 'SLACK_SIGNUP_WEBHOOK_URL' ? 'https://hooks.slack.com/services/x' : undefined),
+    fetchImpl: async () => {
+      throw new Error('network')
+    },
+  })
+  assertEquals(ok, false)
 })
 
 Deno.test('authorizeSignupWebhook accepts x-signup-webhook-secret', () => {
