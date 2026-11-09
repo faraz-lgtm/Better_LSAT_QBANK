@@ -6,21 +6,24 @@ import type { TutoringSessionSummary } from "@/features/tutoring/lib/types"
 
 type UpcomingSessionsListProps = {
   sessions: TutoringSessionSummary[]
+  showViewAllLink?: boolean
 }
 
-function UpcomingSessionsList({ sessions }: UpcomingSessionsListProps) {
+function UpcomingSessionsList({ sessions, showViewAllLink = true }: UpcomingSessionsListProps) {
   return (
     <section className="mt-6">
       <div className="flex items-center justify-between gap-3">
         <h3 className="text-[18px] font-bold leading-[1.35] text-[var(--color-student-heading)]">
           Upcoming Sessions List
         </h3>
-        <Link
-          to={STUDENT_TUTORING_SESSIONS_HREF}
-          className="text-xs font-semibold tracking-[0.02em] text-[var(--primary)] hover:underline"
-        >
-          See all sessions →
-        </Link>
+        {showViewAllLink ? (
+          <Link
+            to={STUDENT_TUTORING_SESSIONS_HREF}
+            className="text-xs font-semibold tracking-[0.02em] text-[var(--primary)] hover:underline"
+          >
+            See all sessions →
+          </Link>
+        ) : null}
       </div>
 
       <ul className="mt-4 space-y-3">
@@ -40,8 +43,10 @@ function UpcomingSessionsList({ sessions }: UpcomingSessionsListProps) {
               <p className="mt-1 text-xs tracking-[0.02em] text-[var(--greyscale-500)]">{session.whenLabel}</p>
             </div>
             {session.action === "join" ? (
-              <Button type="button" size="sm" className="h-10 rounded-[10px] px-4">
-                Join
+              <Button asChild size="sm" className="h-10 rounded-[10px] px-4">
+                <a href={session.joinUrl ?? undefined} target="_blank" rel="noopener noreferrer">
+                  Join
+                </a>
               </Button>
             ) : (
               <Button type="button" variant="outline" size="sm" className="h-10 rounded-[10px] px-4">

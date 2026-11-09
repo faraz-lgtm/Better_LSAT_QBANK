@@ -68,9 +68,8 @@ function StrategyCallScheduler() {
       data-testid="strategy-call-ghl-scheduler"
     >
       <iframe
-        id={BOOKING_WIDGET_ID}
-        title="FREE LSAT Strategy Call booking"
-        src={BOOKING_WIDGET_SRC}
+        title="FREE LSAT Strategy Call booking with Amelia"
+        src={BOOKING_PAGE_SRC}
         allow="payment"
         scrolling="no"
         className="block w-full border-0"

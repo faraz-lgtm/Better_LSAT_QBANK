@@ -43,13 +43,17 @@ function PastSessionsTable({
               <th className="w-[133px] px-2 py-2.5 font-medium">Date</th>
               <th className="w-[235px] px-2 py-2.5 font-medium">Tutor</th>
               <th className="px-2 py-2.5 font-medium">Focus</th>
-              <th className="w-[202px] px-2 py-2.5 font-bold">Transcript</th>
+              <th className="w-[202px] px-2 py-2.5 font-bold">Recording &amp; Transcript</th>
             </tr>
           </thead>
           <tbody>
             {sessions.map((session, index) => {
               const active = session.id === activeSessionId
               const isLast = index === sessions.length - 1
+              const artifactsReady =
+                session.transcriptStatus === "ready" || session.recordingStatus === "ready"
+              const artifactsProcessing =
+                session.transcriptStatus === "processing" || session.recordingStatus === "processing"
               return (
                 <tr
                   key={session.id}
@@ -61,7 +65,7 @@ function PastSessionsTable({
                   </td>
                   <td className="px-2 py-3.5 text-[var(--color-student-heading)]">{session.focus}</td>
                   <td className="px-2 py-3.5">
-                    {onTranscriptClick ? (
+                    {artifactsReady && onTranscriptClick ? (
                       <button
                         type="button"
                         onClick={() => onTranscriptClick(session.id)}
@@ -74,13 +78,21 @@ function PastSessionsTable({
                       >
                         {active ? "Viewing Transcript" : "Transcript"}
                       </button>
-                    ) : (
+                    ) : artifactsReady ? (
                       <Link
                         to={studentTutoringSessionTranscriptHref(session.id)}
                         className="text-xs tracking-[0.02em] text-[var(--primary)] hover:underline"
                       >
-                        Transcript
+                        View session
                       </Link>
+                    ) : artifactsProcessing ? (
+                      <span className="text-xs tracking-[0.02em] text-[var(--greyscale-500)]">
+                        Processing…
+                      </span>
+                    ) : (
+                      <span className="text-xs tracking-[0.02em] text-[var(--greyscale-500)]">
+                        Not available
+                      </span>
                     )}
                   </td>
                 </tr>

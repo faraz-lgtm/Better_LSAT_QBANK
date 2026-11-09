@@ -44,6 +44,7 @@ export type TutoringSessionSummary = {
   tutorInitials: string
   focus: string
   action: "join" | "reschedule"
+  joinUrl?: string | null
 }
 
 export type PastSessionRow = {
@@ -51,6 +52,9 @@ export type PastSessionRow = {
   dateLabel: string
   tutorName: string
   focus: string
+  transcriptStatus?: "none" | "processing" | "ready" | "failed"
+  recordingStatus?: "none" | "processing" | "ready" | "failed"
+  joinUrl?: string | null
 }
 
 export type TranscriptSegment = {
@@ -77,6 +81,7 @@ export type SessionTranscript = {
   totalTime: string
   segments: TranscriptSegment[]
   lines: TranscriptLine[]
+  recordingUrl?: string | null
 }
 
 export type TodoTag = "Homework" | "Session prep" | "Review" | "Setup"

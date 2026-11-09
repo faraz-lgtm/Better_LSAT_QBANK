@@ -45,20 +45,39 @@ function SessionTranscriptViewer({ transcript, className }: SessionTranscriptVie
         </div>
       </div>
 
+      {transcript.recordingUrl ? (
+        <div className="border-b border-[#e4e9f2] bg-[#0b1220] px-[18px] py-4">
+          <video
+            className="mx-auto max-h-[420px] w-full rounded-[10px]"
+            controls
+            preload="metadata"
+            src={transcript.recordingUrl}
+          >
+            <track kind="captions" />
+          </video>
+        </div>
+      ) : null}
+
       <div className="grid lg:grid-cols-[277px_1fr]">
         <aside className="border-b border-[#e4e9f2] bg-[#fbfcfe] p-[18px] lg:border-b-0 lg:border-r">
           <p className="text-xs font-bold tracking-[0.02em] text-[var(--color-student-heading)]">Key takeaways</p>
-          <ul className="mt-3 space-y-2.5">
-            {transcript.takeaways.map((item) => (
-              <li
-                key={item}
-                className="flex gap-2 text-xs tracking-[0.02em] text-[var(--color-student-heading)]"
-              >
-                <Check className="mt-0.5 size-3.5 shrink-0 text-[var(--primary)]" strokeWidth={2.5} aria-hidden />
-                <span>{item}</span>
-              </li>
-            ))}
-          </ul>
+          {transcript.takeaways.length > 0 ? (
+            <ul className="mt-3 space-y-2.5">
+              {transcript.takeaways.map((item) => (
+                <li
+                  key={item}
+                  className="flex gap-2 text-xs tracking-[0.02em] text-[var(--color-student-heading)]"
+                >
+                  <Check className="mt-0.5 size-3.5 shrink-0 text-[var(--primary)]" strokeWidth={2.5} aria-hidden />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-3 text-xs tracking-[0.02em] text-[var(--greyscale-500)]">
+              Takeaways will appear here once generated.
+            </p>
+          )}
           <p className="mt-6 text-xs tracking-[0.02em] text-[var(--greyscale-500)]">
             Summary generated from the transcript.
           </p>
