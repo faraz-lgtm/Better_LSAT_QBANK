@@ -6,22 +6,12 @@ export type PrepCourseNavItem = {
   status: PrepCourseNavStatus
 }
 
-/** Fixed Prep Course sidebar order. */
+/** Fixed Prep Course sidebar order. Mastery courses can be re-added when ready. */
 export const PREP_COURSE_NAV_ITEMS: readonly PrepCourseNavItem[] = [
   {
     slug: "betterlsat-core-syllabus-structure-content",
     title: "LSAT Essentials Course",
     status: "available",
-  },
-  {
-    slug: "lr-mastery-course",
-    title: "LR Mastery Course",
-    status: "coming_soon",
-  },
-  {
-    slug: "rc-mastery",
-    title: "RC Mastery Course",
-    status: "coming_soon",
   },
 ] as const
 

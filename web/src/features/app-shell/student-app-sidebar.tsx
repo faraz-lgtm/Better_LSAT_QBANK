@@ -23,6 +23,7 @@ import {
   STUDENT_NAV_ITEM_ICON_SRC,
   STUDENT_NAV_LOGOUT_ICON_SRC,
   STUDENT_NAV_SECTIONS,
+  STUDENT_TUTORING_BOOK_HREF,
   STUDENT_TUTORING_SESSIONS_HREF,
   type StudentNavItem,
   type StudentNavItemIconKey,
@@ -83,6 +84,7 @@ const NAV_HREF_TOUR_TARGETS: Record<string, string> = {
   "/app/feedback": "nav-feedback",
   "/app/roadmap": "nav-roadmap",
   [STUDENT_FREE_STRATEGY_CALL_HREF]: "nav-free-strategy-call",
+  [STUDENT_TUTORING_BOOK_HREF]: "nav-book-sessions",
   [STUDENT_TUTORING_SESSIONS_HREF]: "nav-tutoring-sessions",
   [STUDENT_LIVE_CLASSES_HREF]: "nav-live-classes",
 }
@@ -129,6 +131,7 @@ function isUnlockedOnFreePlan(item: StudentNavItem): boolean {
     item.href === ANALYTICS_SECTIONS_HREF ||
     item.href === ANALYTICS_PREPTESTS_HREF ||
     item.href === STUDENT_FREE_STRATEGY_CALL_HREF ||
+    item.href === STUDENT_TUTORING_BOOK_HREF ||
     item.href === STUDENT_TUTORING_SESSIONS_HREF ||
     item.href === STUDENT_LIVE_CLASSES_HREF ||
     item.href === "/app/feedback" ||

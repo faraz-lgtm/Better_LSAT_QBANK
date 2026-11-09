@@ -7,22 +7,22 @@ import {
 } from "./prep-course-nav"
 
 describe("prep-course-nav", () => {
-  it("lists Essential, LR Mastery, then RC Mastery", () => {
+  it("lists only LSAT Essentials for now", () => {
     expect(PREP_COURSE_NAV_ITEMS.map((item) => item.title)).toEqual([
       "LSAT Essentials Course",
-      "LR Mastery Course",
-      "RC Mastery Course",
     ])
   })
 
-  it("marks mastery courses as coming soon", () => {
-    expect(isPrepCourseComingSoonSlug("lr-mastery-course")).toBe(true)
-    expect(isPrepCourseComingSoonSlug("rc-mastery")).toBe(true)
+  it("does not treat Essentials as coming soon", () => {
     expect(isPrepCourseComingSoonSlug("betterlsat-core-syllabus-structure-content")).toBe(false)
+    expect(isPrepCourseComingSoonSlug("lr-mastery-course")).toBe(false)
+    expect(isPrepCourseComingSoonSlug("rc-mastery")).toBe(false)
   })
 
   it("resolves nav items by slug", () => {
-    expect(findPrepCourseNavItem("rc-mastery")?.title).toBe("RC Mastery Course")
+    expect(findPrepCourseNavItem("betterlsat-core-syllabus-structure-content")?.title).toBe(
+      "LSAT Essentials Course",
+    )
     expect(findPrepCourseNavItem("missing")).toBeUndefined()
   })
 })

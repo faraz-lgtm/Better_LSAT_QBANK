@@ -90,7 +90,10 @@ describe("StudentAppSidebar", () => {
     )
     expect(screen.getByText("TUTORING")).toBeInTheDocument()
     expect(screen.getByText("NEW")).toBeInTheDocument()
-    expect(screen.queryByRole("link", { name: "Book 1 on 1 Sessions" })).not.toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "Book 1 on 1 Sessions" })).toHaveAttribute(
+      "href",
+      "/app/tutoring/book",
+    )
     expect(screen.getByRole("link", { name: "My Sessions" })).toHaveAttribute(
       "href",
       "/app/tutoring/sessions",
@@ -99,6 +102,11 @@ describe("StudentAppSidebar", () => {
       "href",
       "/app/tutoring/live-classes",
     )
+    const bookSessions = screen.getByRole("link", { name: "Book 1 on 1 Sessions" })
+    const mySessions = screen.getByRole("link", { name: "My Sessions" })
+    expect(
+      bookSessions.compareDocumentPosition(mySessions) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
     expect(screen.queryByText("Coming Soon")).not.toBeInTheDocument()
     expect(screen.getByText("COMMUNITY")).toBeInTheDocument()
     expect(screen.getByRole("link", { name: "Feedback" })).toHaveAttribute("href", "/app/feedback")
@@ -339,14 +347,8 @@ describe("StudentAppSidebar", () => {
       "href",
       "/app/prep-course/betterlsat-core-syllabus-structure-content",
     )
-    expect(screen.getByRole("link", { name: "LR Mastery Course" })).toHaveAttribute(
-      "href",
-      "/app/prep-course/lr-mastery-course",
-    )
-    expect(screen.getByRole("link", { name: "RC Mastery Course" })).toHaveAttribute(
-      "href",
-      "/app/prep-course/rc-mastery",
-    )
+    expect(screen.queryByRole("link", { name: "LR Mastery Course" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("link", { name: "RC Mastery Course" })).not.toBeInTheDocument()
     expect(screen.queryByText("Coming Soon")).not.toBeInTheDocument()
     expect(screen.getByRole("link", { name: "LSAT Essentials Course" })).toHaveClass(
       "student-sidebar-link--active",
@@ -366,8 +368,8 @@ describe("StudentAppSidebar", () => {
     await user.click(screen.getByRole("button", { name: "Prep Courses" }))
 
     expect(screen.getByRole("link", { name: "LSAT Essentials Course" })).toBeInTheDocument()
-    expect(screen.getByRole("link", { name: "LR Mastery Course" })).toBeInTheDocument()
-    expect(screen.getByRole("link", { name: "RC Mastery Course" })).toBeInTheDocument()
+    expect(screen.queryByRole("link", { name: "LR Mastery Course" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("link", { name: "RC Mastery Course" })).not.toBeInTheDocument()
   })
 
   it("shows logout and version in the footer", () => {

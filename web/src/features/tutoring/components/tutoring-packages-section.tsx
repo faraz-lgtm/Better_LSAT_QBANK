@@ -45,11 +45,12 @@ function TutoringPackagesSection({
             <div
               key={pkg.id}
               className={cn(
-                "relative flex h-full flex-col gap-3.5 rounded-[16px] border bg-[var(--greyscale-0)] px-[22px] py-6 text-left transition-shadow",
+                "relative flex h-full cursor-pointer flex-col gap-3.5 rounded-[16px] border bg-[var(--greyscale-0)] px-[22px] py-6 text-left transition-shadow",
                 selected
                   ? "border-2 border-[var(--primary)] shadow-[0_8px_24px_rgba(13,71,161,0.12)]"
                   : "border-[var(--greyscale-100)] hover:border-[var(--primary)]/40",
               )}
+              onClick={() => onSelectPackage?.(pkg.id)}
             >
               {pkg.popular ? (
                 <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-t-[8px] bg-[var(--primary)] px-3 py-1 text-[13px] font-bold tracking-[0.02em] text-white">

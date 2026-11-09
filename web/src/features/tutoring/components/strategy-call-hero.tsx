@@ -2,9 +2,14 @@ import { Button } from "@/components/ui/button"
 
 type StrategyCallHeroProps = {
   onBookClick?: () => void
+  /** Figma Book Sessions CTA; defaults to Free Strategy Call copy. */
+  ctaLabel?: string
 }
 
-function StrategyCallHero({ onBookClick }: StrategyCallHeroProps) {
+function StrategyCallHero({
+  onBookClick,
+  ctaLabel = "Book your FREE Call with a 175+ Scorer",
+}: StrategyCallHeroProps) {
   return (
     <section className="w-full rounded-[20px] border border-[#dbe5f3] bg-[var(--greyscale-0)] p-[30px]">
       <div className="flex flex-wrap gap-2">
@@ -64,7 +69,7 @@ function StrategyCallHero({ onBookClick }: StrategyCallHeroProps) {
           aria-controls="strategy-call-scheduler"
           onClick={onBookClick}
         >
-          Book your FREE Call with a 175+ Scorer
+          {ctaLabel}
         </Button>
         <p className="pt-3.5 text-sm tracking-[0.02em] text-[var(--greyscale-500)]">
           15 minutes with a 175+ scorer. No cost, and nothing to buy on the call.
