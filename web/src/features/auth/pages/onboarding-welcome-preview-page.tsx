@@ -6,6 +6,7 @@ import { OnboardingWelcomeStep } from "@/features/auth/onboarding/onboarding-wel
 function OnboardingWelcomePreviewPage() {
   const [firstName, setFirstName] = useState("")
   const [lastName, setLastName] = useState("")
+  const [phone, setPhone] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [plannedLsatDate, setPlannedLsatDate] = useState(ONBOARDING_RECOMMENDED_LSAT_DATE)
@@ -16,6 +17,8 @@ function OnboardingWelcomePreviewPage() {
       onFirstNameChange={setFirstName}
       lastName={lastName}
       onLastNameChange={setLastName}
+      phone={phone}
+      onPhoneChange={setPhone}
       password={password}
       onPasswordChange={setPassword}
       confirmPassword={confirmPassword}

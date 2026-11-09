@@ -106,6 +106,7 @@ export type SaveOnboardingInput = {
   lastName: string
   /** @deprecated Prefer firstName + lastName */
   fullName?: string
+  phone?: string | null
   username?: string | null
   plannedLsatWindow?: string | null
   plannedLsatDate?: string | null

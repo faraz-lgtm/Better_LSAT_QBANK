@@ -955,6 +955,7 @@ export function createUsersService(deps: UsersServiceDeps) {
         lastName?: string
         /** @deprecated Prefer firstName + lastName */
         fullName?: string
+        phone?: string
         username?: string | null
         plannedLsatWindow?: string | null
         plannedLsatDate?: string | null
@@ -975,12 +976,17 @@ export function createUsersService(deps: UsersServiceDeps) {
       })
 
       const existing = await deps.repository.getProfileById(userId)
+      const phone =
+        input.phone !== undefined
+          ? normalizeAccountPhone(input.phone)
+          : existing?.phone ?? null
       const profile = await deps.repository.upsertProfile({
         id: userId,
         email: existing?.email ?? null,
         full_name: joinLawHubFullName(nameParts.firstName, nameParts.lastName),
         first_name: nameParts.firstName,
         last_name: nameParts.lastName,
+        phone,
         student_coaching_id: existing?.student_coaching_id ?? null,
       })
 
