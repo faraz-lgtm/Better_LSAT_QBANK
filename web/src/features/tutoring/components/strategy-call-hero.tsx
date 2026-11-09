@@ -2,32 +2,31 @@ import { Button } from "@/components/ui/button"
 
 type StrategyCallHeroProps = {
   onBookClick?: () => void
-  bookButtonExpanded?: boolean
 }
 
-function StrategyCallHero({ onBookClick, bookButtonExpanded = false }: StrategyCallHeroProps) {
+function StrategyCallHero({ onBookClick }: StrategyCallHeroProps) {
   return (
-    <section className="rounded-[20px] border border-[#dbe5f3] bg-[var(--greyscale-0)] p-[30px]">
+    <section className="w-full rounded-[20px] border border-[#dbe5f3] bg-[var(--greyscale-0)] p-[30px]">
       <div className="flex flex-wrap gap-2">
-        <span className="rounded-[14px] bg-[#ddf3e7] px-4 py-2 text-xs font-bold tracking-[0.02em] text-[#17996f]">
+        <span className="inline-flex h-[34px] items-center rounded-[14px] bg-[#ddf3e7] px-4 text-xs font-bold tracking-[0.02em] text-[#17996f]">
           ✓ 175+ Scoring Tutors
         </span>
-        <span className="rounded-[14px] bg-[var(--primary-0)] px-4 py-2 text-xs font-semibold tracking-[0.02em] text-[var(--primary)]">
+        <span className="inline-flex h-[34px] items-center rounded-[14px] bg-[var(--primary-0)] px-4 text-xs font-semibold tracking-[0.02em] text-[var(--primary)]">
           200+ Students Tutored
         </span>
       </div>
 
-      <h2 className="mt-3 text-[20px] font-bold leading-[1.35] text-[var(--color-student-heading)]">
+      <h2 className="py-3 text-[20px] font-bold leading-[1.35] text-[var(--color-student-heading)]">
         Not sure what to fix first?
         <br />
         Ask someone who scored 175+ in LSAT.
       </h2>
-      <p className="mt-2 max-w-[1014px] text-sm tracking-[0.02em] text-[var(--greyscale-500)]">
+      <p className="max-w-[1014px] text-sm leading-normal tracking-[0.02em] text-[var(--greyscale-500)]">
         In 15 minutes, we&apos;ll look at where you are, where you want to be, and how much time you have. Then
         we&apos;ll show you the fastest way to close the gap.
       </p>
 
-      <div className="mt-6 grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 pb-3 pt-6 md:grid-cols-2">
         <div className="flex gap-4 rounded-[14px] bg-[var(--primary-25)] p-[18px]">
           <div className="flex size-[38px] shrink-0 items-center justify-center rounded-[9px] bg-[var(--greyscale-0)] text-[18px] font-bold text-[var(--primary)]">
             1
@@ -57,18 +56,17 @@ function StrategyCallHero({ onBookClick, bookButtonExpanded = false }: StrategyC
         </div>
       </div>
 
-      <div className="mt-6 flex flex-col items-center gap-2.5">
+      <div className="flex flex-col items-center gap-2.5">
         <Button
           type="button"
           size="lg"
           className="h-12 rounded-[10px] px-4"
-          aria-expanded={bookButtonExpanded}
           aria-controls="strategy-call-scheduler"
           onClick={onBookClick}
         >
-          Book Your Free 15-Minute Call
+          Book your FREE Call with a 175+ Scorer
         </Button>
-        <p className="text-sm tracking-[0.02em] text-[var(--greyscale-500)]">
+        <p className="pt-3.5 text-sm tracking-[0.02em] text-[var(--greyscale-500)]">
           15 minutes with a 175+ scorer. No cost, and nothing to buy on the call.
         </p>
       </div>
