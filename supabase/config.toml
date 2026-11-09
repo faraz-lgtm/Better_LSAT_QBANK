@@ -778,6 +778,30 @@ verify_jwt = false
 [functions.stripe-webhook]
 verify_jwt = false
 
+[functions.tutoring-list-slots]
+verify_jwt = false
+
+[functions.tutoring-create-booking]
+verify_jwt = false
+
+[functions.tutoring-reschedule-booking]
+verify_jwt = false
+
+[functions.tutoring-cancel-booking]
+verify_jwt = false
+
+[functions.tutoring-list-sessions]
+verify_jwt = false
+
+[functions.tutoring-get-transcript]
+verify_jwt = false
+
+[functions.amelia-webhook]
+verify_jwt = false
+
+[functions.zoom-webhook]
+verify_jwt = false
+
 [functions.users]
 verify_jwt = false
 

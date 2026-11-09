@@ -1,30 +1,12 @@
-import { useEffect } from "react"
 import { X } from "lucide-react"
 
-const BOOKING_WIDGET_SRC = "https://booking.betterlsat.com/widget/booking/ykgARKRGf5mpZC3nHOYQ"
-const BOOKING_WIDGET_ID = "ykgARKRGf5mpZC3nHOYQ_1789994679867"
-const BOOKING_EMBED_SCRIPT_ID = "ghl-booking-form-embed"
-const BOOKING_EMBED_SCRIPT_SRC = "https://booking.betterlsat.com/js/form_embed.js"
+const BOOKING_PAGE_SRC = "https://old.betterlsat.com/booking/free-test-session/"
 
 type StrategyCallSchedulerProps = {
   onClose?: () => void
 }
 
-function ensureBookingEmbedScript() {
-  if (document.getElementById(BOOKING_EMBED_SCRIPT_ID)) return
-
-  const script = document.createElement("script")
-  script.id = BOOKING_EMBED_SCRIPT_ID
-  script.src = BOOKING_EMBED_SCRIPT_SRC
-  script.type = "text/javascript"
-  document.body.appendChild(script)
-}
-
 function StrategyCallScheduler({ onClose }: StrategyCallSchedulerProps) {
-  useEffect(() => {
-    ensureBookingEmbedScript()
-  }, [])
-
   return (
     <div className="relative w-full">
       {onClose ? (
@@ -38,9 +20,8 @@ function StrategyCallScheduler({ onClose }: StrategyCallSchedulerProps) {
         </button>
       ) : null}
       <iframe
-        id={BOOKING_WIDGET_ID}
-        title="FREE LSAT Strategy Call booking"
-        src={BOOKING_WIDGET_SRC}
+        title="FREE LSAT Strategy Call booking with Amelia"
+        src={BOOKING_PAGE_SRC}
         allow="payment"
         scrolling="no"
         className="block h-[900px] w-full border-0"

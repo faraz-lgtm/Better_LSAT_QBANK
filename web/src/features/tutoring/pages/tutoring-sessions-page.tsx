@@ -1,13 +1,68 @@
+import { useEffect, useMemo, useState } from "react"
 import { Link } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
 import { PastSessionsTable } from "@/features/tutoring/components/past-sessions-table"
+import { UpcomingSessionsList } from "@/features/tutoring/components/upcoming-sessions-list"
 import { STUDENT_TUTORING_BOOK_HREF } from "@/features/app-shell/student-nav-config"
-import { MOCK_TUTORING_SESSIONS } from "@/features/tutoring/lib/mock-sessions-data"
+import type { PastSessionRow, TutoringSessionSummary } from "@/features/tutoring/lib/types"
 import { StudentMain } from "@/features/student/components/student-main"
+import { createTutoringApi } from "@/lib/api/tutoring"
+import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
 /** My Sessions → View all Sessions screen. */
 function TutoringSessionsPage() {
+  const api = useMemo(() => createTutoringApi(getSupabaseBrowserClient()), [])
+  const [sessions, setSessions] = useState<PastSessionRow[]>([])
+  const [upcomingSessions, setUpcomingSessions] = useState<TutoringSessionSummary[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    void api
+      .listSessions()
+      .then((data) => {
+        if (cancelled) return
+        setUpcomingSessions(
+          data.upcomingSessions.map((session) => ({
+            id: session.id,
+            month: session.month,
+            day: session.day,
+            title: session.title,
+            whenLabel: session.whenLabel,
+            tutorName: session.tutorName,
+            tutorInitials: session.tutorInitials,
+            focus: session.focus,
+            action: session.action,
+            joinUrl: session.joinUrl,
+          })),
+        )
+        setSessions(
+          data.pastSessions.map((s) => ({
+            id: s.id,
+            dateLabel: s.dateLabel,
+            tutorName: s.tutorName,
+            focus: s.focus,
+            transcriptStatus: s.transcriptStatus,
+            recordingStatus: s.recordingStatus,
+          })),
+        )
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return
+        setError(err instanceof Error ? err.message : "Failed to load sessions")
+        setSessions([])
+        setUpcomingSessions([])
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [api])
+
   return (
     <StudentMain
       className="bg-[var(--primary-0)]"
@@ -25,7 +80,24 @@ function TutoringSessionsPage() {
         </Button>
       </header>
 
-      <PastSessionsTable sessions={MOCK_TUTORING_SESSIONS.pastSessions} />
+      {loading ? (
+        <p className="text-sm text-[var(--greyscale-500)]">Loading sessions…</p>
+      ) : error ? (
+        <p className="rounded-[14px] border border-dashed border-[#e4e9f2] px-4 py-10 text-center text-sm text-[var(--greyscale-500)]">
+          {error}
+        </p>
+      ) : sessions.length === 0 && upcomingSessions.length === 0 ? (
+        <p className="rounded-[14px] border border-dashed border-[#e4e9f2] px-4 py-10 text-center text-sm text-[var(--greyscale-500)]">
+          No sessions yet. Book a tutoring session to get started.
+        </p>
+      ) : (
+        <div className="space-y-6">
+          {upcomingSessions.length > 0 ? (
+            <UpcomingSessionsList sessions={upcomingSessions} showViewAllLink={false} />
+          ) : null}
+          {sessions.length > 0 ? <PastSessionsTable sessions={sessions} /> : null}
+        </div>
+      )}
     </StudentMain>
   )
 }
