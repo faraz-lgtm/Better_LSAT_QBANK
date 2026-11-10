@@ -1,5 +1,6 @@
 import type { ReactNode } from "react"
 
+import { LsacLicenseBanner } from "@/features/app-shell/lsac-license-banner"
 import { STUDENT_MAIN_PADDING_CLASS, STUDENT_PAGE_CONTAINER_CLASS, STUDENT_SHELL_GUTTER_CLASS } from "@/features/student/components/student-page-container"
 import { cn } from "@/lib/utils"
 
@@ -11,6 +12,8 @@ type StudentMainProps = {
   layout?: "scroll" | "locked" | "immersive"
   /** Skip the 1168px page container so a 3-col shell can cap only the center pane. */
   fullBleed?: boolean
+  /** Hide the LSAC license strip (shown by default on scroll layout pages). */
+  hideLsacLicenseBanner?: boolean
 }
 
 function StudentMain({
@@ -19,10 +22,12 @@ function StudentMain({
   contentClassName = "",
   layout = "scroll",
   fullBleed = false,
+  hideLsacLicenseBanner = false,
 }: StudentMainProps) {
   const locked = layout === "locked"
   const immersive = layout === "immersive"
   const contained = !immersive && !fullBleed
+  const showLsacLicenseBanner = !immersive && !locked && !hideLsacLicenseBanner
 
   return (
     <main
@@ -46,6 +51,7 @@ function StudentMain({
         )}
       >
         {children}
+        {showLsacLicenseBanner ? <LsacLicenseBanner className="mt-6 shrink-0" /> : null}
       </div>
     </main>
   )

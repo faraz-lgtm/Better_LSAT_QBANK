@@ -1,5 +1,7 @@
 import { StrategyCallHero } from "@/features/tutoring/components/strategy-call-hero"
 import { StrategyCallScheduler } from "@/features/tutoring/components/strategy-call-scheduler"
+import { TutoringTestimonials } from "@/features/tutoring/components/tutoring-testimonials"
+import { MOCK_TUTORING_SESSIONS } from "@/features/tutoring/lib/mock-sessions-data"
 import { StudentMain } from "@/features/student/components/student-main"
 
 function FreeStrategyCallPage() {
@@ -26,6 +28,7 @@ function FreeStrategyCallPage() {
 
       <StrategyCallHero onBookClick={scrollToScheduler} />
       <StrategyCallScheduler alwaysOpen />
+      <TutoringTestimonials testimonials={MOCK_TUTORING_SESSIONS.testimonials} />
     </StudentMain>
   )
 }

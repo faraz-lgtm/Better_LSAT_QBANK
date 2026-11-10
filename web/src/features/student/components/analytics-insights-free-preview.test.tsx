@@ -35,11 +35,6 @@ describe("AnalyticsInsightsFreePreview", () => {
       "href",
       "/app/free-strategy-call",
     )
-    expect(screen.getByText("Official LSAC licensed prep")).toBeInTheDocument()
-    expect(screen.getByRole("link", { name: "About our license" })).toHaveAttribute(
-      "href",
-      "https://www.lsac.org/",
-    )
 
     expect(screen.queryByRole("button", { name: "Unlock Analytics" })).not.toBeInTheDocument()
     expect(screen.queryByTestId("locked-metric-skeleton")).not.toBeInTheDocument()
@@ -67,7 +62,6 @@ describe("AnalyticsInsightsFreePreview", () => {
       "href",
       "/app/free-strategy-call",
     )
-    expect(screen.getByText("Official LSAC licensed prep")).toBeInTheDocument()
 
     expect(screen.queryByRole("button", { name: "Unlock Analytics" })).not.toBeInTheDocument()
     expect(screen.queryByTestId("locked-metric-skeleton")).not.toBeInTheDocument()
@@ -97,7 +91,6 @@ describe("AnalyticsInsightsFreePreview", () => {
       "href",
       "/app/free-strategy-call",
     )
-    expect(screen.getByText("Official LSAC licensed prep")).toBeInTheDocument()
 
     expect(screen.queryByRole("button", { name: "Unlock Analytics" })).not.toBeInTheDocument()
     expect(screen.queryByTestId("locked-metric-skeleton")).not.toBeInTheDocument()
@@ -125,7 +118,6 @@ describe("AnalyticsInsightsFreePreview", () => {
       "href",
       "/app/free-strategy-call",
     )
-    expect(screen.getByText("Official LSAC licensed prep")).toBeInTheDocument()
 
     expect(screen.queryByRole("button", { name: "Unlock Analytics" })).not.toBeInTheDocument()
     expect(screen.queryByTestId("locked-metric-skeleton")).not.toBeInTheDocument()
