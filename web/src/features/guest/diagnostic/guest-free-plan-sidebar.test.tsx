@@ -18,7 +18,7 @@ function PathProbe() {
 }
 
 describe("GuestFreePlanSidebar", () => {
-  it("matches the premium menu, unlocks limited Prep Course, and locks other Academy / Insights items", () => {
+  it("matches the premium menu, unlocks Prep / Insights browse / tutoring, and keeps Book Sessions above My Sessions", () => {
     render(
       <MemoryRouter initialEntries={["/app"]}>
         <GuestFreePlanSidebar mobileOpen={false} onMobileClose={() => {}} />
@@ -37,17 +37,33 @@ describe("GuestFreePlanSidebar", () => {
     expect(screen.getByRole("link", { name: "Explanations" })).toHaveAttribute("href", "/app/learn/explanations")
     expect(screen.queryByRole("button", { name: "Explanations (locked)" })).not.toBeInTheDocument()
     expect(screen.queryByRole("button", { name: "Untimed Review (locked)" })).not.toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Analytics (locked)" })).toBeInTheDocument()
-    expect(screen.getByRole("link", { name: "Drills" })).toHaveAttribute("href", "/app/practice/drills")
-    expect(screen.getByRole("button", { name: "Drills (locked)" })).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Sections (locked)" })).toBeInTheDocument()
-    expect(screen.getByRole("link", { name: "PrepTest" })).toHaveAttribute("href", "/app/preptest")
-    expect(screen.getByRole("button", { name: "PrepTest (locked)" })).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "Overview" })).toHaveAttribute("href", "/app/analytics")
+    expect(
+      screen.getAllByRole("link", { name: "Drills" }).some((el) => el.getAttribute("href") === "/app/practice/drills"),
+    ).toBe(true)
+    expect(
+      screen.getAllByRole("link", { name: "Drills" }).some((el) => el.getAttribute("href") === "/app/analytics/drills"),
+    ).toBe(true)
+    expect(
+      screen.getAllByRole("link", { name: "Sections" }).some((el) => el.getAttribute("href") === "/app/analytics/sections"),
+    ).toBe(true)
+    expect(
+      screen.getAllByRole("link", { name: "PrepTest" }).some((el) => el.getAttribute("href") === "/app/preptest"),
+    ).toBe(true)
+    expect(
+      screen
+        .getAllByRole("link", { name: "PrepTest" })
+        .some((el) => el.getAttribute("href") === "/app/analytics/preptests"),
+    ).toBe(true)
     expect(screen.getByRole("link", { name: "Free Strategy Call" })).toHaveAttribute(
       "href",
       "/app/free-strategy-call",
     )
     expect(screen.getByText("TUTORING")).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "Book 1 on 1 Sessions" })).toHaveAttribute(
+      "href",
+      "/app/tutoring/book",
+    )
     expect(screen.getByRole("link", { name: "My Sessions" })).toHaveAttribute(
       "href",
       "/app/tutoring/sessions",
@@ -56,8 +72,13 @@ describe("GuestFreePlanSidebar", () => {
       "href",
       "/app/tutoring/live-classes",
     )
-    expect(screen.queryByRole("link", { name: "Book 1 on 1 Sessions" })).not.toBeInTheDocument()
+    const bookSessions = screen.getByRole("link", { name: "Book 1 on 1 Sessions" })
+    const mySessions = screen.getByRole("link", { name: "My Sessions" })
+    expect(
+      bookSessions.compareDocumentPosition(mySessions) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
     expect(screen.queryByRole("button", { name: "Free Strategy Call (locked)" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Book 1 on 1 Sessions (locked)" })).not.toBeInTheDocument()
     expect(screen.queryByRole("button", { name: "My Sessions (locked)" })).not.toBeInTheDocument()
     expect(screen.getByRole("link", { name: "Feedback" })).toHaveAttribute("href", "/app/feedback")
     expect(screen.getByRole("link", { name: "Roadmap" })).toHaveAttribute("href", "/app/roadmap")
@@ -75,7 +96,7 @@ describe("GuestFreePlanSidebar", () => {
     expect(screen.queryByRole("button", { name: /\$79/ })).not.toBeInTheDocument()
   })
 
-  it("opens feature-specific locked-content copy for Insights Drills, Sections, Analytics, and PrepTest", async () => {
+  it("lets free students navigate Insights browse routes (locks stay in-page)", async () => {
     const user = userEvent.setup()
     render(
       <MemoryRouter initialEntries={["/app"]}>
@@ -86,28 +107,11 @@ describe("GuestFreePlanSidebar", () => {
       </MemoryRouter>,
     )
 
-    await user.click(screen.getByRole("button", { name: "Drills (locked)" }))
-    expect(screen.getByRole("dialog", { name: "Unlock More Ways to Practice" })).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "View Plans" })).toBeInTheDocument()
-    await user.click(screen.getByRole("button", { name: "Back" }))
-
-    await user.click(screen.getAllByRole("button", { name: "Sections (locked)" })[0]!)
-    expect(screen.getByRole("dialog", { name: "Know What to Study Next" })).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Unlock My Plan" })).toBeInTheDocument()
-    await user.click(screen.getByRole("button", { name: "Back" }))
-
-    await user.click(screen.getByRole("button", { name: "Analytics (locked)" }))
-    expect(screen.getByRole("dialog", { name: "See What's Costing You Points" })).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Unlock Analytics" })).toBeInTheDocument()
-    await user.click(screen.getByRole("button", { name: "Back" }))
-
-    await user.click(screen.getByRole("button", { name: "PrepTest (locked)" }))
-    expect(screen.getByRole("dialog", { name: "Unlock Official LSAT PrepTests" })).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "View Plans" })).toBeInTheDocument()
-    expect(screen.getByTestId("path")).toHaveTextContent("/app")
+    await user.click(screen.getByRole("link", { name: "Overview" }))
+    expect(screen.getByTestId("path")).toHaveTextContent("/app/analytics")
   })
 
-  it("lets free students open LSAT Essentials and mastery courses (coming soon pages)", async () => {
+  it("lets free students open LSAT Essentials from Prep Courses", async () => {
     const user = userEvent.setup()
     render(
       <MemoryRouter initialEntries={["/app"]}>
@@ -124,15 +128,8 @@ describe("GuestFreePlanSidebar", () => {
       "/app/prep-course/betterlsat-core-syllabus-structure-content",
     )
 
-    expect(screen.getByRole("link", { name: "LR Mastery Course" })).toHaveAttribute(
-      "href",
-      "/app/prep-course/lr-mastery-course",
-    )
-    expect(screen.getByRole("link", { name: "RC Mastery Course" })).toHaveAttribute(
-      "href",
-      "/app/prep-course/rc-mastery",
-    )
-    expect(screen.queryByRole("button", { name: "LR Mastery Course (locked)" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("link", { name: "LR Mastery Course" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("link", { name: "RC Mastery Course" })).not.toBeInTheDocument()
     expect(screen.getByTestId("path")).toHaveTextContent("/app")
   })
 

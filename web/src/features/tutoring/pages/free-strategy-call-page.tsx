@@ -25,7 +25,7 @@ function FreeStrategyCallPage() {
       </header>
 
       <StrategyCallHero onBookClick={scrollToScheduler} />
-      <StrategyCallScheduler />
+      <StrategyCallScheduler alwaysOpen />
     </StudentMain>
   )
 }
