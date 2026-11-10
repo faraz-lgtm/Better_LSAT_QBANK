@@ -260,6 +260,7 @@ export async function handleUsersPostMicro(req: Request, slug: string): Promise<
           firstName: firstName.trim() || undefined,
           lastName: lastName.trim() || undefined,
           fullName: fullName.trim() || undefined,
+          phone: typeof body.phone === 'string' ? body.phone : undefined,
           username: typeof body.username === 'string' ? body.username : null,
           plannedLsatWindow:
             typeof body.plannedLsatWindow === 'string' ? body.plannedLsatWindow : null,
@@ -278,6 +279,9 @@ export async function handleUsersPostMicro(req: Request, slug: string): Promise<
       } catch (error) {
         if (isLawHubIdentityError(error)) {
           return json({ error: error.message, code: error.code }, { status: 400 }, corsHeaders)
+        }
+        if (error instanceof Error && /phone|valid phone/i.test(error.message)) {
+          return json({ error: error.message }, { status: 400 }, corsHeaders)
         }
         throw error
       }

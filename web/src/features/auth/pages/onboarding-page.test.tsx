@@ -72,6 +72,7 @@ function sessionWithoutPasswordAuth() {
 async function fillWelcomeAndContinue(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByPlaceholderText(/first name/i), "Ada")
   await user.type(screen.getByPlaceholderText(/last name/i), "Lovelace")
+  await user.type(screen.getByPlaceholderText(/phone number/i), "+1 555 123 4567")
   const passwordFields = screen.getAllByPlaceholderText(/enter your password/i)
   await user.type(passwordFields[0], "same-as-old-password")
   await user.type(passwordFields[1], "same-as-old-password")
@@ -216,8 +217,33 @@ describe("OnboardingPage password setup", () => {
 
     expect(await screen.findByText(/app home/i)).toBeInTheDocument()
     expect(updatePassword).toHaveBeenCalledTimes(1)
-    expect(saveOnboarding).toHaveBeenCalled()
+    expect(saveOnboarding).toHaveBeenCalledWith(
+      expect.objectContaining({
+        firstName: "Ada",
+        lastName: "Lovelace",
+        phone: "+1 555 123 4567",
+      }),
+    )
     expect(completeFirstLogin).toHaveBeenCalled()
+  })
+
+  it("requires a phone number on the welcome step", async () => {
+    const user = userEvent.setup()
+
+    renderOnboarding()
+
+    expect(await screen.findByRole("heading", { name: /welcome to betterlsat/i })).toBeInTheDocument()
+    await user.type(screen.getByPlaceholderText(/first name/i), "Ada")
+    await user.type(screen.getByPlaceholderText(/last name/i), "Lovelace")
+    const passwordFields = screen.getAllByPlaceholderText(/enter your password/i)
+    await user.type(passwordFields[0], "same-as-old-password")
+    await user.type(passwordFields[1], "same-as-old-password")
+    await user.click(screen.getByRole("button", { name: /^continue$/i }))
+
+    expect(await screen.findByText(/phone is required/i)).toBeInTheDocument()
+    expect(screen.getByRole("heading", { name: /welcome to betterlsat/i })).toBeInTheDocument()
+    expect(updatePassword).not.toHaveBeenCalled()
+    expect(saveOnboarding).not.toHaveBeenCalled()
   })
 
   it("saves onboarding before starting the diagnostic from step 8", async () => {

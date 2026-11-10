@@ -34,6 +34,7 @@ import {
 } from "@/lib/auth/diagnostic-intent"
 import { resolvePendingCheckoutDestination } from "@/lib/auth/pending-checkout-plan"
 import { userNeedsPasswordSetup } from "@/lib/auth/password-setup"
+import { validateAccountPhone } from "@/lib/account/profile-field-validation"
 import { splitFullName } from "@/lib/lawhub-identity"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { formatSupabaseCallError } from "@/lib/supabase/format-call-error"
@@ -53,6 +54,7 @@ function OnboardingPage() {
   const [step, setStep] = useState<Step>(1)
   const [firstName, setFirstName] = useState("")
   const [lastName, setLastName] = useState("")
+  const [phone, setPhone] = useState("")
   const [plannedLsatDate, setPlannedLsatDate] = useState(ONBOARDING_RECOMMENDED_LSAT_DATE)
   const [studyDays, setStudyDays] = useState<string[]>(days.slice(0, 5))
   const [studyHours, setStudyHours] = useState("1-2 hours/day")
@@ -128,6 +130,7 @@ function OnboardingPage() {
           return
         }
         setRequiresPassword(needsPassword)
+        if (profile?.phone) setPhone(profile.phone.trim())
         if (profile?.first_name || profile?.last_name) {
           setFirstName(profile.first_name?.trim() ?? "")
           setLastName(profile.last_name?.trim() ?? "")
@@ -169,6 +172,8 @@ function OnboardingPage() {
     if (!firstName.trim() || !lastName.trim()) {
       return setError("First and last name are required."), false
     }
+    const phoneError = validateAccountPhone(phone)
+    if (phoneError) return setError(phoneError), false
     if (!plannedLsatDate) return setError("Please select when you plan to take the LSAT."), false
     if (requiresPassword) {
       if (password.length < 8) return setError("Password must be at least 8 characters."), false
@@ -194,6 +199,7 @@ function OnboardingPage() {
       const saved = await usersApi.saveOnboarding({
         firstName: firstName.trim(),
         lastName: lastName.trim(),
+        phone: phone.trim(),
         plannedLsatDate: plannedLsatDate || null,
         plannedLsatWindow: null,
         lawSchoolCycle: lawSchoolCycle.trim() || null,
@@ -257,6 +263,7 @@ function OnboardingPage() {
         const saved = await usersApi.saveOnboarding({
           firstName: firstName.trim(),
           lastName: lastName.trim(),
+          phone: phone.trim(),
           plannedLsatDate: plannedLsatDate || null,
           plannedLsatWindow: null,
         })
@@ -359,6 +366,8 @@ function OnboardingPage() {
         onFirstNameChange={setFirstName}
         lastName={lastName}
         onLastNameChange={setLastName}
+        phone={phone}
+        onPhoneChange={setPhone}
         password={password}
         onPasswordChange={setPassword}
         confirmPassword={confirmPassword}

@@ -183,6 +183,7 @@ describe('createUsersApi', () => {
     await api.saveOnboarding({
       firstName: 'Ada',
       lastName: 'Lovelace',
+      phone: '+1 555 123 4567',
       goalScore: '170',
       startingScore: "I haven't taken an LSAT yet",
     })
@@ -191,6 +192,7 @@ describe('createUsersApi', () => {
       body: {
         firstName: 'Ada',
         lastName: 'Lovelace',
+        phone: '+1 555 123 4567',
         goalScore: '170',
         startingScore: "I haven't taken an LSAT yet",
       },

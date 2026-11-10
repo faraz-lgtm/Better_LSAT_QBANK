@@ -14,6 +14,8 @@ type OnboardingWelcomeStepProps = {
   onFirstNameChange: (value: string) => void
   lastName: string
   onLastNameChange: (value: string) => void
+  phone: string
+  onPhoneChange: (value: string) => void
   password: string
   onPasswordChange: (value: string) => void
   confirmPassword: string
@@ -33,6 +35,8 @@ function OnboardingWelcomeStep({
   onFirstNameChange,
   lastName,
   onLastNameChange,
+  phone,
+  onPhoneChange,
   password,
   onPasswordChange,
   confirmPassword,
@@ -87,6 +91,20 @@ function OnboardingWelcomeStep({
                       disabled={isSubmitting}
                     />
                   </div>
+                </div>
+
+                <div className="figma-gap-8 flex flex-col">
+                  <p className="figma-text-sm figma-track-sm font-medium text-[#062357]">
+                    Phone number<span className="text-[#df1c41]">*</span>
+                  </p>
+                  <Input
+                    type="tel"
+                    value={phone}
+                    onChange={(event) => onPhoneChange(event.target.value)}
+                    placeholder="Phone number"
+                    autoComplete="tel"
+                    disabled={isSubmitting}
+                  />
                 </div>
 
                 {requiresPassword ? (
