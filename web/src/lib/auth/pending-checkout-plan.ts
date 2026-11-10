@@ -59,8 +59,9 @@ export function clearPendingCheckoutPlan(): void {
 }
 
 /**
- * Paid plan intent bypasses onboarding and routes through the authenticated checkout
- * handoff. Free intent keeps the normal onboarding/funnel destination.
+ * Free intent keeps the normal onboarding/funnel destination.
+ * Paid plan intent still collects onboarding (name/phone) first, then routes
+ * through the authenticated checkout handoff once first-login is cleared.
  */
 export function resolvePendingCheckoutDestination(destination: string): string {
   const plan = readPendingCheckoutPlan()
@@ -68,9 +69,11 @@ export function resolvePendingCheckoutDestination(destination: string): string {
 
   if (destination === "/admin") return destination
 
+  // Always finish onboarding before checkout or dashboard.
+  if (destination === "/onboarding") return destination
+
   if (plan === "free") {
     if (
-      destination === "/onboarding" ||
       destination === "/intent" ||
       destination === "/diagnostic/start" ||
       destination === "/app/diagnostic/results"

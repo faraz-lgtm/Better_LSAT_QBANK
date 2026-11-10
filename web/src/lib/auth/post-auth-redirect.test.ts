@@ -75,14 +75,14 @@ describe("resolvePostAuthDestination", () => {
     ).toBe("/diagnostic/start")
   })
 
-  it("returns diagnostic start during acquisition funnel for first-time login", () => {
+  it("returns onboarding during acquisition funnel for first-time login", () => {
     expect(
       resolvePostAuthDestination(
         { ...baseStudent, is_first_time_login: true },
         lsacRequiredEntitlement,
         acquisitionFunnel,
       ),
-    ).toBe("/diagnostic/start")
+    ).toBe("/onboarding")
   })
 
   it("returns diagnostic results when funnel is complete", () => {
@@ -91,8 +91,8 @@ describe("resolvePostAuthDestination", () => {
     ).toBe("/app/diagnostic/results")
   })
 
-  it("returns diagnostic results after funnel flags are cleared for first-time login", () => {
-    // clearDiagnosticFunnel() wipes funnelActive but leaves the stored result.
+  it("returns onboarding after diagnostic when first-time login is still set", () => {
+    // Name/phone must be collected even if the free diagnostic already finished.
     const clearedAfterSubmit: DiagnosticFunnelState = {
       pendingIntent: null,
       completedDiagnostic: true,
@@ -105,7 +105,7 @@ describe("resolvePostAuthDestination", () => {
         lsacRequiredEntitlement,
         clearedAfterSubmit,
       ),
-    ).toBe("/app/diagnostic/results")
+    ).toBe("/onboarding")
   })
 
   it("returns onboarding when student is first-time login outside funnel", () => {
@@ -114,6 +114,21 @@ describe("resolvePostAuthDestination", () => {
         { ...baseStudent, is_first_time_login: true },
         fullAccessEntitlement,
         emptyFunnel,
+      ),
+    ).toBe("/onboarding")
+  })
+
+  it("returns onboarding for first-time login with pending diagnostic intent", () => {
+    expect(
+      resolvePostAuthDestination(
+        { ...baseStudent, is_first_time_login: true },
+        fullAccessEntitlement,
+        {
+          pendingIntent: "quick",
+          completedDiagnostic: false,
+          funnelActive: false,
+          inAcquisitionFunnel: false,
+        },
       ),
     ).toBe("/onboarding")
   })

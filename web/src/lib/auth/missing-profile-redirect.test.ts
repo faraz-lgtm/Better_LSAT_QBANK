@@ -11,8 +11,22 @@ describe("shouldRedirectAuthenticatedUserToOnboarding", () => {
     expect(shouldRedirectAuthenticatedUserToOnboarding(true, null)).toBe(true)
   })
 
-  it("returns false when a profile exists", () => {
-    expect(shouldRedirectAuthenticatedUserToOnboarding(true, { id: "u1" })).toBe(false)
+  it("returns false when a completed profile exists", () => {
+    expect(
+      shouldRedirectAuthenticatedUserToOnboarding(true, {
+        id: "u1",
+        is_first_time_login: false,
+      }),
+    ).toBe(false)
+  })
+
+  it("returns true when profile exists but first-time login is still set", () => {
+    expect(
+      shouldRedirectAuthenticatedUserToOnboarding(true, {
+        id: "u1",
+        is_first_time_login: true,
+      }),
+    ).toBe(true)
   })
 
   it("does not treat a stale logged-out check as ready for onboarding redirect", () => {

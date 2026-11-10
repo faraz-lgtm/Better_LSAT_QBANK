@@ -47,12 +47,10 @@ describe("pending checkout plan", () => {
     expect(readPendingCheckoutPlan()).toBe("six_month")
   })
 
-  it("bypasses onboarding for paid intent", () => {
+  it("keeps onboarding for paid intent until name/phone are collected", () => {
     savePendingCheckoutPlan("monthly")
 
-    expect(resolvePendingCheckoutDestination("/onboarding")).toBe(
-      "/checkout?plan=monthly",
-    )
+    expect(resolvePendingCheckoutDestination("/onboarding")).toBe("/onboarding")
     expect(readPendingCheckoutPlan()).toBe("monthly")
   })
 

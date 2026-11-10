@@ -111,11 +111,11 @@ function OnboardingPage() {
           void syncDiagnosticMailerliteIfAuthenticated(getSupabaseBrowserClient())
         }
         const needsPassword = userNeedsPasswordSetup(user, session)
-        // Already finished welcome prefs (or diagnostic) — leave onboarding even if
+        // Already finished welcome prefs — leave onboarding even if
         // is_first_time_login was left true after a partial prior save.
+        // Completing the diagnostic alone must not skip name/phone collection.
         const alreadyOnboarded =
           Boolean(studyContext?.preferences) ||
-          hasCompletedDiagnostic() ||
           Boolean(profile && !profile.is_first_time_login)
         if (profile && alreadyOnboarded) {
           if (profile.is_first_time_login) {
