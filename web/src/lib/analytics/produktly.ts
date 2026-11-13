@@ -150,3 +150,24 @@ export function closeProduktlyFeedback(id: number): void {
   if (!id) return
   getProduktly()?.closeFeedback?.({ id })
 }
+
+/**
+ * Produktly's open feedback dialog sets `inert` on every non-Produktly
+ * `document.body` child (including `#root`), which blocks sidebar navigation.
+ * Keep the app shell interactive while the floating collector is open.
+ */
+export function keepAppInteractiveDuringProduktlyFeedback(): () => void {
+  if (typeof document === "undefined") return () => {}
+
+  const root = document.getElementById("root")
+  if (!root) return () => {}
+
+  const stripInert = () => {
+    if (root.hasAttribute("inert")) root.removeAttribute("inert")
+  }
+
+  stripInert()
+  const observer = new MutationObserver(stripInert)
+  observer.observe(root, { attributes: true, attributeFilter: ["inert"] })
+  return () => observer.disconnect()
+}

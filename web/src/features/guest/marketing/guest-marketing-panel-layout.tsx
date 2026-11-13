@@ -11,14 +11,12 @@ import { GuestMarketingPanelPattern } from "@/features/guest/marketing/guest-mar
 
 type GuestMarketingPanelLayoutProps = {
   children: ReactNode
-  headerVariant: "intent" | "signup" | "login" | "logout"
-  onLogout?: () => void
+  headerVariant: "intent" | "signup" | "login" | "onboarding"
 }
 
 function GuestMarketingPanelLayout({
   children,
   headerVariant,
-  onLogout,
 }: GuestMarketingPanelLayoutProps) {
   return (
     <div className="auth-page auth-split-page guest-marketing-page">
@@ -26,7 +24,7 @@ function GuestMarketingPanelLayout({
         <AuthSidebar />
         <div className={GUEST_INTENT_PANEL_CLASS}>
           <GuestMarketingPanelPattern />
-          <GuestMarketingPanelHeader variant={headerVariant} onLogout={onLogout} />
+          <GuestMarketingPanelHeader variant={headerVariant} />
           <main className={GUEST_INTENT_MAIN_CLASS}>{children}</main>
           <AuthSplitFooter />
         </div>
