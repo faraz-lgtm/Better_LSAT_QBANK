@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
 
-import type { SessionTranscript } from "@/features/tutoring/lib/types"
+import type { SessionTranscript, TodoTag, TutoringTodo } from "@/features/tutoring/lib/types"
 import { handleUsersInvokeError } from "@/lib/auth/handle-unauthorized-session"
 
 export type TutoringSessionDto = {
@@ -57,6 +57,11 @@ export type TutoringSlotsResponse = {
     maximum?: string
     slots?: Record<string, Record<string, Array<[number, number]>>>
   }
+}
+
+export type TutoringTodosListResponse = {
+  sessionId: string
+  todos: TutoringTodo[]
 }
 
 export function createTutoringApi(supabase: SupabaseClient) {
@@ -122,6 +127,23 @@ export function createTutoringApi(supabase: SupabaseClient) {
 
     getTranscript(sessionId: string): Promise<TutoringTranscriptResponse> {
       return invokeTutoringPost("tutoring-get-transcript", { sessionId })
+    },
+
+    listTodos(sessionId: string): Promise<TutoringTodosListResponse> {
+      return invokeTutoringPost("tutoring-list-todos", { sessionId })
+    },
+
+    createTodo(input: {
+      sessionId: string
+      title: string
+      tag?: TodoTag
+      dueAt?: string | null
+    }): Promise<TutoringTodo> {
+      return invokeTutoringPost("tutoring-create-todo", { ...input })
+    },
+
+    updateTodo(input: { todoId: string; done: boolean }): Promise<TutoringTodo> {
+      return invokeTutoringPost("tutoring-update-todo", { ...input })
     },
   }
 }

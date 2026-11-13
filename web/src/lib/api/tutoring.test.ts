@@ -61,4 +61,73 @@ describe("createTutoringApi", () => {
       }),
     )
   })
+
+  it("invokes tutoring-list-todos with sessionId", async () => {
+    const invoke = vi.fn().mockResolvedValue({
+      data: { sessionId: "s1", todos: [] },
+      error: null,
+    })
+    const api = createTutoringApi({
+      auth: { getSession: async () => ({ data: { session: null } }) },
+      functions: { invoke },
+    } as never)
+
+    await api.listTodos("s1")
+    expect(invoke).toHaveBeenCalledWith(
+      "tutoring-list-todos",
+      expect.objectContaining({
+        body: { sessionId: "s1" },
+      }),
+    )
+  })
+
+  it("invokes tutoring-create-todo and tutoring-update-todo", async () => {
+    const invoke = vi
+      .fn()
+      .mockResolvedValueOnce({
+        data: {
+          id: "t1",
+          sessionId: "s1",
+          title: "Drill flaws",
+          tag: "Homework",
+          done: false,
+          createdLabel: "Nov 12, 2026",
+          dueLabel: "No due date",
+        },
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        data: {
+          id: "t1",
+          sessionId: "s1",
+          title: "Drill flaws",
+          tag: "Homework",
+          done: true,
+          createdLabel: "Nov 12, 2026",
+          dueLabel: "No due date",
+        },
+        error: null,
+      })
+    const api = createTutoringApi({
+      auth: { getSession: async () => ({ data: { session: null } }) },
+      functions: { invoke },
+    } as never)
+
+    await api.createTodo({ sessionId: "s1", title: "Drill flaws" })
+    await api.updateTodo({ todoId: "t1", done: true })
+    expect(invoke).toHaveBeenNthCalledWith(
+      1,
+      "tutoring-create-todo",
+      expect.objectContaining({
+        body: { sessionId: "s1", title: "Drill flaws" },
+      }),
+    )
+    expect(invoke).toHaveBeenNthCalledWith(
+      2,
+      "tutoring-update-todo",
+      expect.objectContaining({
+        body: { todoId: "t1", done: true },
+      }),
+    )
+  })
 })

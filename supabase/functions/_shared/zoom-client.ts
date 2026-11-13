@@ -20,9 +20,13 @@ export type ZoomMeetingRecordings = {
   download_token?: string
 }
 
+/** Zoom AI Companion meeting summary (same content as the emailed summary). */
+export type ZoomMeetingSummary = Record<string, unknown>
+
 export type ZoomClient = {
   getAccessToken: () => Promise<string>
   getMeetingRecordings: (meetingIdOrUuid: string) => Promise<ZoomMeetingRecordings>
+  getMeetingSummary: (meetingIdOrUuid: string) => Promise<ZoomMeetingSummary>
   downloadFile: (downloadUrl: string, bearerToken: string) => Promise<Uint8Array>
 }
 
@@ -88,6 +92,27 @@ export function createZoomClient(deps: {
         throw new Error(message)
       }
       return json as ZoomMeetingRecordings
+    },
+
+    async getMeetingSummary(meetingIdOrUuid) {
+      const token = await getAccessToken()
+      // Zoom requires double-encoding when UUID contains / or //.
+      const needsDoubleEncode = meetingIdOrUuid.includes('/')
+      const encoded = needsDoubleEncode
+        ? encodeURIComponent(encodeURIComponent(meetingIdOrUuid))
+        : encodeURIComponent(meetingIdOrUuid)
+      const res = await fetchFn(`https://api.zoom.us/v2/meetings/${encoded}/meeting_summary`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        const message =
+          typeof json?.message === 'string'
+            ? json.message
+            : `Zoom meeting summary request failed (${res.status})`
+        throw new Error(message)
+      }
+      return json as ZoomMeetingSummary
     },
 
     async downloadFile(downloadUrl, bearerToken) {

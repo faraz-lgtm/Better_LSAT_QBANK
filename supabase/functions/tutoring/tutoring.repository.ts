@@ -33,7 +33,26 @@ export type TutoringSessionArtifactRow = {
   duration_seconds: number | null
   transcript_storage_path: string | null
   transcript_json: unknown
+  summary_json: unknown
+  takeaways: unknown
   zoom_share_url: string | null
+  created_at: string
+  updated_at: string
+}
+
+/** Free-text category; common presets still used by Zoom todos / UI defaults. */
+export type TutoringTodoTag = string
+export type TutoringTodoSource = 'zoom_summary' | 'user'
+
+export type TutoringSessionTodoRow = {
+  id: string
+  session_id: string
+  user_id: string
+  title: string
+  tag: TutoringTodoTag
+  source: TutoringTodoSource
+  done: boolean
+  due_at: string | null
   created_at: string
   updated_at: string
 }
@@ -325,6 +344,8 @@ export function createTutoringRepository(client: SupabaseClient) {
           | 'duration_seconds'
           | 'transcript_storage_path'
           | 'transcript_json'
+          | 'summary_json'
+          | 'takeaways'
           | 'zoom_share_url'
         >
       >,
@@ -350,6 +371,99 @@ export function createTutoringRepository(client: SupabaseClient) {
       return data as TutoringSessionArtifactRow
     },
 
+    async listTodosForSession(
+      userId: string,
+      sessionId: string,
+    ): Promise<TutoringSessionTodoRow[]> {
+      const { data, error } = await client
+        .from('tutoring_session_todos')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('session_id', sessionId)
+        .order('created_at', { ascending: true })
+      if (error) throw error
+      return (data ?? []) as TutoringSessionTodoRow[]
+    },
+
+    async createTodo(input: {
+      sessionId: string
+      userId: string
+      title: string
+      tag?: TutoringTodoTag
+      source?: TutoringTodoSource
+      dueAt?: string | null
+    }): Promise<TutoringSessionTodoRow> {
+      const now = new Date().toISOString()
+      const { data, error } = await client
+        .from('tutoring_session_todos')
+        .insert({
+          session_id: input.sessionId,
+          user_id: input.userId,
+          title: input.title.trim(),
+          tag: input.tag ?? 'Homework',
+          source: input.source ?? 'user',
+          due_at: input.dueAt ?? null,
+          updated_at: now,
+        })
+        .select('*')
+        .single()
+      if (error) throw error
+      return data as TutoringSessionTodoRow
+    },
+
+    async upsertZoomSummaryTodos(input: {
+      sessionId: string
+      userId: string
+      titles: string[]
+    }): Promise<TutoringSessionTodoRow[]> {
+      const now = new Date().toISOString()
+      const rows = input.titles
+        .map((title) => title.trim())
+        .filter(Boolean)
+        .map((title) => ({
+          session_id: input.sessionId,
+          user_id: input.userId,
+          title,
+          tag: 'Homework' as const,
+          source: 'zoom_summary' as const,
+          updated_at: now,
+        }))
+      if (rows.length === 0) return []
+      const { data, error } = await client
+        .from('tutoring_session_todos')
+        .upsert(rows, { onConflict: 'session_id,source,title', ignoreDuplicates: true })
+        .select('*')
+      if (error) throw error
+      return (data ?? []) as TutoringSessionTodoRow[]
+    },
+
+    async getTodoForUser(userId: string, todoId: string): Promise<TutoringSessionTodoRow | null> {
+      const { data, error } = await client
+        .from('tutoring_session_todos')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('id', todoId)
+        .maybeSingle()
+      if (error) throw error
+      return data as TutoringSessionTodoRow | null
+    },
+
+    async updateTodoDone(
+      userId: string,
+      todoId: string,
+      done: boolean,
+    ): Promise<TutoringSessionTodoRow> {
+      const { data, error } = await client
+        .from('tutoring_session_todos')
+        .update({ done, updated_at: new Date().toISOString() })
+        .eq('user_id', userId)
+        .eq('id', todoId)
+        .select('*')
+        .single()
+      if (error) throw error
+      return data as TutoringSessionTodoRow
+    },
+
     async listActivePackages(userId: string): Promise<TutoringPackageEntitlementRow[]> {
       const { data, error } = await client
         .from('tutoring_package_entitlements')
@@ -369,7 +483,12 @@ export function createTutoringRepository(client: SupabaseClient) {
       const { error } = await client.storage
         .from('tutoring-session-media')
         .upload(path, bytes, { contentType, upsert: true })
-      if (error) throw error
+      if (error) {
+        const detail = [error.message, (error as { statusCode?: string }).statusCode]
+          .filter(Boolean)
+          .join(' ')
+        throw new Error(`Storage upload failed (${path}): ${detail || 'unknown error'}`)
+      }
     },
 
     async createSignedMediaUrl(path: string, expiresInSeconds = 3600): Promise<string | null> {

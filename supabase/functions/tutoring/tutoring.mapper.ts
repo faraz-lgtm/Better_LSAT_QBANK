@@ -1,5 +1,9 @@
 import type { ParsedTranscriptLine } from '../_shared/zoom-vtt.ts'
-import type { TutoringSessionRow } from './tutoring.repository.ts'
+import type {
+  TutoringSessionRow,
+  TutoringSessionTodoRow,
+  TutoringTodoTag,
+} from './tutoring.repository.ts'
 
 export type TutoringSessionDto = {
   id: string
@@ -70,34 +74,182 @@ export function mapSessionRowToDto(row: TutoringSessionRow, now = new Date()): T
   }
 }
 
+function asTakeawayList(value: unknown): string[] {
+  if (!Array.isArray(value)) return []
+  return value
+    .filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+    .map((item) => item.trim())
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null
+}
+
+function asString(value: unknown): string | null {
+  return typeof value === 'string' && value.trim() ? value.trim() : null
+}
+
+function parseClockToSeconds(time: string): number {
+  const parts = time.trim().split(':').map((part) => Number(part))
+  if (parts.some((n) => Number.isNaN(n))) return 0
+  if (parts.length === 3) return parts[0]! * 3600 + parts[1]! * 60 + parts[2]!
+  if (parts.length === 2) return parts[0]! * 60 + parts[1]!
+  return parts[0] ?? 0
+}
+
+function formatClock(totalSeconds: number): string {
+  const s = Math.max(0, Math.floor(totalSeconds))
+  const hh = Math.floor(s / 3600)
+  const mm = Math.floor((s % 3600) / 60)
+  const ss = s % 60
+  if (hh > 0) {
+    return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}`
+  }
+  return `${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}`
+}
+
+function significantWords(text: string): string[] {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter((word) => word.length >= 4)
+}
+
+/** Find the transcript timestamp that best matches a topic/action phrase. */
+export function findTranscriptTimeForPhrase(
+  lines: Array<{ time: string; text: string }>,
+  phrase: string,
+): string | null {
+  if (lines.length === 0) return null
+  const words = significantWords(phrase)
+  if (words.length === 0) return lines[0]?.time ?? null
+
+  let bestIndex = -1
+  let bestScore = 0
+  for (let i = 0; i < lines.length; i++) {
+    const hay = lines[i]!.text.toLowerCase()
+    let score = 0
+    for (const word of words) {
+      if (hay.includes(word)) score += 1
+    }
+    if (score > bestScore) {
+      bestScore = score
+      bestIndex = i
+    }
+  }
+  if (bestScore === 0) return null
+  return lines[bestIndex]?.time ?? null
+}
+
+export type TranscriptViewerSegment = {
+  id: string
+  time: string
+  label: string
+  kind: 'topic' | 'action'
+}
+
+/**
+ * Build scrubber tags from Zoom summary_details (topics) and next_steps (Actions needed).
+ * Falls back to a single "Session" tag when summary data is missing.
+ */
+export function buildTranscriptSegments(
+  lines: Array<{ time: string; text: string }>,
+  summaryJson: unknown,
+): TranscriptViewerSegment[] {
+  const root = asRecord(summaryJson) ?? {}
+  const object =
+    asRecord(root.object) ??
+    asRecord(asRecord(root.payload)?.object) ??
+    root
+
+  const segments: TranscriptViewerSegment[] = []
+  const details = object.summary_details
+  if (Array.isArray(details)) {
+    details.forEach((item, index) => {
+      const rec = asRecord(item)
+      const label = asString(rec?.label) ?? asString(rec?.summary) ?? asString(rec?.text)
+      if (!label) return
+      const time =
+        findTranscriptTimeForPhrase(lines, label) ??
+        lines[Math.min(index, Math.max(0, lines.length - 1))]?.time ??
+        '00:00'
+      segments.push({
+        id: `topic-${index + 1}`,
+        time,
+        label: label.length > 42 ? `${label.slice(0, 39).trim()}…` : label,
+        kind: 'topic',
+      })
+    })
+  }
+
+  const nextSteps: string[] = []
+  const rawSteps = object.next_steps
+  if (Array.isArray(rawSteps)) {
+    for (const step of rawSteps) {
+      if (typeof step === 'string' && step.trim()) nextSteps.push(step.trim())
+      else {
+        const rec = asRecord(step)
+        const label =
+          asString(rec?.label) ??
+          asString(rec?.text) ??
+          asString(rec?.content) ??
+          asString(rec?.next_step)
+        if (label) nextSteps.push(label)
+      }
+    }
+  }
+
+  if (nextSteps.length > 0) {
+    const joined = nextSteps.join(' ')
+    const time =
+      findTranscriptTimeForPhrase(lines, joined) ??
+      lines[Math.max(0, lines.length - 1)]?.time ??
+      '00:00'
+    segments.push({
+      id: 'actions-needed',
+      time,
+      label: 'Actions needed',
+      kind: 'action',
+    })
+  }
+
+  if (segments.length > 0) {
+    return segments.sort(
+      (a, b) => parseClockToSeconds(a.time) - parseClockToSeconds(b.time),
+    )
+  }
+
+  if (lines.length === 0) return []
+  return [{ id: 'seg-1', time: lines[0]!.time, label: 'Session', kind: 'topic' }]
+}
+
 export function mapTranscriptJsonToViewer(input: {
   sessionId: string
   title: string
   metaLabel: string
   lines: ParsedTranscriptLine[] | unknown
+  takeaways?: unknown
+  summaryJson?: unknown
   recordingUrl?: string | null
+  zoomShareUrl?: string | null
   durationSeconds?: number | null
 }) {
   const lines = Array.isArray(input.lines) ? (input.lines as ParsedTranscriptLine[]) : []
   const totalSeconds = input.durationSeconds ?? 0
-  const hh = Math.floor(totalSeconds / 3600)
-  const mm = Math.floor((totalSeconds % 3600) / 60)
-  const ss = totalSeconds % 60
-  const totalTime =
-    hh > 0
-      ? `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}`
-      : `${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}`
+  const totalTime = formatClock(totalSeconds)
+  const segments = buildTranscriptSegments(lines, input.summaryJson)
 
   return {
     sessionId: input.sessionId,
     title: input.title,
     metaLabel: input.metaLabel,
-    takeaways: [] as string[],
-    currentTime: lines[0]?.time ?? '00:00',
+    takeaways: asTakeawayList(input.takeaways),
+    currentTime: segments[0]?.time ?? lines[0]?.time ?? '00:00',
     totalTime,
-    segments: lines.length
-      ? [{ id: 'seg-1', time: lines[0]!.time, label: 'Session' }]
-      : [],
+    segments,
     lines: lines.map((line) => ({
       id: line.id,
       speaker: line.speaker === 'tutor' || line.speaker === 'student' ? line.speaker : 'tutor',
@@ -107,6 +259,57 @@ export function mapTranscriptJsonToViewer(input: {
       text: line.text,
     })),
     recordingUrl: input.recordingUrl ?? null,
+    zoomShareUrl: input.zoomShareUrl ?? null,
+  }
+}
+
+export type TutoringTodoDto = {
+  id: string
+  sessionId: string
+  title: string
+  tag: TutoringTodoTag
+  source: TutoringSessionTodoRow['source']
+  done: boolean
+  createdLabel: string
+  dueLabel: string
+}
+
+function formatTodoCreatedLabel(iso: string): string {
+  try {
+    const d = new Date(iso)
+    return new Intl.DateTimeFormat('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    }).format(d)
+  } catch {
+    return iso
+  }
+}
+
+function formatTodoDueLabel(dueAt: string | null): string {
+  if (!dueAt) return 'No due date'
+  try {
+    const d = new Date(dueAt)
+    return `Due ${new Intl.DateTimeFormat('en-US', {
+      month: 'short',
+      day: 'numeric',
+    }).format(d)}`
+  } catch {
+    return 'No due date'
+  }
+}
+
+export function mapTodoRowToDto(row: TutoringSessionTodoRow): TutoringTodoDto {
+  return {
+    id: row.id,
+    sessionId: row.session_id,
+    title: row.title,
+    tag: row.tag,
+    source: row.source,
+    done: row.done,
+    createdLabel: formatTodoCreatedLabel(row.created_at),
+    dueLabel: formatTodoDueLabel(row.due_at),
   }
 }
 

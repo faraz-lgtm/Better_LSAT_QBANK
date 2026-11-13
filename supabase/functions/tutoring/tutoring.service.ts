@@ -1,11 +1,15 @@
 import type { AmeliaClient } from '../_shared/amelia-client.ts'
 import type { AmeliaEnv } from '../_shared/amelia-env.ts'
+import { createZoomClient } from '../_shared/zoom-client.ts'
+import { parseZoomEnv } from '../_shared/zoom-env.ts'
 import {
   ameliaLocalDateTimeToIso,
   mapSessionRowToDto,
+  mapTodoRowToDto,
   mapTranscriptJsonToViewer,
 } from './tutoring.mapper.ts'
 import type { TutoringRepository } from './tutoring.repository.ts'
+import { createZoomWebhookService } from './zoom-webhook.service.ts'
 
 function splitName(fullName: string | null | undefined, email: string): {
   firstName: string
@@ -137,6 +141,7 @@ export function createTutoringService(deps: {
       const result = await client.rescheduleBooking({
         bookingId: session.amelia_booking_id,
         bookingStart: input.bookingStart,
+        timeZone,
       })
 
       const startsAt = result.bookingStart
@@ -219,7 +224,25 @@ export function createTutoringService(deps: {
     async getTranscript(userId: string, sessionId: string) {
       const session = await repository.getSessionForUser(userId, sessionId)
       if (!session) throw new Error('Session not found')
-      const artifacts = await repository.getArtifacts(sessionId)
+      let artifacts = await repository.getArtifacts(sessionId)
+
+      const takeaways = Array.isArray(artifacts?.takeaways) ? artifacts.takeaways : []
+      const needsZoomSummary =
+        takeaways.length === 0 &&
+        Boolean(session.zoom_meeting_id || session.zoom_meeting_uuid) &&
+        !artifacts?.summary_json
+      if (needsZoomSummary) {
+        const zoomEnv = parseZoomEnv()
+        if (zoomEnv) {
+          const zoomService = createZoomWebhookService({
+            repository,
+            zoom: createZoomClient({ env: zoomEnv }),
+          })
+          await zoomService.syncSummaryForSession(session)
+          artifacts = await repository.getArtifacts(sessionId)
+        }
+      }
+
       let recordingUrl: string | null = null
       if (artifacts?.recording_storage_path) {
         recordingUrl = await repository.createSignedMediaUrl(artifacts.recording_storage_path)
@@ -231,9 +254,75 @@ export function createTutoringService(deps: {
         title,
         metaLabel,
         lines: artifacts?.transcript_json ?? [],
+        takeaways: artifacts?.takeaways ?? [],
+        summaryJson: artifacts?.summary_json ?? null,
         recordingUrl,
+        zoomShareUrl: artifacts?.zoom_share_url ?? null,
         durationSeconds: artifacts?.duration_seconds ?? null,
       })
+    },
+
+    async listTodos(userId: string, sessionId: string) {
+      const session = await repository.getSessionForUser(userId, sessionId)
+      if (!session) throw new Error('Session not found')
+
+      // If Zoom summary webhook was missed, pull next_steps before listing todos.
+      const artifacts = await repository.getArtifacts(sessionId)
+      const takeaways = Array.isArray(artifacts?.takeaways) ? artifacts.takeaways : []
+      if (
+        takeaways.length === 0 &&
+        !artifacts?.summary_json &&
+        (session.zoom_meeting_id || session.zoom_meeting_uuid)
+      ) {
+        const zoomEnv = parseZoomEnv()
+        if (zoomEnv) {
+          const zoomService = createZoomWebhookService({
+            repository,
+            zoom: createZoomClient({ env: zoomEnv }),
+          })
+          await zoomService.syncSummaryForSession(session)
+        }
+      }
+
+      const rows = await repository.listTodosForSession(userId, sessionId)
+      return { sessionId, todos: rows.map(mapTodoRowToDto) }
+    },
+
+    async createTodo(
+      userId: string,
+      input: { sessionId: string; title: string; tag?: string; dueAt?: string | null },
+    ) {
+      const session = await repository.getSessionForUser(userId, input.sessionId)
+      if (!session) throw new Error('Session not found')
+      const title = input.title.trim()
+      if (!title) throw new Error('title is required')
+      const tag =
+        typeof input.tag === 'string' && input.tag.trim()
+          ? input.tag.trim().slice(0, 64)
+          : 'Homework'
+      const dueAt =
+        typeof input.dueAt === 'string' && input.dueAt.trim()
+          ? new Date(input.dueAt).toISOString()
+          : null
+      if (dueAt && Number.isNaN(Date.parse(dueAt))) {
+        throw new Error('dueAt is invalid')
+      }
+      const row = await repository.createTodo({
+        sessionId: session.id,
+        userId,
+        title,
+        tag,
+        source: 'user',
+        dueAt,
+      })
+      return mapTodoRowToDto(row)
+    },
+
+    async updateTodo(userId: string, input: { todoId: string; done: boolean }) {
+      const existing = await repository.getTodoForUser(userId, input.todoId)
+      if (!existing) throw new Error('Todo not found')
+      const row = await repository.updateTodoDone(userId, input.todoId, input.done)
+      return mapTodoRowToDto(row)
     },
   }
 }

@@ -4,8 +4,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { FreeStrategyCallPage } from "@/features/tutoring/pages/free-strategy-call-page"
 import {
+  BOOKING_PAGE_SRC,
   BOOKING_WIDGET_ID,
-  BOOKING_WIDGET_SRC,
 } from "@/features/tutoring/components/strategy-call-scheduler"
 
 vi.mock("@/features/student/components/student-main", () => ({
@@ -14,11 +14,10 @@ vi.mock("@/features/student/components/student-main", () => ({
 
 describe("FreeStrategyCallPage", () => {
   beforeEach(() => {
-    document.getElementById("ghl-booking-form-embed")?.remove()
     Element.prototype.scrollIntoView = vi.fn()
   })
 
-  it("renders Figma hero and always-on GHL booking embed with no packages or testimonials", () => {
+  it("renders Figma hero and always-on Amelia booking embed with no packages or testimonials", () => {
     render(<FreeStrategyCallPage />)
 
     expect(
@@ -31,19 +30,15 @@ describe("FreeStrategyCallPage", () => {
     expect(screen.getByText("200+ Students Tutored")).toBeInTheDocument()
 
     const iframe = screen.getByTitle("FREE LSAT Strategy Call booking")
-    expect(iframe).toHaveAttribute("src", BOOKING_WIDGET_SRC)
+    expect(iframe).toHaveAttribute("src", BOOKING_PAGE_SRC)
     expect(iframe).toHaveAttribute("id", BOOKING_WIDGET_ID)
-    expect(screen.getByTestId("strategy-call-ghl-scheduler")).toBeInTheDocument()
-
-    const embed = document.getElementById("ghl-booking-form-embed") as HTMLScriptElement | null
-    expect(embed).toBeTruthy()
-    expect(embed?.src).toContain("booking.betterlsat.com/js/form_embed.js")
+    expect(screen.getByTestId("strategy-call-amelia-scheduler")).toBeInTheDocument()
 
     expect(screen.queryByRole("heading", { name: "Choose Your Tutoring Package" })).not.toBeInTheDocument()
     expect(screen.queryByText("5-Session Pack")).not.toBeInTheDocument()
   })
 
-  it("scrolls to the GHL widget from the hero CTA", async () => {
+  it("scrolls to the Amelia booking iframe from the hero CTA", async () => {
     const user = userEvent.setup()
     render(<FreeStrategyCallPage />)
 

@@ -1,10 +1,8 @@
-import { Navigate } from "react-router-dom"
+import { TutoringSessionsPage } from "@/features/tutoring/pages/tutoring-sessions-page"
 
-import { STUDENT_TUTORING_SESSIONS_HREF } from "@/features/app-shell/student-nav-config"
-
-/** `/sessions/all` → My Sessions (View all Sessions screen). */
+/** `/sessions/all` — full upcoming + past list (linked from My Sessions). */
 function ViewAllSessionsPage() {
-  return <Navigate to={STUDENT_TUTORING_SESSIONS_HREF} replace />
+  return <TutoringSessionsPage />
 }
 
 export { ViewAllSessionsPage }

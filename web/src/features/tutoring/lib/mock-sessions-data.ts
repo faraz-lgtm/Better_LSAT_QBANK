@@ -181,6 +181,7 @@ export const MOCK_TUTORING_SESSIONS: TutoringSessionsViewModel = {
   todos: [
     {
       id: "todo-1",
+      sessionId: "past-1",
       title: "Review the questions you missed on your last PrepTest",
       createdLabel: "Created Oct 29, 6:05 PM",
       dueLabel: "Due Nov 4 · From Maya Chen",
@@ -189,6 +190,7 @@ export const MOCK_TUTORING_SESSIONS: TutoringSessionsViewModel = {
     },
     {
       id: "todo-2",
+      sessionId: "past-1",
       title: "Drill 20 Flaw questions",
       createdLabel: "Created Oct 29, 6:05 PM",
       dueLabel: "Due Nov 4 · From Maya Chen",
@@ -197,6 +199,7 @@ export const MOCK_TUTORING_SESSIONS: TutoringSessionsViewModel = {
     },
     {
       id: "todo-3",
+      sessionId: "past-1",
       title: "Write down questions for Thursday's session",
       createdLabel: "Created Oct 30, 9:20 AM",
       dueLabel: "Before Nov 5",
@@ -205,6 +208,7 @@ export const MOCK_TUTORING_SESSIONS: TutoringSessionsViewModel = {
     },
     {
       id: "todo-4",
+      sessionId: "past-1",
       title: "Re-read your Oct 29 session notes",
       createdLabel: "Created Oct 29, 7:10 PM",
       dueLabel: "Anytime",
@@ -213,6 +217,7 @@ export const MOCK_TUTORING_SESSIONS: TutoringSessionsViewModel = {
     },
     {
       id: "todo-5",
+      sessionId: "past-1",
       title: "Book your 5 sessions",
       createdLabel: "Created Oct 29, 12:40 PM",
       dueLabel: "Completed Oct 29",

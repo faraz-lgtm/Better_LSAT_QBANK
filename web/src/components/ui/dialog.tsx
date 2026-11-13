@@ -29,20 +29,32 @@ function DialogOverlay({ className, ...props }: React.ComponentProps<typeof Dial
   )
 }
 
-function DialogContent({ className, children, ...props }: React.ComponentProps<typeof Dialog.Content>) {
+function DialogContent({
+  className,
+  children,
+  style,
+  ...props
+}: React.ComponentProps<typeof Dialog.Content>) {
   return (
     <DialogPortal>
       <DialogOverlay />
-      <Dialog.Content
-        data-slot="dialog-content"
-        className={cn(
-          "fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-xl border border-border bg-background p-6 shadow-lg sm:max-w-lg",
-          className,
-        )}
-        {...props}
+      {/* Center inside a `fixed inset-0` layer so `html { zoom: 0.75 }` cannot shift `top/left: 50%` off-center. */}
+      <div
+        data-slot="dialog-positioner"
+        className="pointer-events-none fixed inset-0 z-50 flex overflow-y-auto p-4"
       >
-        {children}
-      </Dialog.Content>
+        <Dialog.Content
+          data-slot="dialog-content"
+          className={cn(
+            "pointer-events-auto relative z-50 m-auto grid w-full max-w-[calc(100%-2rem)] gap-4 rounded-xl border border-border bg-background p-6 shadow-lg sm:max-w-lg",
+            className,
+          )}
+          style={style}
+          {...props}
+        >
+          {children}
+        </Dialog.Content>
+      </div>
     </DialogPortal>
   )
 }

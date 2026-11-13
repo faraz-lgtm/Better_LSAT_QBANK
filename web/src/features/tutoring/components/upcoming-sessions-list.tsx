@@ -1,15 +1,20 @@
 import { Link } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
-import { STUDENT_TUTORING_SESSIONS_HREF } from "@/features/app-shell/student-nav-config"
+import { STUDENT_TUTORING_SESSIONS_ALL_HREF } from "@/features/app-shell/student-nav-config"
 import type { TutoringSessionSummary } from "@/features/tutoring/lib/types"
 
 type UpcomingSessionsListProps = {
   sessions: TutoringSessionSummary[]
   showViewAllLink?: boolean
+  onReschedule?: (session: TutoringSessionSummary) => void
 }
 
-function UpcomingSessionsList({ sessions, showViewAllLink = true }: UpcomingSessionsListProps) {
+function UpcomingSessionsList({
+  sessions,
+  showViewAllLink = true,
+  onReschedule,
+}: UpcomingSessionsListProps) {
   return (
     <section className="mt-6">
       <div className="flex items-center justify-between gap-3">
@@ -18,7 +23,7 @@ function UpcomingSessionsList({ sessions, showViewAllLink = true }: UpcomingSess
         </h3>
         {showViewAllLink ? (
           <Link
-            to={STUDENT_TUTORING_SESSIONS_HREF}
+            to={STUDENT_TUTORING_SESSIONS_ALL_HREF}
             className="text-xs font-semibold tracking-[0.02em] text-[var(--primary)] hover:underline"
           >
             See all sessions →
@@ -42,17 +47,24 @@ function UpcomingSessionsList({ sessions, showViewAllLink = true }: UpcomingSess
               </p>
               <p className="mt-1 text-xs tracking-[0.02em] text-[var(--greyscale-500)]">{session.whenLabel}</p>
             </div>
-            {session.action === "join" ? (
-              <Button asChild size="sm" className="h-10 rounded-[10px] px-4">
-                <a href={session.joinUrl ?? undefined} target="_blank" rel="noopener noreferrer">
-                  Join
-                </a>
-              </Button>
-            ) : (
-              <Button type="button" variant="outline" size="sm" className="h-10 rounded-[10px] px-4">
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-10 rounded-[10px] px-4"
+                onClick={() => onReschedule?.(session)}
+              >
                 Reschedule
               </Button>
-            )}
+              {session.action === "join" && session.joinUrl ? (
+                <Button asChild size="sm" className="h-10 rounded-[10px] px-4">
+                  <a href={session.joinUrl} target="_blank" rel="noopener noreferrer">
+                    Join
+                  </a>
+                </Button>
+              ) : null}
+            </div>
           </li>
         ))}
       </ul>

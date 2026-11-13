@@ -796,6 +796,15 @@ verify_jwt = false
 [functions.tutoring-get-transcript]
 verify_jwt = false
 
+[functions.tutoring-list-todos]
+verify_jwt = false
+
+[functions.tutoring-create-todo]
+verify_jwt = false
+
+[functions.tutoring-update-todo]
+verify_jwt = false
+
 [functions.amelia-webhook]
 verify_jwt = false
 
