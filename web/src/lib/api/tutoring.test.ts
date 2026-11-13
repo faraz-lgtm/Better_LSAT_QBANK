@@ -108,6 +108,19 @@ describe("createTutoringApi", () => {
         },
         error: null,
       })
+      .mockResolvedValueOnce({
+        data: {
+          id: "t1",
+          sessionId: "s1",
+          title: "Drill more flaws",
+          tag: "Review",
+          done: true,
+          createdLabel: "Nov 12, 2026",
+          dueLabel: "Due Nov 20",
+          dueAt: "2026-11-20T00:00:00.000Z",
+        },
+        error: null,
+      })
     const api = createTutoringApi({
       auth: { getSession: async () => ({ data: { session: null } }) },
       functions: { invoke },
@@ -115,6 +128,12 @@ describe("createTutoringApi", () => {
 
     await api.createTodo({ sessionId: "s1", title: "Drill flaws" })
     await api.updateTodo({ todoId: "t1", done: true })
+    await api.updateTodo({
+      todoId: "t1",
+      title: "Drill more flaws",
+      tag: "Review",
+      dueAt: "2026-11-20",
+    })
     expect(invoke).toHaveBeenNthCalledWith(
       1,
       "tutoring-create-todo",
@@ -127,6 +146,18 @@ describe("createTutoringApi", () => {
       "tutoring-update-todo",
       expect.objectContaining({
         body: { todoId: "t1", done: true },
+      }),
+    )
+    expect(invoke).toHaveBeenNthCalledWith(
+      3,
+      "tutoring-update-todo",
+      expect.objectContaining({
+        body: {
+          todoId: "t1",
+          title: "Drill more flaws",
+          tag: "Review",
+          dueAt: "2026-11-20",
+        },
       }),
     )
   })

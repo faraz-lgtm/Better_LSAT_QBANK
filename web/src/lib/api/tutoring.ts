@@ -142,7 +142,13 @@ export function createTutoringApi(supabase: SupabaseClient) {
       return invokeTutoringPost("tutoring-create-todo", { ...input })
     },
 
-    updateTodo(input: { todoId: string; done: boolean }): Promise<TutoringTodo> {
+    updateTodo(input: {
+      todoId: string
+      done?: boolean
+      title?: string
+      tag?: TodoTag
+      dueAt?: string | null
+    }): Promise<TutoringTodo> {
       return invokeTutoringPost("tutoring-update-todo", { ...input })
     },
   }

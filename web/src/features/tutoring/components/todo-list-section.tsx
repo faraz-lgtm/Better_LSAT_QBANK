@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react"
-import { Clock3, Plus, X } from "lucide-react"
+import { Clock3, Pencil, Plus, X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -15,16 +15,19 @@ import {
 import type { TodoTag, TutoringTodo } from "@/features/tutoring/lib/types"
 import { cn } from "@/lib/utils"
 
+type TodoFormInput = {
+  title: string
+  tag: TodoTag
+  dueAt?: string | null
+}
+
 type TodoListSectionProps = {
   todos: TutoringTodo[]
   sessionId?: string | null
   loading?: boolean
   onToggle?: (todoId: string, done: boolean) => void | Promise<void>
-  onAdd?: (input: {
-    title: string
-    tag: TodoTag
-    dueAt?: string | null
-  }) => void | Promise<void>
+  onAdd?: (input: TodoFormInput) => void | Promise<void>
+  onEdit?: (todoId: string, input: TodoFormInput) => void | Promise<void>
 }
 
 const PRESET_TAG_CLASS: Record<string, string> = {
@@ -48,30 +51,56 @@ function formatCreatedNow(): string {
   }).format(new Date())
 }
 
+function toDateInputValue(iso: string | null | undefined): string {
+  if (!iso) return ""
+  const parsed = new Date(iso)
+  if (Number.isNaN(parsed.getTime())) return ""
+  return parsed.toISOString().slice(0, 10)
+}
+
 function TodoListSection({
   todos,
   sessionId = null,
   loading = false,
   onToggle,
   onAdd,
+  onEdit,
 }: TodoListSectionProps) {
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [editingTodo, setEditingTodo] = useState<TutoringTodo | null>(null)
   const [title, setTitle] = useState("")
   const [category, setCategory] = useState("Homework")
   const [dueDate, setDueDate] = useState("")
-  const [adding, setAdding] = useState(false)
+  const [saving, setSaving] = useState(false)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [createdLabel] = useState(() => formatCreatedNow())
 
   const doneCount = useMemo(() => todos.filter((todo) => todo.done).length, [todos])
   const progress = todos.length === 0 ? 0 : Math.round((doneCount / todos.length) * 100)
-  const canMutate = Boolean(sessionId && onAdd && onToggle)
+  const canToggle = Boolean(sessionId && onToggle)
+  const canAdd = Boolean(sessionId && onAdd)
+  const canEdit = Boolean(sessionId && onEdit)
   const canSubmit = Boolean(title.trim() && category.trim())
+  const isEditing = Boolean(editingTodo)
 
   function resetForm() {
+    setEditingTodo(null)
     setTitle("")
     setCategory("Homework")
     setDueDate("")
+  }
+
+  function openAddDialog() {
+    resetForm()
+    setDialogOpen(true)
+  }
+
+  function openEditDialog(todo: TutoringTodo) {
+    setEditingTodo(todo)
+    setTitle(todo.title)
+    setCategory(todo.tag)
+    setDueDate(toDateInputValue(todo.dueAt))
+    setDialogOpen(true)
   }
 
   async function handleToggle(todo: TutoringTodo) {
@@ -84,19 +113,26 @@ function TodoListSection({
     }
   }
 
-  async function handleAdd() {
-    if (!onAdd || !sessionId || !canSubmit) return
-    setAdding(true)
+  async function handleSubmit() {
+    if (!sessionId || !canSubmit) return
+    const payload: TodoFormInput = {
+      title: title.trim(),
+      tag: category.trim(),
+      dueAt: dueDate.trim() ? dueDate.trim() : null,
+    }
+    setSaving(true)
     try {
-      await onAdd({
-        title: title.trim(),
-        tag: category.trim(),
-        dueAt: dueDate.trim() ? dueDate.trim() : null,
-      })
+      if (editingTodo) {
+        if (!onEdit) return
+        await onEdit(editingTodo.id, payload)
+      } else {
+        if (!onAdd) return
+        await onAdd(payload)
+      }
       resetForm()
       setDialogOpen(false)
     } finally {
-      setAdding(false)
+      setSaving(false)
     }
   }
 
@@ -115,12 +151,12 @@ function TodoListSection({
           <span className="rounded-full bg-[var(--primary-25)] px-3 py-1.5 text-xs font-semibold tracking-[0.02em] text-[var(--primary)]">
             {doneCount} of {todos.length} done
           </span>
-          {canMutate ? (
+          {canAdd ? (
             <Button
               type="button"
               variant="outline"
               className="h-9 gap-1.5 rounded-[10px] px-3"
-              onClick={() => setDialogOpen(true)}
+              onClick={openAddDialog}
             >
               <Plus className="size-3.5" aria-hidden />
               Add Task
@@ -155,7 +191,7 @@ function TodoListSection({
             >
               <Checkbox
                 checked={todo.done}
-                disabled={!canMutate || busyId === todo.id}
+                disabled={!canToggle || busyId === todo.id}
                 onChange={() => void handleToggle(todo)}
                 aria-label={todo.title}
                 className="mt-1"
@@ -177,14 +213,26 @@ function TodoListSection({
                   <span>{todo.dueLabel}</span>
                 </div>
               </div>
-              <span
-                className={cn(
-                  "shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold tracking-[0.02em]",
-                  tagClass(todo.tag),
-                )}
-              >
-                {todo.tag}
-              </span>
+              <div className="flex shrink-0 items-center gap-2">
+                <span
+                  className={cn(
+                    "rounded-full px-2.5 py-1 text-xs font-semibold tracking-[0.02em]",
+                    tagClass(todo.tag),
+                  )}
+                >
+                  {todo.tag}
+                </span>
+                {canEdit ? (
+                  <button
+                    type="button"
+                    className="inline-flex size-8 items-center justify-center rounded-[8px] text-[var(--greyscale-500)] hover:bg-[#f3f6fb] hover:text-[var(--primary)]"
+                    aria-label={`Edit ${todo.title}`}
+                    onClick={() => openEditDialog(todo)}
+                  >
+                    <Pencil className="size-3.5" aria-hidden />
+                  </button>
+                ) : null}
+              </div>
             </li>
           ))}
         </ul>
@@ -205,10 +253,12 @@ function TodoListSection({
             <DialogHeader className="flex-row items-start justify-between space-y-0 border-b border-[#e4e9f2] px-[22px] py-[18px] text-left">
               <div className="flex flex-col gap-0.5">
                 <DialogTitle className="text-[18px] font-bold leading-[1.35] tracking-normal text-[var(--color-student-heading)]">
-                  Add Task
+                  {isEditing ? "Edit Task" : "Add Task"}
                 </DialogTitle>
                 <DialogDescription className="text-xs tracking-[0.02em] text-[var(--greyscale-500)]">
-                  Created {createdLabel}
+                  {isEditing
+                    ? `Created ${editingTodo?.createdLabel ?? ""}`
+                    : `Created ${createdLabel}`}
                 </DialogDescription>
               </div>
               <DialogClose asChild>
@@ -233,7 +283,7 @@ function TodoListSection({
                   onChange={(event) => setTitle(event.target.value)}
                   placeholder="e.g. Drill 10 Parallel Reasoning questions"
                   className="h-11 w-full rounded-[10px] border border-[#d5deec] bg-[var(--greyscale-0)] px-3 text-sm tracking-[0.02em] text-[var(--color-student-heading)] outline-none placeholder:text-[rgba(14,42,92,0.5)] focus:border-[var(--primary)]"
-                  disabled={adding}
+                  disabled={saving}
                   autoFocus
                 />
               </label>
@@ -249,7 +299,7 @@ function TodoListSection({
                     onChange={(event) => setCategory(event.target.value)}
                     placeholder="Homework"
                     className="h-11 w-full rounded-[10px] border border-[#d5deec] bg-[var(--greyscale-0)] px-3 text-sm tracking-[0.02em] text-[var(--color-student-heading)] outline-none placeholder:text-[rgba(14,42,92,0.5)] focus:border-[var(--primary)]"
-                    disabled={adding}
+                    disabled={saving}
                   />
                 </label>
                 <label className="flex flex-col gap-1.5">
@@ -261,7 +311,7 @@ function TodoListSection({
                     value={dueDate}
                     onChange={(event) => setDueDate(event.target.value)}
                     className="h-11 w-full rounded-[10px] border border-[#d5deec] bg-[var(--greyscale-0)] px-3 text-sm tracking-[0.02em] text-[var(--color-student-heading)] outline-none focus:border-[var(--primary)]"
-                    disabled={adding}
+                    disabled={saving}
                   />
                 </label>
               </div>
@@ -273,7 +323,7 @@ function TodoListSection({
                   type="button"
                   variant="outline"
                   className="h-11 min-h-11 rounded-[10px] border-[#d5deec] px-[18px] text-xs font-bold tracking-[0.02em] text-[var(--primary)]"
-                  disabled={adding}
+                  disabled={saving}
                 >
                   Cancel
                 </Button>
@@ -286,10 +336,10 @@ function TodoListSection({
                     ? "bg-[var(--primary)] text-white hover:bg-[var(--primary)]/90"
                     : "bg-[#d5deec] text-[var(--greyscale-500)] hover:bg-[#d5deec]",
                 )}
-                disabled={adding || !canSubmit}
-                onClick={() => void handleAdd()}
+                disabled={saving || !canSubmit}
+                onClick={() => void handleSubmit()}
               >
-                Add Task
+                {isEditing ? "Save Changes" : "Add Task"}
               </Button>
             </DialogFooter>
           </DialogContent>

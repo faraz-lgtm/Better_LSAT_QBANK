@@ -272,6 +272,8 @@ export type TutoringTodoDto = {
   done: boolean
   createdLabel: string
   dueLabel: string
+  /** ISO timestamp for edit forms; null when unset. */
+  dueAt: string | null
 }
 
 function formatTodoCreatedLabel(iso: string): string {
@@ -310,6 +312,7 @@ export function mapTodoRowToDto(row: TutoringSessionTodoRow): TutoringTodoDto {
     done: row.done,
     createdLabel: formatTodoCreatedLabel(row.created_at),
     dueLabel: formatTodoDueLabel(row.due_at),
+    dueAt: row.due_at,
   }
 }
 

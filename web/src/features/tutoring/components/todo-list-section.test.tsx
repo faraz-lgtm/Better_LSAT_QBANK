@@ -30,7 +30,13 @@ describe("TodoListSection", () => {
     const onToggle = vi.fn()
     const onAdd = vi.fn().mockResolvedValue(undefined)
     render(
-      <TodoListSection todos={todos} sessionId="s1" onToggle={onToggle} onAdd={onAdd} />,
+      <TodoListSection
+        todos={todos}
+        sessionId="s1"
+        onToggle={onToggle}
+        onAdd={onAdd}
+        onEdit={vi.fn()}
+      />,
     )
 
     expect(screen.getByText("Drill 20 Flaw questions")).toBeInTheDocument()
@@ -65,6 +71,49 @@ describe("TodoListSection", () => {
         title: "Review notes",
         tag: "Session prep",
         dueAt: null,
+      })
+    })
+  })
+
+  it("edits an existing task through the Edit Task dialog", async () => {
+    const user = userEvent.setup()
+    const onEdit = vi.fn().mockResolvedValue(undefined)
+    render(
+      <TodoListSection
+        todos={[
+          {
+            ...todos[0],
+            dueAt: "2026-11-20T00:00:00.000Z",
+            dueLabel: "Due Nov 20",
+          },
+        ]}
+        sessionId="s1"
+        onToggle={vi.fn()}
+        onAdd={vi.fn()}
+        onEdit={onEdit}
+      />,
+    )
+
+    await user.click(screen.getByRole("button", { name: "Edit Drill 20 Flaw questions" }))
+
+    const dialog = screen.getByRole("dialog")
+    expect(within(dialog).getByRole("heading", { name: "Edit Task" })).toBeInTheDocument()
+    const titleInput = within(dialog).getByPlaceholderText(
+      "e.g. Drill 10 Parallel Reasoning questions",
+    )
+    expect(titleInput).toHaveValue("Drill 20 Flaw questions")
+    expect(within(dialog).getByPlaceholderText("Homework")).toHaveValue("Homework")
+    expect(within(dialog).getByDisplayValue("2026-11-20")).toBeInTheDocument()
+
+    await user.clear(titleInput)
+    await user.type(titleInput, "Drill 30 Flaw questions")
+    await user.click(within(dialog).getByRole("button", { name: "Save Changes" }))
+
+    await waitFor(() => {
+      expect(onEdit).toHaveBeenCalledWith("todo-1", {
+        title: "Drill 30 Flaw questions",
+        tag: "Homework",
+        dueAt: "2026-11-20",
       })
     })
   })

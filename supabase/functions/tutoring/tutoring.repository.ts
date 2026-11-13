@@ -448,14 +448,27 @@ export function createTutoringRepository(client: SupabaseClient) {
       return data as TutoringSessionTodoRow | null
     },
 
-    async updateTodoDone(
+    async updateTodo(
       userId: string,
       todoId: string,
-      done: boolean,
+      patch: {
+        done?: boolean
+        title?: string
+        tag?: TutoringTodoTag
+        dueAt?: string | null
+      },
     ): Promise<TutoringSessionTodoRow> {
+      const updates: Record<string, unknown> = {
+        updated_at: new Date().toISOString(),
+      }
+      if (typeof patch.done === 'boolean') updates.done = patch.done
+      if (typeof patch.title === 'string') updates.title = patch.title
+      if (typeof patch.tag === 'string') updates.tag = patch.tag
+      if (patch.dueAt !== undefined) updates.due_at = patch.dueAt
+
       const { data, error } = await client
         .from('tutoring_session_todos')
-        .update({ done, updated_at: new Date().toISOString() })
+        .update(updates)
         .eq('user_id', userId)
         .eq('id', todoId)
         .select('*')

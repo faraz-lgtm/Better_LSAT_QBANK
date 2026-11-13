@@ -318,10 +318,62 @@ export function createTutoringService(deps: {
       return mapTodoRowToDto(row)
     },
 
-    async updateTodo(userId: string, input: { todoId: string; done: boolean }) {
+    async updateTodo(
+      userId: string,
+      input: {
+        todoId: string
+        done?: boolean
+        title?: string
+        tag?: string
+        dueAt?: string | null
+      },
+    ) {
       const existing = await repository.getTodoForUser(userId, input.todoId)
       if (!existing) throw new Error('Todo not found')
-      const row = await repository.updateTodoDone(userId, input.todoId, input.done)
+
+      const patch: {
+        done?: boolean
+        title?: string
+        tag?: string
+        dueAt?: string | null
+      } = {}
+
+      if (typeof input.done === 'boolean') patch.done = input.done
+
+      if (typeof input.title === 'string') {
+        const title = input.title.trim()
+        if (!title) throw new Error('title is required')
+        patch.title = title
+      }
+
+      if (typeof input.tag === 'string') {
+        const tag = input.tag.trim()
+        if (!tag) throw new Error('tag is required')
+        patch.tag = tag.slice(0, 64)
+      }
+
+      if (input.dueAt !== undefined) {
+        if (input.dueAt === null || (typeof input.dueAt === 'string' && !input.dueAt.trim())) {
+          patch.dueAt = null
+        } else if (typeof input.dueAt === 'string') {
+          const dueAt = new Date(input.dueAt).toISOString()
+          if (Number.isNaN(Date.parse(dueAt))) throw new Error('dueAt is invalid')
+          patch.dueAt = dueAt
+        } else {
+          throw new Error('dueAt is invalid')
+        }
+      }
+
+      if (
+        patch.done === undefined &&
+        patch.title === undefined &&
+        patch.tag === undefined &&
+        patch.dueAt === undefined
+      ) {
+        throw new Error('No updates provided')
+      }
+
+      const row = await repository.updateTodo(userId, input.todoId, patch)
       return mapTodoRowToDto(row)
     },
   }

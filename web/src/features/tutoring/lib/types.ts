@@ -97,6 +97,8 @@ export type TutoringTodo = {
   title: string
   createdLabel: string
   dueLabel: string
+  /** ISO timestamp for edit forms; null/omitted when unset. */
+  dueAt?: string | null
   tag: TodoTag
   done: boolean
   source?: "zoom_summary" | "user"

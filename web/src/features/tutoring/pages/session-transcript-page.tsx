@@ -88,6 +88,36 @@ function SessionTranscriptPage() {
     setTodos((current) => [...current, created])
   }
 
+  async function handleEditTodo(
+    todoId: string,
+    input: { title: string; tag: TodoTag; dueAt?: string | null },
+  ) {
+    const previous = todos
+    const dueAt = input.dueAt ?? null
+    const dueLabel = dueAt
+      ? `Due ${new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(new Date(dueAt))}`
+      : "No due date"
+    setTodos((current) =>
+      current.map((todo) =>
+        todo.id === todoId
+          ? { ...todo, title: input.title, tag: input.tag, dueAt, dueLabel }
+          : todo,
+      ),
+    )
+    try {
+      const updated = await api.updateTodo({
+        todoId,
+        title: input.title,
+        tag: input.tag,
+        dueAt,
+      })
+      if (!updated?.id) throw new Error("Invalid update response")
+      setTodos((current) => current.map((todo) => (todo.id === todoId ? updated : todo)))
+    } catch {
+      setTodos(previous)
+    }
+  }
+
   return (
     <StudentMain
       className="bg-[var(--primary-0)]"
@@ -132,6 +162,7 @@ function SessionTranscriptPage() {
           loading={todosLoading}
           onToggle={handleToggleTodo}
           onAdd={handleAddTodo}
+          onEdit={handleEditTodo}
         />
       ) : null}
     </StudentMain>

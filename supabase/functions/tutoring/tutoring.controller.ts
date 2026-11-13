@@ -233,15 +233,56 @@ export async function handleTutoringUpdateTodo(req: Request): Promise<Response> 
     const body = await readJsonBody(req)
     const todoId = typeof body.todoId === 'string' ? body.todoId : ''
     if (!todoId) return json({ error: 'todoId is required' }, { status: 400 }, cors)
-    if (typeof body.done !== 'boolean') {
+    if ('done' in body && typeof body.done !== 'boolean') {
       return json({ error: 'done must be a boolean' }, { status: 400 }, cors)
     }
+
+    const patch: {
+      todoId: string
+      done?: boolean
+      title?: string
+      tag?: string
+      dueAt?: string | null
+    } = { todoId }
+
+    if (typeof body.done === 'boolean') patch.done = body.done
+    if (typeof body.title === 'string') patch.title = body.title
+    if (typeof body.tag === 'string') patch.tag = body.tag
+    if ('dueAt' in body) {
+      if (body.dueAt === null || typeof body.dueAt === 'string') {
+        patch.dueAt = body.dueAt
+      } else {
+        return json({ error: 'dueAt is invalid' }, { status: 400 }, cors)
+      }
+    }
+
+    if (
+      patch.done === undefined &&
+      patch.title === undefined &&
+      patch.tag === undefined &&
+      !('dueAt' in patch)
+    ) {
+      return json(
+        { error: 'Provide at least one of done, title, tag, dueAt' },
+        { status: 400 },
+        cors,
+      )
+    }
+
     const { service } = buildService()
-    const result = await service.updateTodo(auth.user.id, { todoId, done: body.done })
+    const result = await service.updateTodo(auth.user.id, patch)
     return json(result, {}, cors)
   } catch (error) {
     const message = formatUnknownError(error)
-    const status = message === 'Todo not found' ? 404 : 500
+    const status =
+      message === 'Todo not found'
+        ? 404
+        : message === 'title is required' ||
+            message === 'tag is required' ||
+            message === 'dueAt is invalid' ||
+            message === 'No updates provided'
+          ? 400
+          : 500
     return json({ error: message }, { status }, cors)
   }
 }
