@@ -4,6 +4,7 @@ import {
   clearProduktlyUser,
   closeProduktlyFeedback,
   identifyProduktlyUser,
+  keepAppInteractiveDuringProduktlyFeedback,
   openProduktlyFeedback,
   startProduktlyTour,
 } from "./produktly"
@@ -194,5 +195,22 @@ describe("produktly helpers", () => {
   it("closeProduktlyFeedback forwards id", () => {
     closeProduktlyFeedback(2722)
     expect(closeFeedback).toHaveBeenCalledWith({ id: 2722 })
+  })
+
+  it("keepAppInteractiveDuringProduktlyFeedback strips inert from #root as Produktly adds it", async () => {
+    const root = document.createElement("div")
+    root.id = "root"
+    document.body.appendChild(root)
+
+    const stop = keepAppInteractiveDuringProduktlyFeedback()
+    root.setAttribute("inert", "")
+    await Promise.resolve()
+    expect(root.hasAttribute("inert")).toBe(false)
+
+    stop()
+    root.setAttribute("inert", "")
+    await Promise.resolve()
+    expect(root.hasAttribute("inert")).toBe(true)
+    root.remove()
   })
 })

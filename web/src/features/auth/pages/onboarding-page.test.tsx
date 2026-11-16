@@ -12,13 +12,9 @@ const getMyProfile = vi.fn()
 const getStudyContext = vi.fn()
 const saveOnboarding = vi.fn()
 const completeFirstLogin = vi.fn()
-const signOut = vi.fn()
-const clearStudentSessionCaches = vi.fn()
-const resetUser = vi.fn()
-
 vi.mock("@/lib/supabase/client", () => ({
   getSupabaseBrowserClient: () => ({
-    auth: { signOut },
+    auth: {},
   }),
 }))
 
@@ -49,14 +45,9 @@ vi.mock("@/lib/auth/fetch-post-auth-destination", () => ({
   fetchPostAuthDestination: vi.fn(async () => "/app"),
 }))
 
-vi.mock("@/lib/auth/clear-student-session-caches", () => ({
-  clearStudentSessionCaches: () => clearStudentSessionCaches(),
-}))
-
 vi.mock("@/lib/analytics/posthog", () => ({
   AnalyticsEvent: { onboardingCompleted: "onboarding_completed" },
   captureEvent: vi.fn(),
-  resetUser: () => resetUser(),
 }))
 
 vi.mock("@/lib/analytics/track-checkout-purchase", () => ({
@@ -105,7 +96,6 @@ function renderOnboarding() {
       <Routes>
         <Route path="/onboarding" element={<OnboardingPage />} />
         <Route path="/app" element={<p>App home</p>} />
-        <Route path="/login" element={<p>Login view</p>} />
         <Route path="/diagnostic/start" element={<p>Diagnostic start</p>} />
       </Routes>
     </MemoryRouter>,
@@ -121,10 +111,6 @@ describe("OnboardingPage password setup", () => {
     getStudyContext.mockReset()
     saveOnboarding.mockReset()
     completeFirstLogin.mockReset()
-    signOut.mockReset()
-    clearStudentSessionCaches.mockReset()
-    resetUser.mockReset()
-    signOut.mockResolvedValue({ error: null })
     window.localStorage.clear()
     window.sessionStorage.clear()
 
@@ -158,21 +144,12 @@ describe("OnboardingPage password setup", () => {
     })
   })
 
-  it("shows logout instead of sign in and signs the user out", async () => {
-    const user = userEvent.setup()
-
+  it("hides logout and sign-in CTAs on the welcome step", async () => {
     renderOnboarding()
 
     expect(await screen.findByRole("heading", { name: /welcome to betterlsat/i })).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: /^logout$/i })).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: /^logout$/i })).not.toBeInTheDocument()
     expect(screen.queryByRole("link", { name: /sign in/i })).not.toBeInTheDocument()
-
-    await user.click(screen.getByRole("button", { name: /^logout$/i }))
-
-    await waitFor(() => expect(signOut).toHaveBeenCalledOnce())
-    expect(clearStudentSessionCaches).toHaveBeenCalledOnce()
-    expect(resetUser).toHaveBeenCalledOnce()
-    expect(await screen.findByText(/login view/i)).toBeInTheDocument()
   })
 
   it("shows same_password error on the welcome step and does not advance", async () => {
@@ -242,6 +219,40 @@ describe("OnboardingPage password setup", () => {
 
     expect(await screen.findByText(/phone is required/i)).toBeInTheDocument()
     expect(screen.getByRole("heading", { name: /welcome to betterlsat/i })).toBeInTheDocument()
+    expect(updatePassword).not.toHaveBeenCalled()
+    expect(saveOnboarding).not.toHaveBeenCalled()
+  })
+
+  it("keeps typed values and shows live name and phone errors", async () => {
+    const user = userEvent.setup()
+
+    renderOnboarding()
+
+    expect(await screen.findByRole("heading", { name: /welcome to betterlsat/i })).toBeInTheDocument()
+    await user.type(screen.getByPlaceholderText(/first name/i), "Assad1212")
+    expect(screen.getByPlaceholderText(/first name/i)).toHaveValue("Assad1212")
+    expect(screen.getByText(/name cannot include numbers/i)).toBeInTheDocument()
+
+    await user.type(screen.getByPlaceholderText(/phone number/i), "sdsdd3434")
+    expect(screen.getByPlaceholderText(/phone number/i)).toHaveValue("sdsdd3434")
+    expect(screen.getByText(/phone number cannot include letters/i)).toBeInTheDocument()
+  })
+
+  it("rejects phone numbers with letters on continue", async () => {
+    const user = userEvent.setup()
+
+    renderOnboarding()
+
+    expect(await screen.findByRole("heading", { name: /welcome to betterlsat/i })).toBeInTheDocument()
+    await user.type(screen.getByPlaceholderText(/first name/i), "Ada")
+    await user.type(screen.getByPlaceholderText(/last name/i), "Lovelace")
+    await user.type(screen.getByPlaceholderText(/phone number/i), "sdsdd3434")
+    const passwordFields = screen.getAllByPlaceholderText(/enter your password/i)
+    await user.type(passwordFields[0], "same-as-old-password")
+    await user.type(passwordFields[1], "same-as-old-password")
+    await user.click(screen.getByRole("button", { name: /^continue$/i }))
+
+    expect(screen.getAllByText(/phone number cannot include letters/i).length).toBeGreaterThan(0)
     expect(updatePassword).not.toHaveBeenCalled()
     expect(saveOnboarding).not.toHaveBeenCalled()
   })

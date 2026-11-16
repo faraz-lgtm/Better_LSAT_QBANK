@@ -22,7 +22,7 @@ function TutoringTestimonials({ testimonials }: TutoringTestimonialsProps) {
             <div className="relative w-full overflow-hidden rounded-[16px]" style={{ aspectRatio: "73 / 36" }}>
               <iframe
                 loading="lazy"
-                title={`${item.name} testimonial video`}
+                title="Student testimonial video"
                 src={item.videoEmbedSrc}
                 className="absolute inset-0 h-full w-full border-0"
                 referrerPolicy="origin"
@@ -32,9 +32,6 @@ function TutoringTestimonials({ testimonials }: TutoringTestimonialsProps) {
             <div className="flex flex-col gap-1">
               <p className="text-xs leading-normal text-[#ffbd4c]" aria-label="5 star rating">
                 ★★★★★
-              </p>
-              <p className="text-xs font-bold tracking-[0.02em] text-[var(--color-student-heading)]">
-                {item.name}
               </p>
               <p className="text-xs tracking-[0.02em] text-[var(--primary)]">BetterLSAT student</p>
             </div>

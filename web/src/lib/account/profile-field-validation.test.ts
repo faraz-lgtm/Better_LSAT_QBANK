@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest"
 
-import { validateAccountNameParts, validateAccountPhone } from "./profile-field-validation"
+import {
+  getAccountNameTypingError,
+  getAccountPhoneTypingError,
+  validateAccountNameParts,
+  validateAccountPhone,
+} from "./profile-field-validation"
 
 describe("validateAccountNameParts", () => {
   it("requires first and last name", () => {
@@ -18,6 +23,13 @@ describe("validateAccountNameParts", () => {
   })
 })
 
+describe("getAccountNameTypingError", () => {
+  it("flags digits while typing without requiring both parts yet", () => {
+    expect(getAccountNameTypingError("Assad1212", "")).toBe("Name cannot include numbers.")
+    expect(getAccountNameTypingError("Assad", "Ulyat")).toBeNull()
+  })
+})
+
 describe("validateAccountPhone", () => {
   it("requires a value", () => {
     expect(validateAccountPhone("   ")).toBe("Phone is required.")
@@ -25,6 +37,7 @@ describe("validateAccountPhone", () => {
 
   it("rejects letters", () => {
     expect(validateAccountPhone("aaa1133")).toBe("Phone number cannot include letters.")
+    expect(validateAccountPhone("sdsdd3434")).toBe("Phone number cannot include letters.")
   })
 
   it("rejects values that are not phone-shaped", () => {
@@ -35,5 +48,17 @@ describe("validateAccountPhone", () => {
   it("allows formatted phone numbers", () => {
     expect(validateAccountPhone("+1 555 987 6543")).toBeNull()
     expect(validateAccountPhone("(555) 123-4567")).toBeNull()
+  })
+})
+
+describe("getAccountPhoneTypingError", () => {
+  it("allows empty and short numeric values while typing", () => {
+    expect(getAccountPhoneTypingError("")).toBeNull()
+    expect(getAccountPhoneTypingError("14")).toBeNull()
+  })
+
+  it("shows letter and symbol errors immediately", () => {
+    expect(getAccountPhoneTypingError("sdsdd3434")).toBe("Phone number cannot include letters.")
+    expect(getAccountPhoneTypingError("555#99")).toBe("Enter a valid phone number.")
   })
 })

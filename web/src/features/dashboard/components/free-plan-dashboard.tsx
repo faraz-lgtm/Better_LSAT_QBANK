@@ -24,8 +24,6 @@ import { cn } from "@/lib/utils"
 const FREE_START_FULL_HREF = "/diagnostic/start?intent=quick"
 const FREE_START_MINI_HREF = "/diagnostic/start?intent=mini"
 const PREP_COURSE_HREF = `/app/prep-course/${PREP_COURSE_ESSENTIALS_SLUG}`
-const LSAC_LICENSE_HREF = "https://www.lsac.org/"
-const LSAC_LICENSE_IMG = "/figma/insights-overview/lsac-licensed.png"
 
 const LOCKED_STAT_CARDS = [
   { id: "study-time", label: "Total Study Time", skeletonWidthClass: "w-11" },
@@ -375,14 +373,14 @@ function FreePlanContinueLearning() {
         </div>
       </div>
 
-      <div className="flex gap-2 overflow-x-auto border-t border-[var(--greyscale-100)] pt-3">
+      <div className="grid grid-cols-1 gap-2 border-t border-[var(--greyscale-100)] pt-3 sm:grid-cols-2 lg:grid-cols-5">
         {CONTINUE_LEARNING_MODULES.map((module) => {
           if (module.kind === "progress") {
             return (
               <Link
                 key={module.id}
                 to={PREP_COURSE_HREF}
-                className="flex h-[52px] min-w-[162px] shrink-0 items-center gap-2.5 rounded-[10px] border border-[var(--primary-25)] bg-[var(--greyscale-0)] px-3 py-2.5 transition-colors hover:bg-[var(--greyscale-25)]"
+                className="flex h-[52px] min-w-0 items-center gap-2.5 rounded-[10px] border border-[var(--primary-25)] bg-[var(--greyscale-0)] px-3 py-2.5 transition-colors hover:bg-[var(--greyscale-25)]"
               >
                 <CourseProgressRing value={0} size="sm" />
                 <div className="min-w-0">
@@ -401,7 +399,7 @@ function FreePlanContinueLearning() {
             <button
               key={module.id}
               type="button"
-              className="flex h-[52px] min-w-0 shrink-0 items-center gap-2.5 rounded-[10px] border border-[var(--greyscale-100)] bg-[var(--primary-0,#f3f7ff)] px-3 py-2.5 text-left transition-colors hover:bg-[var(--primary-25)]"
+              className="flex h-[52px] min-w-0 items-center gap-2.5 rounded-[10px] border border-[var(--greyscale-100)] bg-[var(--primary-0,#f3f7ff)] px-3 py-2.5 text-left transition-colors hover:bg-[var(--primary-25)]"
               onClick={() => openLockedContentModal("courses")}
             >
               <span className="flex size-[30px] shrink-0 items-center justify-center rounded-full bg-[var(--primary-25)]">
@@ -412,7 +410,7 @@ function FreePlanContinueLearning() {
                   {module.title}
                 </p>
                 <p className="m-0 text-[11px] leading-[13.75px] text-[var(--greyscale-500)]">
-                  {module.lessonsTotal} lessons · Upgrade
+                  {module.lessonsTotal} lessons
                 </p>
               </div>
             </button>
@@ -589,36 +587,6 @@ function FreePlanDiagnosticHistory() {
   )
 }
 
-function FreePlanLsacLicenseBanner() {
-  return (
-    <section className="flex w-full flex-col gap-[18px] rounded-2xl border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-[22px] py-[18px] sm:flex-row sm:items-center">
-      <img
-        src={LSAC_LICENSE_IMG}
-        alt="Law School Admission Council"
-        width={154}
-        height={41}
-        className="h-[41px] w-[154px] shrink-0 object-contain"
-        draggable={false}
-      />
-      <div className="min-w-0 flex-1">
-        <p className="m-0 text-lg font-bold leading-[1.35] text-[#0e2a5c]">Official LSAC licensed prep</p>
-        <p className="m-0 pt-0.5 text-sm leading-[1.5] tracking-[0.28px] text-[#4a5b78]">
-          Practice questions and sections on betterLSAT are licensed from the Law School Admission
-          Council.
-        </p>
-      </div>
-      <a
-        href={LSAC_LICENSE_HREF}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="inline-flex h-10 shrink-0 items-center justify-center rounded-[14px] px-4 text-sm font-semibold tracking-[0.28px] text-[var(--primary)] hover:underline"
-      >
-        About our license
-      </a>
-    </section>
-  )
-}
-
 function FreePlanDashboard({ firstName }: FreePlanDashboardProps) {
   return (
     <div className="dashboard-page free-plan-dashboard flex flex-col gap-6">
@@ -637,7 +605,6 @@ function FreePlanDashboard({ firstName }: FreePlanDashboardProps) {
       <FreePlanLockedPerformanceOverview />
       <FreePlanTranscriptsBanner />
       <FreePlanDiagnosticHistory />
-      <FreePlanLsacLicenseBanner />
     </div>
   )
 }

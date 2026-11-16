@@ -18,6 +18,8 @@ export type PostAuthDestination =
 
 /**
  * Route students using diagnostic funnel progress when active.
+ * First-time login always collects onboarding (name/phone) before funnel/diagnostic
+ * or dashboard — including magic-link and Google signup with acquisition flags set.
  * Outside the funnel, payment stays soft-gated on the dashboard; subscribed but
  * not LawHub-eligible soft-lands on /app/lsac-link-step (navigation stays open).
  */
@@ -37,18 +39,20 @@ export function resolvePostAuthDestination(
     return "/admin"
   }
 
+  // Collect name/phone before diagnostic funnel or dashboard (magic link / Google).
+  if (profile.is_first_time_login) {
+    logRouteRedirect(from, "/onboarding", "first-time login")
+    return "/onboarding"
+  }
+
   if (funnel.inAcquisitionFunnel) {
     ensureDiagnosticIntent()
     logRouteRedirect(from, "/diagnostic/start", "diagnostic acquisition funnel")
     return "/diagnostic/start"
   }
 
-  // Prefer results when the exam is done. clearDiagnosticFunnel() clears funnelActive
-  // on submit, so first-time students must not fall through to /onboarding.
-  if (
-    funnel.completedDiagnostic &&
-    (funnel.funnelActive || profile.is_first_time_login)
-  ) {
+  // Prefer results when the exam is done (funnelActive may be cleared on submit).
+  if (funnel.completedDiagnostic && funnel.funnelActive) {
     logRouteRedirect(from, "/app/diagnostic/results", "diagnostic funnel complete")
     return "/app/diagnostic/results"
   }
@@ -57,11 +61,6 @@ export function resolvePostAuthDestination(
     ensureDiagnosticIntent()
     logRouteRedirect(from, "/diagnostic/start", "pending diagnostic intent")
     return "/diagnostic/start"
-  }
-
-  if (profile.is_first_time_login) {
-    logRouteRedirect(from, "/onboarding", "first-time login")
-    return "/onboarding"
   }
 
   if (funnel.completedDiagnostic && entitlement?.accessState === "PAYMENT_REQUIRED") {

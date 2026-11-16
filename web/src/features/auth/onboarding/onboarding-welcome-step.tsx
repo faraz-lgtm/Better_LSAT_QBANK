@@ -25,9 +25,10 @@ type OnboardingWelcomeStepProps = {
   requiresPassword: boolean
   isLoading: boolean
   isSubmitting: boolean
+  nameError?: string | null
+  phoneError?: string | null
   error: string | null
   onContinue: () => void
-  onLogout?: () => void
 }
 
 function OnboardingWelcomeStep({
@@ -46,12 +47,13 @@ function OnboardingWelcomeStep({
   requiresPassword,
   isLoading,
   isSubmitting,
+  nameError = null,
+  phoneError = null,
   error,
   onContinue,
-  onLogout,
 }: OnboardingWelcomeStepProps) {
   return (
-    <GuestMarketingPanelLayout headerVariant="logout" onLogout={onLogout}>
+    <GuestMarketingPanelLayout headerVariant="onboarding">
       <AuthCard className="guest-marketing-signup-card">
         <div className="figma-gap-24 flex flex-col">
           <div className="figma-gap-16 flex flex-col items-center text-center">
@@ -77,6 +79,7 @@ function OnboardingWelcomeStep({
                       placeholder="First name"
                       autoComplete="given-name"
                       disabled={isSubmitting}
+                      aria-invalid={Boolean(nameError) || undefined}
                     />
                   </div>
                   <div className="figma-gap-8 flex flex-col">
@@ -89,9 +92,15 @@ function OnboardingWelcomeStep({
                       placeholder="Last name"
                       autoComplete="family-name"
                       disabled={isSubmitting}
+                      aria-invalid={Boolean(nameError) || undefined}
                     />
                   </div>
                 </div>
+                {nameError ? (
+                  <p className="figma-text-sm figma-track-sm text-[#df1c41]" role="alert">
+                    {nameError}
+                  </p>
+                ) : null}
 
                 <div className="figma-gap-8 flex flex-col">
                   <p className="figma-text-sm figma-track-sm font-medium text-[#062357]">
@@ -104,7 +113,13 @@ function OnboardingWelcomeStep({
                     placeholder="Phone number"
                     autoComplete="tel"
                     disabled={isSubmitting}
+                    aria-invalid={Boolean(phoneError) || undefined}
                   />
+                  {phoneError ? (
+                    <p className="figma-text-sm figma-track-sm text-[#df1c41]" role="alert">
+                      {phoneError}
+                    </p>
+                  ) : null}
                 </div>
 
                 {requiresPassword ? (

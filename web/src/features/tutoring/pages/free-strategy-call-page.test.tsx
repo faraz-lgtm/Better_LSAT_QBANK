@@ -34,6 +34,10 @@ describe("FreeStrategyCallPage", () => {
     expect(iframe).toHaveAttribute("id", BOOKING_WIDGET_ID)
     expect(screen.getByTestId("strategy-call-amelia-scheduler")).toBeInTheDocument()
 
+    expect(
+      screen.getByRole("heading", { name: "What students say about BetterLSAT tutoring" }),
+    ).toBeInTheDocument()
+
     expect(screen.queryByRole("heading", { name: "Choose Your Tutoring Package" })).not.toBeInTheDocument()
     expect(screen.queryByText("5-Session Pack")).not.toBeInTheDocument()
   })

@@ -114,11 +114,6 @@ describe("FreePlanDashboard", () => {
       "href",
       STUDENT_TUTORING_BOOK_HREF,
     )
-    expect(screen.getByText("Official LSAC licensed prep")).toBeInTheDocument()
-    expect(screen.getByRole("link", { name: "About our license" })).toHaveAttribute(
-      "href",
-      "https://www.lsac.org/",
-    )
   })
 
   it("opens the pricing modal from Compare Plans and locked modules", async () => {

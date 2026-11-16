@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { StudentMain } from "@/features/student/components/student-main"
 import {
   closeProduktlyFeedback,
+  keepAppInteractiveDuringProduktlyFeedback,
   openProduktlyFeedback,
 } from "@/lib/analytics/produktly"
 import { PRODUKTLY_FEEDBACK_WIDGET_ID } from "@/lib/analytics/produktly-widgets"
@@ -12,7 +13,9 @@ import { PRODUKTLY_FEEDBACK_WIDGET_ID } from "@/lib/analytics/produktly-widgets"
 function FeedbackPage() {
   useEffect(() => {
     openProduktlyFeedback(PRODUKTLY_FEEDBACK_WIDGET_ID)
+    const restoreShell = keepAppInteractiveDuringProduktlyFeedback()
     return () => {
+      restoreShell()
       closeProduktlyFeedback(PRODUKTLY_FEEDBACK_WIDGET_ID)
     }
   }, [])

@@ -7,32 +7,23 @@ import {
 } from "@/features/guest/diagnostic/guest-diagnostic-intent-styles"
 
 type GuestMarketingPanelHeaderProps = {
-  variant: "intent" | "signup" | "login" | "logout"
-  onLogout?: () => void
+  variant: "intent" | "signup" | "login" | "onboarding"
 }
 
-function GuestMarketingPanelHeader({ variant, onLogout }: GuestMarketingPanelHeaderProps) {
+function GuestMarketingPanelHeader({ variant }: GuestMarketingPanelHeaderProps) {
   return (
     <header className={GUEST_INTENT_HEADER_CLASS}>
       <Link to={STUDENT_DASHBOARD_HREF} className="flex shrink-0 items-center" aria-label="betterLSAT home">
         <img src="/betterLSAT_LOGO.png" alt="betterLSAT" className="auth-split-logo" />
       </Link>
 
-      <div className="flex min-w-0 flex-wrap items-center justify-end gap-3">
-        {variant === "intent" ? (
-          <button type="button" className={GUEST_INTENT_UPGRADE_BUTTON_CLASS}>
-            Upgrade now
-          </button>
-        ) : null}
-        {variant === "logout" ? (
-          <button
-            type="button"
-            className="m-0 cursor-pointer border-0 bg-transparent p-0 text-base font-semibold leading-6 tracking-[0.32px] text-[#0d47a1]"
-            onClick={onLogout}
-          >
-            Logout
-          </button>
-        ) : (
+      {variant === "onboarding" ? null : (
+        <div className="flex min-w-0 flex-wrap items-center justify-end gap-3">
+          {variant === "intent" ? (
+            <button type="button" className={GUEST_INTENT_UPGRADE_BUTTON_CLASS}>
+              Upgrade now
+            </button>
+          ) : null}
           <p className="m-0 text-base leading-6 tracking-[0.32px] text-[#666d80]">
             {variant === "signup" ? (
               <>
@@ -57,8 +48,8 @@ function GuestMarketingPanelHeader({ variant, onLogout }: GuestMarketingPanelHea
               </>
             )}
           </p>
-        )}
-      </div>
+        </div>
+      )}
     </header>
   )
 }

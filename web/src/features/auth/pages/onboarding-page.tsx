@@ -16,13 +16,12 @@ import {
   appendCheckoutSuccessQuery,
   useTrackCheckoutPurchase,
 } from "@/lib/analytics/track-checkout-purchase"
-import { AnalyticsEvent, captureEvent, resetUser } from "@/lib/analytics/posthog"
+import { AnalyticsEvent, captureEvent } from "@/lib/analytics/posthog"
 import { syncDiagnosticMailerliteIfAuthenticated } from "@/lib/analytics/sync-diagnostic-mailerlite"
 import { createAuthApi } from "@/lib/api/auth"
 import { createUsersApi } from "@/lib/api/users"
 import { getAppStore } from "@/app/store-ref"
 import { setProfile } from "@/features/student-session/studentSessionSlice"
-import { clearStudentSessionCaches } from "@/lib/auth/clear-student-session-caches"
 import { fetchPostAuthDestination } from "@/lib/auth/fetch-post-auth-destination"
 import {
   ensureDiagnosticIntent,
@@ -34,7 +33,12 @@ import {
 } from "@/lib/auth/diagnostic-intent"
 import { resolvePendingCheckoutDestination } from "@/lib/auth/pending-checkout-plan"
 import { userNeedsPasswordSetup } from "@/lib/auth/password-setup"
-import { validateAccountPhone } from "@/lib/account/profile-field-validation"
+import {
+  getAccountNameTypingError,
+  getAccountPhoneTypingError,
+  validateAccountNameParts,
+  validateAccountPhone,
+} from "@/lib/account/profile-field-validation"
 import { splitFullName } from "@/lib/lawhub-identity"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { formatSupabaseCallError } from "@/lib/supabase/format-call-error"
@@ -111,11 +115,11 @@ function OnboardingPage() {
           void syncDiagnosticMailerliteIfAuthenticated(getSupabaseBrowserClient())
         }
         const needsPassword = userNeedsPasswordSetup(user, session)
-        // Already finished welcome prefs (or diagnostic) — leave onboarding even if
+        // Already finished welcome prefs — leave onboarding even if
         // is_first_time_login was left true after a partial prior save.
+        // Completing the diagnostic alone must not skip name/phone collection.
         const alreadyOnboarded =
           Boolean(studyContext?.preferences) ||
-          hasCompletedDiagnostic() ||
           Boolean(profile && !profile.is_first_time_login)
         if (profile && alreadyOnboarded) {
           if (profile.is_first_time_login) {
@@ -169,9 +173,8 @@ function OnboardingPage() {
   }, [authApi, navigate, searchParams, usersApi])
 
   function validateStep1(): boolean {
-    if (!firstName.trim() || !lastName.trim()) {
-      return setError("First and last name are required."), false
-    }
+    const nameError = validateAccountNameParts(firstName, lastName)
+    if (nameError) return setError(nameError), false
     const phoneError = validateAccountPhone(phone)
     if (phoneError) return setError(phoneError), false
     if (!plannedLsatDate) return setError("Please select when you plan to take the LSAT."), false
@@ -334,18 +337,6 @@ function OnboardingPage() {
     if (step > 1) setStep((step - 1) as Step)
   }
 
-  async function handleLogout() {
-    try {
-      const supabase = getSupabaseBrowserClient()
-      await supabase.auth.signOut()
-    } catch {
-      // Still clear local session state if sign-out fails.
-    }
-    clearStudentSessionCaches()
-    resetUser()
-    navigate("/login", { replace: true })
-  }
-
   function title() {
     if (step === 2) return "What days do you want to study?"
     if (step === 3 || step === 4) return "How many hours per day will you study?"
@@ -363,23 +354,42 @@ function OnboardingPage() {
     return (
       <OnboardingWelcomeStep
         firstName={firstName}
-        onFirstNameChange={setFirstName}
+        onFirstNameChange={(value) => {
+          setFirstName(value)
+          setError(null)
+        }}
         lastName={lastName}
-        onLastNameChange={setLastName}
+        onLastNameChange={(value) => {
+          setLastName(value)
+          setError(null)
+        }}
         phone={phone}
-        onPhoneChange={setPhone}
+        onPhoneChange={(value) => {
+          setPhone(value)
+          setError(null)
+        }}
         password={password}
-        onPasswordChange={setPassword}
+        onPasswordChange={(value) => {
+          setPassword(value)
+          setError(null)
+        }}
         confirmPassword={confirmPassword}
-        onConfirmPasswordChange={setConfirmPassword}
+        onConfirmPasswordChange={(value) => {
+          setConfirmPassword(value)
+          setError(null)
+        }}
         plannedLsatDate={plannedLsatDate}
-        onPlannedLsatDateChange={setPlannedLsatDate}
+        onPlannedLsatDateChange={(value) => {
+          setPlannedLsatDate(value)
+          setError(null)
+        }}
         requiresPassword={requiresPassword}
         isLoading={isLoading}
         isSubmitting={isSubmitting}
+        nameError={getAccountNameTypingError(firstName, lastName)}
+        phoneError={getAccountPhoneTypingError(phone)}
         error={error}
         onContinue={() => void handleWelcomeContinue()}
-        onLogout={() => void handleLogout()}
       />
     )
   }
