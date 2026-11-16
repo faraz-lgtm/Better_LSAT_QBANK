@@ -424,11 +424,8 @@ function IntentRouteGuard({
       const nextEntitlement = await ensureEntitlement()
       if (!alive) return
       setEntitlement(nextEntitlement)
-      // Exam done but first-login flag still set — land on results, not the intent picker.
-      // Do NOT force /onboarding for all first-time users here: email magic-link flows often
-      // land on /intent to re-pick a tier after storage was lost, and blocking that loops
-      // diagnostic/start → intent → onboarding.
-      if (nextProfile.is_first_time_login && funnel.completedDiagnostic) {
+      // First-time login resolves to /onboarding (name/phone) before intent/diagnostic.
+      if (nextProfile.is_first_time_login) {
         setDestination(resolvePostAuthDestination(nextProfile, nextEntitlement, funnel))
         return
       }
@@ -578,17 +575,26 @@ function RequireRole({ children, requiredRole }: { children: ReactElement; requi
     if (studentPrepTestUiPreview) return children
     return <Navigate to="/login" replace state={{ from: location.pathname }} />
   }
+  if (!authChecked && !profile) {
+    if (studentPrepTestUiPreview) return children
+    return (
+      <div className="flex min-h-svh items-center justify-center bg-[var(--primary-0)]">
+        <StudentPageLoader centered label="Loading…" />
+      </div>
+    )
+  }
+  // Missing profile or first-time login (magic link / Google) → collect onboarding first.
+  if (shouldRedirectAuthenticatedUserToOnboarding(authChecked, profile)) {
+    if (studentPrepTestUiPreview) return children
+    return <Navigate to="/onboarding" replace state={{ from: location.pathname }} />
+  }
   if (!profile) {
     if (studentPrepTestUiPreview) return children
-    if (!authChecked) {
-      return (
-        <div className="flex min-h-svh items-center justify-center bg-[var(--primary-0)]">
-          <StudentPageLoader centered label="Loading…" />
-        </div>
-      )
-    }
-    // Authenticated but no app profile yet (typical right after Google signup).
-    return <Navigate to="/onboarding" replace state={{ from: location.pathname }} />
+    return (
+      <div className="flex min-h-svh items-center justify-center bg-[var(--primary-0)]">
+        <StudentPageLoader centered label="Loading…" />
+      </div>
+    )
   }
   if (requiredRole === "admin" && profile.role !== "admin" && profile.role !== "super_admin") {
     return <Navigate to="/app" replace />
@@ -638,6 +644,91 @@ function RequireAuthenticated({ children }: { children: ReactElement }) {
         state={{ from: `${location.pathname}${location.search}` }}
       />
     )
+  }
+  return children
+}
+
+/** Auth + finished first-login onboarding before diagnostic exam routes. */
+function RequireOnboardingComplete({ children }: { children: ReactElement }) {
+  const location = useLocation()
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
+  const [profile, setProfile] = useState<UserProfile | null>(null)
+  const [profileChecked, setProfileChecked] = useState(false)
+
+  useEffect(() => {
+    let alive = true
+    const supabase = getSupabaseBrowserClient()
+
+    const sync = async () => {
+      const { data } = await supabase.auth.getSession()
+      if (!alive) return
+      const hasSession = Boolean(data.session)
+      setIsAuthenticated(hasSession)
+      if (!hasSession) {
+        setProfile(null)
+        setProfileChecked(true)
+        return
+      }
+      try {
+        const nextProfile = await ensureProfile()
+        if (!alive) return
+        setProfile(nextProfile)
+      } catch {
+        if (!alive) return
+        setProfile(null)
+      } finally {
+        if (alive) setProfileChecked(true)
+      }
+    }
+
+    void sync()
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!alive) return
+      const hasSession = Boolean(session)
+      setIsAuthenticated(hasSession)
+      if (!hasSession) {
+        setProfile(null)
+        setProfileChecked(true)
+        return
+      }
+      setProfileChecked(false)
+      deferAuthWork(() => {
+        void ensureProfile()
+          .then((nextProfile) => {
+            if (!alive) return
+            if (nextProfile) setProfile(nextProfile)
+            setProfileChecked(true)
+          })
+          .catch(() => {
+            if (alive) setProfileChecked(true)
+          })
+      })
+    })
+
+    return () => {
+      alive = false
+      authListener.subscription.unsubscribe()
+    }
+  }, [])
+
+  if (isAuthenticated === null || (isAuthenticated && !profileChecked)) {
+    return (
+      <div className="flex min-h-svh items-center justify-center bg-[var(--primary-0)]">
+        <StudentPageLoader centered label="Loading…" />
+      </div>
+    )
+  }
+  if (!isAuthenticated) {
+    return (
+      <Navigate
+        to="/login"
+        replace
+        state={{ from: `${location.pathname}${location.search}` }}
+      />
+    )
+  }
+  if (shouldRedirectAuthenticatedUserToOnboarding(profileChecked, profile)) {
+    return <Navigate to="/onboarding" replace state={{ from: location.pathname }} />
   }
   return children
 }
@@ -726,14 +817,13 @@ const router = createBrowserRouter([
   },
   {
     path: "/diagnostic/start",
-    // Session only — exam UI does not need a profiles row. Avoids onboarding↔diagnostic
-    // loops when the session cache still holds a pre-onboarding null profile.
+    // Require name/phone onboarding before the free diagnostic (magic link / Google).
     element: (
-      <RequireAuthenticated>
+      <RequireOnboardingComplete>
         <LazyPage>
           <GuestDiagnosticStartPage />
         </LazyPage>
-      </RequireAuthenticated>
+      </RequireOnboardingComplete>
     ),
   },
   {
