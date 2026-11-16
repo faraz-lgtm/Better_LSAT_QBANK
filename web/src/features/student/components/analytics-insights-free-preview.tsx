@@ -20,7 +20,6 @@ type AnalyticsInsightsFreePreviewProps = {
 }
 
 const INSIGHTS_OVERVIEW_FIGMA = "/figma/insights-overview" as const
-const LSAC_LICENSE_HREF = "https://www.lsac.org/"
 
 const OVERVIEW_HEADLINE = [
   { id: "best-score", label: "Best Score", showBar: true },
@@ -119,37 +118,6 @@ function OverviewEmptyPracticePanel() {
   )
 }
 
-/** Figma `21716:26331` — LSAC license strip. */
-function OverviewLsacLicenseBanner() {
-  return (
-    <section className="flex w-full flex-col gap-[18px] rounded-[16px] border border-[var(--greyscale-100)] bg-[var(--greyscale-0)] px-[22px] py-[18px] sm:flex-row sm:items-center">
-      <img
-        src={`${INSIGHTS_OVERVIEW_FIGMA}/lsac-licensed.png`}
-        alt="Law School Admission Council"
-        width={154}
-        height={41}
-        className="h-[41px] w-[154px] shrink-0 object-contain"
-        draggable={false}
-      />
-      <div className="min-w-0 flex-1">
-        <p className="m-0 text-lg font-bold leading-[1.35] text-[#0e2a5c]">Official LSAC licensed prep</p>
-        <p className="m-0 pt-0.5 text-sm leading-[1.5] tracking-[0.28px] text-[#4a5b78]">
-          Practice questions and sections on betterLSAT are licensed from the Law School Admission
-          Council.
-        </p>
-      </div>
-      <a
-        href={LSAC_LICENSE_HREF}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="inline-flex h-10 shrink-0 items-center justify-center rounded-[14px] px-4 text-sm font-semibold tracking-[0.28px] text-[var(--primary)] hover:underline"
-      >
-        About our license
-      </a>
-    </section>
-  )
-}
-
 function InsightsFreePreviewHeader({ title }: { title: string }) {
   return (
     <div className="flex min-h-[52px] flex-wrap items-center justify-between gap-3">
@@ -217,7 +185,6 @@ function OverviewInsightsFreePreview() {
         </div>
 
         <OverviewEmptyPracticePanel />
-        <OverviewLsacLicenseBanner />
       </div>
     </div>
   )
@@ -241,7 +208,6 @@ function DrillsInsightsFreePreview() {
         </div>
 
         <OverviewEmptyPracticePanel />
-        <OverviewLsacLicenseBanner />
       </div>
     </div>
   )
@@ -268,7 +234,6 @@ function SectionsInsightsFreePreview() {
         </div>
 
         <OverviewEmptyPracticePanel />
-        <OverviewLsacLicenseBanner />
       </div>
     </div>
   )
@@ -292,7 +257,6 @@ function PrepTestsInsightsFreePreview() {
         </div>
 
         <OverviewEmptyPracticePanel />
-        <OverviewLsacLicenseBanner />
       </div>
     </div>
   )

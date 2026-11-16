@@ -18,7 +18,7 @@ describe("FreeStrategyCallPage", () => {
     Element.prototype.scrollIntoView = vi.fn()
   })
 
-  it("renders Figma hero and always-on GHL booking embed with no packages or testimonials", () => {
+  it("renders Figma hero, always-on GHL booking embed, testimonials, and no packages", () => {
     render(<FreeStrategyCallPage />)
 
     expect(
@@ -38,6 +38,10 @@ describe("FreeStrategyCallPage", () => {
     const embed = document.getElementById("ghl-booking-form-embed") as HTMLScriptElement | null
     expect(embed).toBeTruthy()
     expect(embed?.src).toContain("booking.betterlsat.com/js/form_embed.js")
+
+    expect(
+      screen.getByRole("heading", { name: "What students say about BetterLSAT tutoring" }),
+    ).toBeInTheDocument()
 
     expect(screen.queryByRole("heading", { name: "Choose Your Tutoring Package" })).not.toBeInTheDocument()
     expect(screen.queryByText("5-Session Pack")).not.toBeInTheDocument()
