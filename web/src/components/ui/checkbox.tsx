@@ -31,9 +31,30 @@ function Checkbox({ className, size, indeterminate = false, ...props }: Checkbox
     if (ref.current) ref.current.indeterminate = indeterminate
   }, [indeterminate])
 
+  const { disabled, onChange, checked, ...rest } = props
+
   return (
-    <span className="inline-flex shrink-0 items-center">
-      <input ref={ref} type="checkbox" className="peer sr-only" {...props} />
+    <span
+      className={cn(
+        "inline-flex shrink-0 items-center",
+        disabled ? "cursor-not-allowed" : "cursor-pointer",
+      )}
+      onClick={(event) => {
+        if (disabled) return
+        // Click the visible box (not only the sr-only input).
+        if (event.target === ref.current) return
+        ref.current?.click()
+      }}
+    >
+      <input
+        ref={ref}
+        type="checkbox"
+        className="peer sr-only"
+        disabled={disabled}
+        checked={checked}
+        onChange={onChange}
+        {...rest}
+      />
       <span
         data-slot="checkbox"
         aria-hidden

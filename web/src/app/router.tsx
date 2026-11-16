@@ -101,10 +101,6 @@ const AfterBookingSessionsPage = lazyNamed(
   () => import("@/features/tutoring/pages/after-booking-sessions-page"),
   "AfterBookingSessionsPage",
 )
-const TutoringSessionsPage = lazyNamed(
-  () => import("@/features/tutoring/pages/tutoring-sessions-page"),
-  "TutoringSessionsPage",
-)
 const ViewAllSessionsPage = lazyNamed(
   () => import("@/features/tutoring/pages/view-all-sessions-page"),
   "ViewAllSessionsPage",
@@ -976,11 +972,7 @@ const router = createBrowserRouter([
           },
           {
             path: "tutoring/after-booking",
-            element: (
-              <LazyPage>
-                <AfterBookingSessionsPage />
-              </LazyPage>
-            ),
+            element: <Navigate to="/app/tutoring/sessions" replace />,
           },
           {
             path: "tutoring/sessions/all",
@@ -1002,7 +994,7 @@ const router = createBrowserRouter([
             path: "tutoring/sessions",
             element: (
               <LazyPage>
-                <TutoringSessionsPage />
+                <AfterBookingSessionsPage />
               </LazyPage>
             ),
           },

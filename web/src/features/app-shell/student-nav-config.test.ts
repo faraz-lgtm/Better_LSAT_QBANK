@@ -61,6 +61,7 @@ describe("student-nav-config", () => {
     expect(getStudentPageTitle("/app/free-strategy-call")).toBe("Free Strategy Call")
     expect(getStudentPageTitle("/app/tutoring/book")).toBe("Book 1 on 1 Sessions")
     expect(getStudentPageTitle("/app/tutoring/sessions")).toBe("My Sessions")
+    expect(getStudentPageTitle("/app/tutoring/sessions/all")).toBe("View all Sessions")
     expect(getStudentPageTitle("/app/tutoring/sessions/past-1/transcript")).toBe("Session Transcript")
     expect(getStudentPageTitle("/app/tutoring/live-classes")).toBe("Live Classes")
   })

@@ -61,6 +61,8 @@ export type TranscriptSegment = {
   id: string
   time: string
   label: string
+  /** Zoom topic chapter vs next-step / homework marker. */
+  kind?: "topic" | "action"
 }
 
 export type TranscriptLine = {
@@ -82,17 +84,24 @@ export type SessionTranscript = {
   segments: TranscriptSegment[]
   lines: TranscriptLine[]
   recordingUrl?: string | null
+  /** Zoom cloud recording share page when in-app MP4 is unavailable. */
+  zoomShareUrl?: string | null
 }
 
-export type TodoTag = "Homework" | "Session prep" | "Review" | "Setup"
+/** Preset categories; free-text categories are also allowed. */
+export type TodoTag = string
 
 export type TutoringTodo = {
   id: string
+  sessionId: string
   title: string
   createdLabel: string
   dueLabel: string
+  /** ISO timestamp for edit forms; null/omitted when unset. */
+  dueAt?: string | null
   tag: TodoTag
   done: boolean
+  source?: "zoom_summary" | "user"
 }
 
 export type TutoringSessionsViewModel = {

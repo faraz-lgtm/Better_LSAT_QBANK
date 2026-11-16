@@ -167,3 +167,122 @@ export async function handleTutoringGetTranscript(req: Request): Promise<Respons
     return json({ error: message }, { status }, cors)
   }
 }
+
+export async function handleTutoringListTodos(req: Request): Promise<Response> {
+  if (req.method === 'OPTIONS') return optionsOk(cors)
+  if (req.method !== 'POST') return json({ error: 'Method not allowed' }, { status: 405 }, cors)
+
+  const auth = await requireAuthUser(req, cors)
+  if (!auth.ok) return auth.response
+
+  try {
+    const body = await readJsonBody(req)
+    const sessionId = typeof body.sessionId === 'string' ? body.sessionId : ''
+    if (!sessionId) return json({ error: 'sessionId is required' }, { status: 400 }, cors)
+    const { service } = buildService()
+    const result = await service.listTodos(auth.user.id, sessionId)
+    return json(result, {}, cors)
+  } catch (error) {
+    const message = formatUnknownError(error)
+    const status = message === 'Session not found' ? 404 : 500
+    return json({ error: message }, { status }, cors)
+  }
+}
+
+export async function handleTutoringCreateTodo(req: Request): Promise<Response> {
+  if (req.method === 'OPTIONS') return optionsOk(cors)
+  if (req.method !== 'POST') return json({ error: 'Method not allowed' }, { status: 405 }, cors)
+
+  const auth = await requireAuthUser(req, cors)
+  if (!auth.ok) return auth.response
+
+  try {
+    const body = await readJsonBody(req)
+    const sessionId = typeof body.sessionId === 'string' ? body.sessionId : ''
+    const title = typeof body.title === 'string' ? body.title : ''
+    if (!sessionId) return json({ error: 'sessionId is required' }, { status: 400 }, cors)
+    if (!title.trim()) return json({ error: 'title is required' }, { status: 400 }, cors)
+    const { service } = buildService()
+    const result = await service.createTodo(auth.user.id, {
+      sessionId,
+      title,
+      tag: typeof body.tag === 'string' ? body.tag : undefined,
+      dueAt: typeof body.dueAt === 'string' ? body.dueAt : null,
+    })
+    return json(result, {}, cors)
+  } catch (error) {
+    const message = formatUnknownError(error)
+    const status =
+      message === 'Session not found'
+        ? 404
+        : message === 'title is required' || message === 'dueAt is invalid'
+          ? 400
+          : 500
+    return json({ error: message }, { status }, cors)
+  }
+}
+
+export async function handleTutoringUpdateTodo(req: Request): Promise<Response> {
+  if (req.method === 'OPTIONS') return optionsOk(cors)
+  if (req.method !== 'POST') return json({ error: 'Method not allowed' }, { status: 405 }, cors)
+
+  const auth = await requireAuthUser(req, cors)
+  if (!auth.ok) return auth.response
+
+  try {
+    const body = await readJsonBody(req)
+    const todoId = typeof body.todoId === 'string' ? body.todoId : ''
+    if (!todoId) return json({ error: 'todoId is required' }, { status: 400 }, cors)
+    if ('done' in body && typeof body.done !== 'boolean') {
+      return json({ error: 'done must be a boolean' }, { status: 400 }, cors)
+    }
+
+    const patch: {
+      todoId: string
+      done?: boolean
+      title?: string
+      tag?: string
+      dueAt?: string | null
+    } = { todoId }
+
+    if (typeof body.done === 'boolean') patch.done = body.done
+    if (typeof body.title === 'string') patch.title = body.title
+    if (typeof body.tag === 'string') patch.tag = body.tag
+    if ('dueAt' in body) {
+      if (body.dueAt === null || typeof body.dueAt === 'string') {
+        patch.dueAt = body.dueAt
+      } else {
+        return json({ error: 'dueAt is invalid' }, { status: 400 }, cors)
+      }
+    }
+
+    if (
+      patch.done === undefined &&
+      patch.title === undefined &&
+      patch.tag === undefined &&
+      !('dueAt' in patch)
+    ) {
+      return json(
+        { error: 'Provide at least one of done, title, tag, dueAt' },
+        { status: 400 },
+        cors,
+      )
+    }
+
+    const { service } = buildService()
+    const result = await service.updateTodo(auth.user.id, patch)
+    return json(result, {}, cors)
+  } catch (error) {
+    const message = formatUnknownError(error)
+    const status =
+      message === 'Todo not found'
+        ? 404
+        : message === 'title is required' ||
+            message === 'tag is required' ||
+            message === 'dueAt is invalid' ||
+            message === 'No updates provided'
+          ? 400
+          : 500
+    return json({ error: message }, { status }, cors)
+  }
+}

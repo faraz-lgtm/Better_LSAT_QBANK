@@ -260,6 +260,7 @@ export function getStudentPageTitle(pathname: string, search = ""): string | nul
   if (pathname === "/app/account") return "Account"
   if (pathname === "/app/settings") return "Settings"
   if (/^\/app\/tutoring\/sessions\/[^/]+\/transcript$/.test(pathname)) return "Session Transcript"
+  if (pathname === STUDENT_TUTORING_SESSIONS_ALL_HREF) return "View all Sessions"
   if (isPrepTestHubDetailPath(pathname)) return null
   if (pathname.startsWith("/app/prep-course/") && pathname !== "/app/prep-course") return null
   if (pathname.startsWith("/app/prep-course")) return "Prep Courses"

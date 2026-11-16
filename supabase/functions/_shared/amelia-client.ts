@@ -57,6 +57,7 @@ export type AmeliaClient = {
   rescheduleBooking: (input: {
     bookingId: number
     bookingStart: string
+    timeZone?: string
     type?: string
   }) => Promise<AmeliaBookingResult>
   cancelBooking: (input: { bookingId: number; type?: string }) => Promise<void>
@@ -66,6 +67,9 @@ export type AmeliaClient = {
  * Amelia Elite API uses:
  * `{site}/wp-admin/admin-ajax.php?action=wpamelia_api&call=/api/v1/slots&...`
  * `AMELIA_API_BASE_URL` may be the site origin or the full admin-ajax URL without `call=`.
+ *
+ * Amelia returns 404 when `call` is percent-encoded (`call=%2Fapi%2Fv1%2Fslots`).
+ * Keep path slashes literal in the query string.
  */
 export function buildAmeliaCallUrl(env: AmeliaEnv, pathAndQuery: string): string {
   const trimmed = pathAndQuery.trim()
@@ -78,15 +82,17 @@ export function buildAmeliaCallUrl(env: AmeliaEnv, pathAndQuery: string): string
     ajaxBase = `${ajaxBase.replace(/\/$/, '')}/wp-admin/admin-ajax.php`
   }
   const url = new URL(ajaxBase)
-  url.searchParams.set('action', 'wpamelia_api')
-  url.searchParams.set('call', apiPath)
+  // Drop any pre-baked action/call from AMELIA_API_BASE_URL so we rebuild cleanly.
+  url.search = ''
+
+  const parts = [`action=wpamelia_api`, `call=${apiPath}`]
   if (queryPart) {
     const extra = new URLSearchParams(queryPart)
     for (const [key, value] of extra.entries()) {
-      url.searchParams.append(key, value)
+      parts.push(`${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
     }
   }
-  return url.toString()
+  return `${url.origin}${url.pathname}?${parts.join('&')}`
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -135,8 +141,11 @@ function dig(obj: unknown, path: string[]): unknown {
 /** Best-effort extract of Zoom/join fields from Amelia booking payloads (shape varies by version). */
 export function mapAmeliaBookingPayload(raw: unknown): AmeliaBookingResult {
   const data = dig(raw, ['data']) ?? raw
+  // `/bookings/reassign` returns existingAppointment / newAppointment instead of appointment.
   const appointment =
     dig(data, ['appointment']) ??
+    dig(data, ['existingAppointment']) ??
+    dig(data, ['newAppointment']) ??
     dig(data, ['booking', 'appointment']) ??
     dig(data, ['appointments', '0']) ??
     data
@@ -185,6 +194,7 @@ export function mapAmeliaBookingPayload(raw: unknown): AmeliaBookingResult {
       asNumber(dig(data, ['id'])),
     appointmentId:
       asNumber(dig(appointment, ['id'])) ??
+      asNumber(dig(booking, ['appointmentId'])) ??
       asNumber(dig(data, ['appointmentId'])),
     customerId:
       asNumber(dig(booking, ['customerId'])) ??
@@ -296,20 +306,22 @@ export function createAmeliaClient(deps: {
     },
 
     async rescheduleBooking(input) {
-      const raw = await request(`/bookings/${input.bookingId}`, {
+      // Official Amelia Elite API: POST /bookings/reassign/{bookingId}
+      const raw = await request(`/bookings/reassign/${input.bookingId}`, {
         method: 'POST',
         body: JSON.stringify({
-          type: input.type ?? 'appointment',
           bookingStart: input.bookingStart,
-          runInstantPostBookingActions: true,
+          timeZone: input.timeZone ?? 'America/New_York',
+          utcOffset: null,
         }),
       })
       return mapAmeliaBookingPayload(raw)
     },
 
     async cancelBooking(input) {
-      await request(`/bookings/${input.bookingId}`, {
-        method: 'DELETE',
+      // Official Amelia Elite API: POST /bookings/cancel/{bookingId}
+      await request(`/bookings/cancel/${input.bookingId}`, {
+        method: 'POST',
         body: JSON.stringify({ type: input.type ?? 'appointment' }),
       })
     },

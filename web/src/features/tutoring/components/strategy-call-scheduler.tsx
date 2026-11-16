@@ -1,20 +1,18 @@
-import { useEffect } from "react"
 import { AlignLeft, CalendarDays, Clock3, Globe2, GraduationCap, X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 
-/** Live GHL / LeadConnector calendar — same embed as booking.betterlsat.com. */
-const BOOKING_WIDGET_SRC = "https://booking.betterlsat.com/widget/booking/ykgARKRGf5mpZC3nHOYQ"
-const BOOKING_WIDGET_ID = "ykgARKRGf5mpZC3nHOYQ_1789994679867"
-const BOOKING_EMBED_SCRIPT_ID = "ghl-booking-form-embed"
-const BOOKING_EMBED_SCRIPT_SRC = "https://booking.betterlsat.com/js/form_embed.js"
+/** Legacy Amelia booking page for the free 15-minute strategy call. */
+const BOOKING_PAGE_SRC = "https://old.betterlsat.com/booking/free-test-session/"
+const BOOKING_WIDGET_SRC = BOOKING_PAGE_SRC
+const BOOKING_WIDGET_ID = "amelia-free-strategy-call-booking"
 
 /** Matches the last known-good embed height before the padding experiments. */
 const BOOKING_IFRAME_HEIGHT_PX = 900
 
 type StrategyCallSchedulerProps = {
   /**
-   * Toggle mode: when false, show the Figma summary card; when true, show the live GHL calendar.
+   * Toggle mode: when false, show the Figma summary card; when true, show the Amelia calendar.
    * Omit (and pass `alwaysOpen`) for the Free Strategy Call always-on embed.
    */
   calendarOpen?: boolean
@@ -24,33 +22,8 @@ type StrategyCallSchedulerProps = {
   onCloseCalendar?: () => void
 }
 
-function ensureBookingEmbedScript() {
-  if (document.getElementById(BOOKING_EMBED_SCRIPT_ID)) return
-
-  const script = document.createElement("script")
-  script.id = BOOKING_EMBED_SCRIPT_ID
-  script.src = BOOKING_EMBED_SCRIPT_SRC
-  script.type = "text/javascript"
-  document.body.appendChild(script)
-}
-
 /**
- * form_embed.js temporarily parks booking iframes off-screen (opacity:0, left:-9999px)
- * until the first resize message. If that message is delayed/missed (SPA remount),
- * force the iframe back into view so the calendar never stays blank.
- */
-function revealBookingIframe(iframe: HTMLIFrameElement) {
-  iframe.style.opacity = "1"
-  iframe.style.visibility = "visible"
-  iframe.style.pointerEvents = "auto"
-  iframe.style.display = "block"
-  iframe.style.position = "relative"
-  if (iframe.style.left === "-9999px") iframe.style.left = ""
-  iframe.removeAttribute("data-initial-iframe-hidden")
-}
-
-/**
- * Figma booking card — summary entry point with live GHL calendar on expand,
+ * Figma booking card — summary entry point with Amelia calendar on expand,
  * or always-on embed when `alwaysOpen` is set.
  */
 function StrategyCallScheduler({
@@ -61,33 +34,12 @@ function StrategyCallScheduler({
 }: StrategyCallSchedulerProps) {
   const isCalendarOpen = alwaysOpen || calendarOpen
 
-  useEffect(() => {
-    if (!isCalendarOpen) return
-
-    ensureBookingEmbedScript()
-
-    const iframe = document.getElementById(BOOKING_WIDGET_ID)
-    if (!(iframe instanceof HTMLIFrameElement)) return
-
-    revealBookingIframe(iframe)
-
-    const script = document.getElementById(BOOKING_EMBED_SCRIPT_ID)
-    const reveal = () => revealBookingIframe(iframe)
-    const settleTimer = window.setTimeout(reveal, 800)
-
-    script?.addEventListener("load", reveal)
-    return () => {
-      window.clearTimeout(settleTimer)
-      script?.removeEventListener("load", reveal)
-    }
-  }, [isCalendarOpen])
-
   return (
     <section
       id="strategy-call-scheduler"
       className="relative w-full overflow-hidden rounded-[20px] border border-[#dbe5f3] bg-[var(--greyscale-0)]"
       aria-label="FREE LSAT Strategy Call booking"
-      data-testid="strategy-call-ghl-scheduler"
+      data-testid="strategy-call-amelia-scheduler"
       data-calendar-open={isCalendarOpen ? "true" : "false"}
     >
       {isCalendarOpen ? (
@@ -105,7 +57,7 @@ function StrategyCallScheduler({
           <iframe
             id={BOOKING_WIDGET_ID}
             title="FREE LSAT Strategy Call booking"
-            src={BOOKING_WIDGET_SRC}
+            src={BOOKING_PAGE_SRC}
             allow="payment"
             scrolling="no"
             className="block w-full border-0"
@@ -176,4 +128,4 @@ function StrategyCallScheduler({
   )
 }
 
-export { StrategyCallScheduler, BOOKING_WIDGET_SRC, BOOKING_WIDGET_ID }
+export { StrategyCallScheduler, BOOKING_PAGE_SRC, BOOKING_WIDGET_SRC, BOOKING_WIDGET_ID }

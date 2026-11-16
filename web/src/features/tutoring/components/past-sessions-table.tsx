@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom"
 
 import {
-  STUDENT_TUTORING_SESSIONS_HREF,
+  STUDENT_TUTORING_SESSIONS_ALL_HREF,
   studentTutoringSessionTranscriptHref,
 } from "@/features/app-shell/student-nav-config"
 import type { PastSessionRow } from "@/features/tutoring/lib/types"
@@ -18,7 +18,7 @@ type PastSessionsTableProps = {
 function PastSessionsTable({
   sessions,
   showViewAllLink = false,
-  viewAllHref = STUDENT_TUTORING_SESSIONS_HREF,
+  viewAllHref = STUDENT_TUTORING_SESSIONS_ALL_HREF,
   onTranscriptClick,
   activeSessionId,
 }: PastSessionsTableProps) {

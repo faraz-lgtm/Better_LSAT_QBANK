@@ -71,11 +71,13 @@ export async function handleZoomWebhook(req: Request): Promise<Response> {
     }
   }
 
-  if (
-    event !== 'recording.completed' &&
-    event !== 'recording.transcript_completed' &&
-    event !== 'meeting.recording_completed'
-  ) {
+  const isRecordingEvent =
+    event === 'recording.completed' ||
+    event === 'recording.transcript_completed' ||
+    event === 'meeting.recording_completed'
+  const isSummaryEvent = event === 'meeting.summary_completed'
+
+  if (!isRecordingEvent && !isSummaryEvent) {
     return json({ ok: true, ignored: event }, {}, cors)
   }
 
@@ -97,6 +99,12 @@ export async function handleZoomWebhook(req: Request): Promise<Response> {
     const repository = createTutoringRepository(createServiceRoleClient())
     const zoom = createZoomClient({ env: zoomEnv })
     const service = createZoomWebhookService({ repository, zoom })
+
+    if (isSummaryEvent) {
+      const result = await service.handleSummaryEvent({ object })
+      return json(result, {}, cors)
+    }
+
     const result = await service.handleRecordingEvent({
       event,
       object,

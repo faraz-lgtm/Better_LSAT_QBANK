@@ -4,8 +4,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { BookSessionsPage } from "@/features/tutoring/pages/book-sessions-page"
 import {
+  BOOKING_PAGE_SRC,
   BOOKING_WIDGET_ID,
-  BOOKING_WIDGET_SRC,
 } from "@/features/tutoring/components/strategy-call-scheduler"
 
 vi.mock("@/features/student/components/student-main", () => ({
@@ -18,7 +18,6 @@ vi.mock("@/features/tutoring/components/package-booking-modal", () => ({
 
 describe("BookSessionsPage", () => {
   beforeEach(() => {
-    document.getElementById("ghl-booking-form-embed")?.remove()
     Element.prototype.scrollIntoView = vi.fn()
   })
 
@@ -34,7 +33,7 @@ describe("BookSessionsPage", () => {
     expect(screen.getByText("Pick a time that works")).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "See available times" })).toBeInTheDocument()
     expect(screen.queryByTitle("FREE LSAT Strategy Call booking")).not.toBeInTheDocument()
-    expect(screen.getByTestId("strategy-call-ghl-scheduler")).toHaveAttribute(
+    expect(screen.getByTestId("strategy-call-amelia-scheduler")).toHaveAttribute(
       "data-calendar-open",
       "false",
     )
@@ -46,30 +45,26 @@ describe("BookSessionsPage", () => {
     ).toBeInTheDocument()
   })
 
-  it("opens the live GHL iframe from the hero CTA and loads form_embed.js", async () => {
+  it("opens the Amelia booking iframe from the hero CTA", async () => {
     const user = userEvent.setup()
     render(<BookSessionsPage />)
 
     await user.click(screen.getByRole("button", { name: "Book Your Free 15-Minute Call" }))
 
     const iframe = screen.getByTitle("FREE LSAT Strategy Call booking")
-    expect(iframe).toHaveAttribute("src", BOOKING_WIDGET_SRC)
+    expect(iframe).toHaveAttribute("src", BOOKING_PAGE_SRC)
     expect(iframe).toHaveAttribute("id", BOOKING_WIDGET_ID)
-    expect(screen.getByTestId("strategy-call-ghl-scheduler")).toHaveAttribute(
+    expect(screen.getByTestId("strategy-call-amelia-scheduler")).toHaveAttribute(
       "data-calendar-open",
       "true",
     )
-
-    const embed = document.getElementById("ghl-booking-form-embed") as HTMLScriptElement | null
-    expect(embed).toBeTruthy()
-    expect(embed?.src).toContain("booking.betterlsat.com/js/form_embed.js")
 
     await vi.waitFor(() => {
       expect(Element.prototype.scrollIntoView).toHaveBeenCalled()
     })
   })
 
-  it("opens the GHL calendar from See available times", async () => {
+  it("opens the Amelia calendar from See available times", async () => {
     const user = userEvent.setup()
     render(<BookSessionsPage />)
 
@@ -77,7 +72,7 @@ describe("BookSessionsPage", () => {
 
     expect(screen.getByTitle("FREE LSAT Strategy Call booking")).toHaveAttribute(
       "src",
-      BOOKING_WIDGET_SRC,
+      BOOKING_PAGE_SRC,
     )
   })
 
@@ -92,7 +87,7 @@ describe("BookSessionsPage", () => {
 
     expect(screen.queryByTitle("FREE LSAT Strategy Call booking")).not.toBeInTheDocument()
     expect(screen.getByRole("button", { name: "See available times" })).toBeInTheDocument()
-    expect(screen.getByTestId("strategy-call-ghl-scheduler")).toHaveAttribute(
+    expect(screen.getByTestId("strategy-call-amelia-scheduler")).toHaveAttribute(
       "data-calendar-open",
       "false",
     )
