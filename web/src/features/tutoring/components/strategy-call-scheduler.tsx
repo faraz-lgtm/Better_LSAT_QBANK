@@ -1,6 +1,8 @@
+import { useEffect, useState } from "react"
 import { AlignLeft, CalendarDays, Clock3, Globe2, GraduationCap, X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { StudentPageLoader } from "@/features/student/components/student-page-loader"
 
 /** Legacy Amelia booking page for the free 15-minute strategy call. */
 const BOOKING_PAGE_SRC = "https://old.betterlsat.com/booking/free-test-session/"
@@ -33,6 +35,11 @@ function StrategyCallScheduler({
   onCloseCalendar,
 }: StrategyCallSchedulerProps) {
   const isCalendarOpen = alwaysOpen || calendarOpen
+  const [iframeLoaded, setIframeLoaded] = useState(false)
+
+  useEffect(() => {
+    setIframeLoaded(false)
+  }, [isCalendarOpen])
 
   return (
     <section
@@ -41,6 +48,7 @@ function StrategyCallScheduler({
       aria-label="FREE LSAT Strategy Call booking"
       data-testid="strategy-call-amelia-scheduler"
       data-calendar-open={isCalendarOpen ? "true" : "false"}
+      data-iframe-loaded={iframeLoaded ? "true" : "false"}
     >
       {isCalendarOpen ? (
         <>
@@ -54,18 +62,28 @@ function StrategyCallScheduler({
               <X className="size-4" aria-hidden />
             </button>
           ) : null}
+          {!iframeLoaded ? (
+            <div
+              className="absolute inset-0 z-[1] flex items-center justify-center bg-[var(--greyscale-0)]"
+              style={{ minHeight: BOOKING_IFRAME_HEIGHT_PX }}
+            >
+              <StudentPageLoader centered label="Loading booking calendar…" />
+            </div>
+          ) : null}
           <iframe
             id={BOOKING_WIDGET_ID}
             title="FREE LSAT Strategy Call booking"
             src={BOOKING_PAGE_SRC}
             allow="payment"
             scrolling="no"
+            onLoad={() => setIframeLoaded(true)}
             className="block w-full border-0"
             style={{
               width: "100%",
               border: "none",
               overflow: "hidden",
               height: BOOKING_IFRAME_HEIGHT_PX,
+              visibility: iframeLoaded ? "visible" : "hidden",
             }}
           />
         </>

@@ -1,5 +1,5 @@
 import { mapAmeliaBookingPayload } from '../_shared/amelia-client.ts'
-import { ameliaLocalDateTimeToIso } from './tutoring.mapper.ts'
+import { ameliaUtcDateTimeToIso } from './tutoring.mapper.ts'
 import type { TutoringRepository, TutoringSessionStatus } from './tutoring.repository.ts'
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -41,6 +41,54 @@ function firstString(obj: unknown, paths: string[][]): string | null {
     if (value) return value
   }
   return null
+}
+
+function parseInfoTimeZone(info: unknown): string | null {
+  if (typeof info === 'string' && info.trim()) {
+    try {
+      const parsed = JSON.parse(info) as unknown
+      return asString(dig(parsed, ['timeZone'])) ?? asString(dig(parsed, ['timezone']))
+    } catch {
+      return null
+    }
+  }
+  const rec = asRecord(info)
+  if (!rec) return null
+  return asString(rec.timeZone) ?? asString(rec.timezone)
+}
+
+/**
+ * Customer's booking timezone from Amelia webhook payloads.
+ * Amelia stores it in `bookings[].info` JSON: `{"timeZone":"Asia/Karachi",...}`.
+ */
+export function resolveAmeliaBookingTimeZone(payload: unknown): string {
+  const fromInfo =
+    parseInfoTimeZone(dig(payload, ['data', 'appointment', 'bookings', '0', 'info'])) ??
+    parseInfoTimeZone(dig(payload, ['appointment', 'bookings', '0', 'info'])) ??
+    parseInfoTimeZone(dig(payload, ['data', 'bookings', '0', 'info'])) ??
+    parseInfoTimeZone(dig(payload, ['bookings', '0', 'info'])) ??
+    parseInfoTimeZone(dig(payload, ['data', 'booking', 'info'])) ??
+    parseInfoTimeZone(dig(payload, ['booking', 'info']))
+
+  if (fromInfo) return fromInfo
+
+  const direct = firstString(payload, [
+    ['data', 'appointment', 'bookings', '0', 'customer', 'timeZone'],
+    ['appointment', 'bookings', '0', 'customer', 'timeZone'],
+    ['data', 'bookings', '0', 'customer', 'timeZone'],
+    ['bookings', '0', 'customer', 'timeZone'],
+    ['data', 'booking', 'customer', 'timeZone'],
+    ['booking', 'customer', 'timeZone'],
+    ['data', 'customer', 'timeZone'],
+    ['customer', 'timeZone'],
+    ['data', 'timeZone'],
+    ['timeZone'],
+    ['data', 'appointment', 'timeZone'],
+    ['appointment', 'timeZone'],
+  ])
+  if (direct) return direct
+
+  return 'America/New_York'
 }
 
 export function createAmeliaWebhookService(deps: { repository: TutoringRepository }) {
@@ -112,14 +160,7 @@ export function createAmeliaWebhookService(deps: { repository: TutoringRepositor
         return { ok: true }
       }
 
-      const timeZone = firstString(payload, [
-        ['timeZone'],
-        ['data', 'timeZone'],
-        ['customer', 'timeZone'],
-        ['data', 'customer', 'timeZone'],
-        ['appointment', 'timeZone'],
-        ['data', 'appointment', 'timeZone'],
-      ]) ?? 'America/New_York'
+      const timeZone = resolveAmeliaBookingTimeZone(payload)
       const bookingStart =
         mapped.bookingStart ??
         asString(dig(payload, ['bookingStart'])) ??
@@ -145,10 +186,8 @@ export function createAmeliaWebhookService(deps: { repository: TutoringRepositor
         amelia_provider_id: mapped.providerId,
         tutor_name: mapped.tutorName,
         focus: mapped.focus,
-        starts_at: ameliaLocalDateTimeToIso(bookingStart, timeZone),
-        ends_at: mapped.bookingEnd
-          ? ameliaLocalDateTimeToIso(mapped.bookingEnd, timeZone)
-          : null,
+        starts_at: ameliaUtcDateTimeToIso(bookingStart),
+        ends_at: mapped.bookingEnd ? ameliaUtcDateTimeToIso(mapped.bookingEnd) : null,
         timezone: timeZone,
         status,
         zoom_meeting_id: mapped.zoomMeetingId,

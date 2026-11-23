@@ -13,7 +13,10 @@ import {
   DIAGNOSTIC_ATTEMPT_HISTORY_STORAGE_KEY,
   type GuestDiagnosticResult,
 } from "@/features/guest/diagnostic/guest-diagnostic-result-storage"
-import { STUDENT_FREE_STRATEGY_CALL_HREF, STUDENT_TUTORING_BOOK_HREF } from "@/features/app-shell/student-nav-config"
+import {
+  STUDENT_FREE_STRATEGY_CALL_HREF,
+  STUDENT_TUTORING_SESSIONS_HREF,
+} from "@/features/app-shell/student-nav-config"
 import { PREP_COURSE_ESSENTIALS_SLUG } from "@/features/prep-course/lib/prep-course-nav"
 
 const openPricingModal = vi.fn()
@@ -112,7 +115,7 @@ describe("FreePlanDashboard", () => {
     expect(screen.getByText("No session transcripts yet")).toBeInTheDocument()
     expect(screen.getByRole("link", { name: "Book Your First Session" })).toHaveAttribute(
       "href",
-      STUDENT_TUTORING_BOOK_HREF,
+      STUDENT_TUTORING_SESSIONS_HREF,
     )
   })
 

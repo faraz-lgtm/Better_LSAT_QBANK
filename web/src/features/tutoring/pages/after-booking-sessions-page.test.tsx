@@ -56,6 +56,8 @@ describe("AfterBookingSessionsPage", () => {
     const user = userEvent.setup()
     listSessions.mockResolvedValue({
       hasActivePackage: true,
+      hasBookedFreeStrategyCall: true,
+      freeStrategyCall: null,
       nextSession: {
         id: "s1",
         month: "NOV",
@@ -99,6 +101,9 @@ describe("AfterBookingSessionsPage", () => {
     expect(screen.getByText("Maya Chen")).toBeInTheDocument()
     expect(screen.getByText("YOUR PACKAGE")).toBeInTheDocument()
     expect(screen.getByRole("heading", { level: 2, name: "5-Session Pack" })).toBeInTheDocument()
+    expect(
+      screen.getByRole("heading", { name: "What students say about BetterLSAT tutoring" }),
+    ).toBeInTheDocument()
 
     await user.click(screen.getByRole("button", { name: "Reschedule" }))
     expect(screen.getByRole("heading", { name: "Reschedule Session" })).toBeInTheDocument()

@@ -99,7 +99,11 @@ function PracticeSectionsPage() {
   }
 
   return (
-    <StudentMain className="practice-section-intro" contentClassName="flex flex-col gap-[25px]">
+    <StudentMain
+      showLsacLicenseBanner
+      className="practice-section-intro"
+      contentClassName="flex flex-col gap-[25px]"
+    >
       {limitFreeAccess ? (
         <PracticeSectionsFreePreview onLockedAction={handleLockedAction} />
       ) : (

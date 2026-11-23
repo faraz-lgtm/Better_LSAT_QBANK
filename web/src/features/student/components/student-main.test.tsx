@@ -15,9 +15,19 @@ describe("StudentMain", () => {
     expect(inner?.className).toContain("max-w-[1168px]")
   })
 
-  it("shows the LSAC license banner on scroll layout pages", () => {
+  it("hides the LSAC license banner by default", () => {
     render(
       <StudentMain>
+        <p>Contained</p>
+      </StudentMain>,
+    )
+
+    expect(screen.queryByTestId("lsac-license-banner")).not.toBeInTheDocument()
+  })
+
+  it("shows the LSAC license banner when showLsacLicenseBanner is set", () => {
+    render(
+      <StudentMain showLsacLicenseBanner>
         <p>Contained</p>
       </StudentMain>,
     )
@@ -28,16 +38,6 @@ describe("StudentMain", () => {
       "href",
       "https://www.lsac.org/",
     )
-  })
-
-  it("hides the LSAC license banner when hideLsacLicenseBanner is set", () => {
-    render(
-      <StudentMain hideLsacLicenseBanner>
-        <p>Contained</p>
-      </StudentMain>,
-    )
-
-    expect(screen.queryByTestId("lsac-license-banner")).not.toBeInTheDocument()
   })
 
   it("does not cap immersive layout", () => {

@@ -24,6 +24,27 @@ export type TutoringSessionDto = {
   title: string
 }
 
+/** Free strategy call card on /app/free-strategy-call (booked vs completed). */
+export type FreeStrategyCallDto = {
+  id: string
+  status: TutoringSessionRow['status']
+  /** Finished call — show Status detail instead of Join/Reschedule. */
+  isCompleted: boolean
+  tutorName: string
+  joinUrl: string | null
+  startsAt: string
+  endsAt: string | null
+  timezone: string | null
+  dateLabel: string
+  timeLabel: string
+  timezoneLabel: string
+  focus: string
+  title: string
+  transcriptStatus: TutoringSessionRow['transcript_status']
+  recordingStatus: TutoringSessionRow['recording_status']
+  customerEmail: string | null
+}
+
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 function initials(name: string): string {
@@ -71,6 +92,101 @@ export function mapSessionRowToDto(row: TutoringSessionRow, now = new Date()): T
     whenLabel: formatWhenLabel(row.starts_at, row.timezone),
     dateLabel: `${MONTHS[starts.getUTCMonth()] ?? ''} ${starts.getUTCDate()}`,
     title: focus,
+  }
+}
+
+function formatStrategyDateLabel(startsAt: string, timeZone: string | null): string {
+  const tz = timeZone?.trim() || 'America/New_York'
+  try {
+    return new Intl.DateTimeFormat('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      timeZone: tz,
+    }).format(new Date(startsAt))
+  } catch {
+    return startsAt
+  }
+}
+
+function formatStrategyTimeLabel(
+  startsAt: string,
+  endsAt: string | null,
+  timeZone: string | null,
+): string {
+  const tz = timeZone?.trim() || 'America/New_York'
+  try {
+    const start = new Date(startsAt)
+    const time = new Intl.DateTimeFormat('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      timeZone: tz,
+    }).format(start)
+    let minutes = 15
+    if (endsAt) {
+      const end = new Date(endsAt)
+      const diff = Math.round((end.getTime() - start.getTime()) / 60_000)
+      if (diff > 0) minutes = diff
+    }
+    return `${time} · ${minutes} min`
+  } catch {
+    return startsAt
+  }
+}
+
+/** Normalize ICU offsets to Figma-style `GMT+5` (not `GMT+05:00` / `UTC+5`). */
+function normalizeGmtOffset(raw: string): string {
+  return raw
+    .replace(/^UTC/, 'GMT')
+    .replace(/([+-])0(\d)(?::00)?$/, '$1$2')
+    .replace(/([+-]\d+):00$/, '$1')
+}
+
+function formatTimezoneLabel(timeZone: string | null, at: string): string {
+  const tz = timeZone?.trim() || 'America/New_York'
+  try {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: tz,
+      timeZoneName: 'shortOffset',
+    }).formatToParts(new Date(at))
+    const raw = parts.find((p) => p.type === 'timeZoneName')?.value ?? ''
+    const offset = raw ? normalizeGmtOffset(raw) : ''
+    return offset ? `${tz} (${offset})` : tz
+  } catch {
+    return tz
+  }
+}
+
+export function mapFreeStrategyCallDto(
+  row: TutoringSessionRow,
+  customerEmail: string | null,
+  now = new Date(),
+): FreeStrategyCallDto {
+  const starts = new Date(row.starts_at)
+  const tutorName = row.tutor_name?.trim() || 'Tutor'
+  const focus = row.focus?.trim() || '15-Minute Free Strategy Call'
+  const isCompleted =
+    row.status === 'completed' ||
+    row.status === 'no_show' ||
+    (row.status === 'scheduled' && starts.getTime() < now.getTime())
+  return {
+    id: row.id,
+    status: row.status,
+    isCompleted,
+    tutorName,
+    joinUrl: row.join_url,
+    startsAt: row.starts_at,
+    endsAt: row.ends_at,
+    timezone: row.timezone,
+    dateLabel: formatStrategyDateLabel(row.starts_at, row.timezone),
+    timeLabel: formatStrategyTimeLabel(row.starts_at, row.ends_at, row.timezone),
+    timezoneLabel: formatTimezoneLabel(row.timezone, row.starts_at),
+    focus,
+    title: focus,
+    transcriptStatus: row.transcript_status,
+    recordingStatus: row.recording_status,
+    customerEmail,
   }
 }
 
@@ -316,15 +432,31 @@ export function mapTodoRowToDto(row: TutoringSessionTodoRow): TutoringTodoDto {
   }
 }
 
+/**
+ * Amelia appointment `bookingStart` / `bookingEnd` are stored as UTC wall times
+ * (`YYYY-MM-DD HH:mm`). Customer `timeZone` is for display only — do not re-apply it.
+ */
+export function ameliaUtcDateTimeToIso(utcDateTime: string): string {
+  const trimmed = utcDateTime.trim()
+  const withT = trimmed.includes('T') ? trimmed : trimmed.replace(' ', 'T')
+  const withoutZ = withT.replace(/Z$/i, '')
+  const normalized = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(withoutZ)
+    ? `${withoutZ}:00`
+    : /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(withoutZ)
+      ? withoutZ.slice(0, 19)
+      : withoutZ
+  const ms = Date.parse(`${normalized}Z`)
+  if (Number.isNaN(ms)) return new Date().toISOString()
+  return new Date(ms).toISOString()
+}
+
+/** Interpret a wall-clock time in `timeZone` (e.g. slots the client picked). */
 export function ameliaLocalDateTimeToIso(localDateTime: string, timeZone: string): string {
-  // Amelia uses `YYYY-MM-DD HH:mm` in the customer's/service timezone.
-  const normalized = localDateTime.includes('T')
-    ? localDateTime
-    : localDateTime.replace(' ', 'T')
+  const trimmed = localDateTime.trim()
+  const normalized = (trimmed.includes('T') ? trimmed : trimmed.replace(' ', 'T')).replace(/Z$/i, '')
   const asUtcGuess = new Date(`${normalized}:00`)
   if (!Number.isNaN(asUtcGuess.getTime()) && !timeZone) return asUtcGuess.toISOString()
 
-  // Interpret wall time in timezone via Intl offset round-trip.
   const probe = new Date(`${normalized}Z`)
   if (Number.isNaN(probe.getTime())) return new Date().toISOString()
   try {
@@ -349,7 +481,10 @@ export function ameliaLocalDateTimeToIso(localDateTime: string, timeZone: string
       const mins = Number(match[2] ?? '0')
       offsetMinutes = hours * 60 + Math.sign(hours || 1) * mins
     }
-    const utcMs = Date.parse(`${normalized}:00Z`) - offsetMinutes * 60_000
+    const wall = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(normalized)
+      ? `${normalized}:00`
+      : normalized.slice(0, 19)
+    const utcMs = Date.parse(`${wall}Z`) - offsetMinutes * 60_000
     return new Date(utcMs).toISOString()
   } catch {
     return probe.toISOString()

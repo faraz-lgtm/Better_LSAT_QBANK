@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils"
 const LSAC_LICENSE_HREF = "https://www.lsac.org/"
 const LSAC_LICENSE_IMG = "/figma/insights-overview/lsac-licensed.png"
 
-/** Official LSAC license strip shown on student sidebar pages. */
+/** Official LSAC license strip shown on Prep drills, sections, and PrepTest list. */
 function LsacLicenseBanner({ className = "" }: { className?: string }) {
   return (
     <section
@@ -22,8 +22,8 @@ function LsacLicenseBanner({ className = "" }: { className?: string }) {
         draggable={false}
       />
       <div className="min-w-0 flex-1">
-        <p className="m-0 text-lg font-bold leading-[1.35] text-[#0e2a5c]">Official LSAC licensed prep</p>
-        <p className="m-0 pt-0.5 text-sm leading-[1.5] tracking-[0.28px] text-[#4a5b78]">
+        <p className="m-0 text-sm font-bold leading-[1.35] text-[#0e2a5c]">Official LSAC licensed prep</p>
+        <p className="m-0 pt-0.5 text-xs leading-[1.5] tracking-[0.28px] text-[#4a5b78]">
           Practice questions and sections on betterLSAT are licensed from the Law School Admission
           Council.
         </p>
@@ -32,7 +32,7 @@ function LsacLicenseBanner({ className = "" }: { className?: string }) {
         href={LSAC_LICENSE_HREF}
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex h-10 shrink-0 items-center justify-center rounded-[14px] px-4 text-sm font-semibold tracking-[0.28px] text-[var(--primary)] hover:underline"
+        className="inline-flex h-10 shrink-0 items-center justify-center rounded-[14px] px-4 text-xs font-semibold tracking-[0.28px] text-[var(--primary)] hover:underline"
       >
         About our license
       </a>

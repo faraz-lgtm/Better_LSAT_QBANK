@@ -858,7 +858,7 @@ function PracticePrepTestsListPage() {
   }
 
   return (
-    <StudentMain>
+    <StudentMain showLsacLicenseBanner>
       <div className="flex flex-col gap-6">
         <p
           className={cn(

@@ -31,8 +31,32 @@ export type TutoringPastSessionDto = {
   recordingStatus: TutoringSessionDto["recordingStatus"]
 }
 
+export type FreeStrategyCallDto = {
+  id: string
+  status: TutoringSessionDto["status"]
+  /** Finished call — Status detail + no Join/Reschedule. */
+  isCompleted: boolean
+  tutorName: string
+  joinUrl: string | null
+  startsAt: string
+  endsAt: string | null
+  timezone: string | null
+  dateLabel: string
+  timeLabel: string
+  timezoneLabel: string
+  focus: string
+  title: string
+  transcriptStatus: TutoringSessionDto["transcriptStatus"]
+  recordingStatus: TutoringSessionDto["recordingStatus"]
+  customerEmail: string | null
+}
+
 export type TutoringSessionsListResponse = {
   hasActivePackage: boolean
+  /** True when the student already used their one free strategy call (non-canceled). */
+  hasBookedFreeStrategyCall: boolean
+  /** The student's free strategy call session when already booked. */
+  freeStrategyCall: FreeStrategyCallDto | null
   nextSession: TutoringSessionDto | null
   upcomingSessions: TutoringSessionDto[]
   pastSessions: TutoringPastSessionDto[]

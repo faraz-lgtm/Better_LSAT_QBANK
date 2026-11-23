@@ -5,7 +5,7 @@ import { Link } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import {
   STUDENT_FREE_STRATEGY_CALL_HREF,
-  STUDENT_TUTORING_BOOK_HREF,
+  STUDENT_TUTORING_SESSIONS_HREF,
 } from "@/features/app-shell/student-nav-config"
 import { DashboardWelcomeHeading } from "@/features/dashboard/components/dashboard-welcome-heading"
 import {
@@ -481,7 +481,7 @@ function FreePlanTranscriptsBanner() {
         asChild
         className="h-10 shrink-0 rounded-[14px] border border-[var(--primary-border)] px-4 text-sm font-semibold tracking-[0.28px] shadow-[0px_1px_1px_rgba(13,13,18,0.06)]"
       >
-        <Link to={STUDENT_TUTORING_BOOK_HREF}>Book Your First Session</Link>
+        <Link to={STUDENT_TUTORING_SESSIONS_HREF}>Book Your First Session</Link>
       </Button>
     </section>
   )

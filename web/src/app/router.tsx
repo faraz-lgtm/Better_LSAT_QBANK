@@ -93,10 +93,6 @@ const FreeStrategyCallPage = lazyNamed(
   () => import("@/features/tutoring/pages/free-strategy-call-page"),
   "FreeStrategyCallPage",
 )
-const BookSessionsPage = lazyNamed(
-  () => import("@/features/tutoring/pages/book-sessions-page"),
-  "BookSessionsPage",
-)
 const AfterBookingSessionsPage = lazyNamed(
   () => import("@/features/tutoring/pages/after-booking-sessions-page"),
   "AfterBookingSessionsPage",
@@ -964,11 +960,7 @@ const router = createBrowserRouter([
           },
           {
             path: "tutoring/book",
-            element: (
-              <LazyPage>
-                <BookSessionsPage />
-              </LazyPage>
-            ),
+            element: <Navigate to="/app/tutoring/sessions" replace />,
           },
           {
             path: "tutoring/after-booking",
