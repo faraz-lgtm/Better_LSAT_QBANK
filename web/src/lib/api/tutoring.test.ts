@@ -7,6 +7,8 @@ describe("createTutoringApi", () => {
     const invoke = vi.fn().mockResolvedValue({
       data: {
         hasActivePackage: false,
+        hasBookedFreeStrategyCall: false,
+        freeStrategyCall: null,
         nextSession: null,
         upcomingSessions: [],
         pastSessions: [],

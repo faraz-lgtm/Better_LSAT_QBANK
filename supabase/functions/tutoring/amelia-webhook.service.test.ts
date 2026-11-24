@@ -1,6 +1,35 @@
 import { assertEquals } from 'https://deno.land/std@0.224.0/assert/mod.ts'
-import { createAmeliaWebhookService } from './amelia-webhook.service.ts'
+import {
+  createAmeliaWebhookService,
+  resolveAmeliaBookingTimeZone,
+} from './amelia-webhook.service.ts'
 import type { TutoringRepository } from './tutoring.repository.ts'
+
+Deno.test('resolveAmeliaBookingTimeZone reads customer zone from bookings[].info JSON', () => {
+  assertEquals(
+    resolveAmeliaBookingTimeZone({
+      data: {
+        appointment: {
+          bookings: {
+            '0': {
+              info: JSON.stringify({
+                firstName: 'Masud',
+                lastName: 'Holt',
+                locale: 'en_US',
+                timeZone: 'Asia/Karachi',
+              }),
+            },
+          },
+        },
+      },
+    }),
+    'Asia/Karachi',
+  )
+})
+
+Deno.test('resolveAmeliaBookingTimeZone falls back to America/New_York', () => {
+  assertEquals(resolveAmeliaBookingTimeZone({ data: { appointment: {} } }), 'America/New_York')
+})
 
 Deno.test('Amelia Booking Completed payload creates a session for the booking customer', async () => {
   let linkedCustomer: { userId: string; customerId: number } | null = null
@@ -35,6 +64,13 @@ Deno.test('Amelia Booking Completed payload creates a session for the booking cu
             customerId: 42,
             status: 'approved',
             customer: { email: 'student@example.com' },
+            info: JSON.stringify({
+              firstName: 'Student',
+              lastName: 'Example',
+              locale: 'en_US',
+              timeZone: 'Asia/Karachi',
+            }),
+            utcOffset: 300,
           },
         ],
       },
@@ -47,6 +83,10 @@ Deno.test('Amelia Booking Completed payload creates a session for the booking cu
   assertEquals(savedSessionInput.user_id, 'user-1')
   assertEquals(savedSessionInput.amelia_booking_id, 99)
   assertEquals(savedSessionInput.zoom_meeting_id, '85950926952')
+  assertEquals(savedSessionInput.timezone, 'Asia/Karachi')
+  // Amelia bookingStart is UTC; customer timeZone is display-only (10:00Z → 3:00 PM Karachi).
+  assertEquals(savedSessionInput.starts_at, '2026-12-08T10:00:00.000Z')
+  assertEquals(savedSessionInput.ends_at, '2026-12-08T10:15:00.000Z')
 })
 
 Deno.test('Amelia booking status payload cancels an existing session', async () => {

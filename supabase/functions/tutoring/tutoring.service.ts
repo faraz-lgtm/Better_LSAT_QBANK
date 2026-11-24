@@ -4,6 +4,8 @@ import { createZoomClient } from '../_shared/zoom-client.ts'
 import { parseZoomEnv } from '../_shared/zoom-env.ts'
 import {
   ameliaLocalDateTimeToIso,
+  ameliaUtcDateTimeToIso,
+  mapFreeStrategyCallDto,
   mapSessionRowToDto,
   mapTodoRowToDto,
   mapTranscriptJsonToViewer,
@@ -23,6 +25,30 @@ function splitName(fullName: string | null | undefined, email: string): {
   const parts = trimmed.split(/\s+/).filter(Boolean)
   if (parts.length === 1) return { firstName: parts[0]!, lastName: 'Student' }
   return { firstName: parts[0]!, lastName: parts.slice(1).join(' ') }
+}
+
+/** Non-canceled free strategy call (by focus name or default Amelia service id). Prefer upcoming. */
+export function pickFreeStrategyCallSession<
+  T extends {
+    focus: string | null
+    amelia_service_id: number | null
+    status: string
+    starts_at: string
+  },
+>(rows: T[], defaultServiceId?: number | null, now = new Date()): T | null {
+  const candidates = rows.filter((row) => {
+    if (row.status === 'canceled') return false
+    const focus = row.focus?.toLowerCase() ?? ''
+    if (focus.includes('strategy call')) return true
+    return defaultServiceId != null && row.amelia_service_id === defaultServiceId
+  })
+  if (candidates.length === 0) return null
+  const nowMs = now.getTime()
+  const upcoming = candidates
+    .filter((row) => row.status === 'scheduled' && new Date(row.starts_at).getTime() >= nowMs)
+    .sort((a, b) => a.starts_at.localeCompare(b.starts_at))
+  if (upcoming[0]) return upcoming[0]
+  return [...candidates].sort((a, b) => b.starts_at.localeCompare(a.starts_at))[0] ?? null
 }
 
 export function createTutoringService(deps: {
@@ -72,6 +98,11 @@ export function createTutoringService(deps: {
       },
     ) {
       const { env, client } = requireAmelia()
+      const existingSessions = await repository.listSessionsForUser(userId)
+      if (pickFreeStrategyCallSession(existingSessions, env.defaultServiceId)) {
+        throw new Error('Free strategy call can only be booked once')
+      }
+
       const profile = await repository.getProfileAmeliaLink(userId)
       const email = profile?.email?.trim()
       if (!email) throw new Error('Profile email required to book tutoring')
@@ -102,12 +133,11 @@ export function createTutoringService(deps: {
         await repository.setAmeliaCustomerId(userId, result.customerId)
       }
 
+      // Amelia returns bookingStart/End as UTC; client input is wall time in timeZone.
       const startsAt = result.bookingStart
-        ? ameliaLocalDateTimeToIso(result.bookingStart, timeZone)
+        ? ameliaUtcDateTimeToIso(result.bookingStart)
         : ameliaLocalDateTimeToIso(input.bookingStart, timeZone)
-      const endsAt = result.bookingEnd
-        ? ameliaLocalDateTimeToIso(result.bookingEnd, timeZone)
-        : null
+      const endsAt = result.bookingEnd ? ameliaUtcDateTimeToIso(result.bookingEnd) : null
 
       const session = await repository.upsertSession({
         user_id: userId,
@@ -145,10 +175,10 @@ export function createTutoringService(deps: {
       })
 
       const startsAt = result.bookingStart
-        ? ameliaLocalDateTimeToIso(result.bookingStart, timeZone)
+        ? ameliaUtcDateTimeToIso(result.bookingStart)
         : ameliaLocalDateTimeToIso(input.bookingStart, timeZone)
       const endsAt = result.bookingEnd
-        ? ameliaLocalDateTimeToIso(result.bookingEnd, timeZone)
+        ? ameliaUtcDateTimeToIso(result.bookingEnd)
         : session.ends_at
 
       const updated = await repository.upsertSession({
@@ -183,6 +213,7 @@ export function createTutoringService(deps: {
     async listSessions(userId: string) {
       const rows = await repository.listSessionsForUser(userId)
       const now = new Date()
+      const defaultServiceId = ameliaEnv?.defaultServiceId ?? null
       const dtos = rows.map((row) => mapSessionRowToDto(row, now))
       const upcoming = dtos
         .filter((s) => s.status === 'scheduled' && new Date(s.startsAt).getTime() >= now.getTime())
@@ -205,8 +236,17 @@ export function createTutoringService(deps: {
           }
         : null
 
+      const freeRow = pickFreeStrategyCallSession(rows, defaultServiceId, now)
+      let freeStrategyCall = null
+      if (freeRow) {
+        const profile = await repository.getProfileAmeliaLink(userId)
+        freeStrategyCall = mapFreeStrategyCallDto(freeRow, profile?.email?.trim() || null, now)
+      }
+
       return {
         hasActivePackage: Boolean(activePackage),
+        hasBookedFreeStrategyCall: Boolean(freeRow),
+        freeStrategyCall,
         nextSession: upcoming[0] ?? null,
         upcomingSessions: upcoming,
         pastSessions: past.map((s) => ({

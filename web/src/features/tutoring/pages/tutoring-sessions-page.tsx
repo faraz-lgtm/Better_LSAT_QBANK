@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { PastSessionsTable } from "@/features/tutoring/components/past-sessions-table"
 import { RescheduleSessionDialog } from "@/features/tutoring/components/reschedule-session-dialog"
 import { UpcomingSessionsList } from "@/features/tutoring/components/upcoming-sessions-list"
-import { STUDENT_TUTORING_BOOK_HREF } from "@/features/app-shell/student-nav-config"
+import { STUDENT_TUTORING_SESSIONS_HREF } from "@/features/app-shell/student-nav-config"
 import type { PastSessionRow, TutoringSessionSummary } from "@/features/tutoring/lib/types"
 import { StudentMain } from "@/features/student/components/student-main"
 import { createTutoringApi } from "@/lib/api/tutoring"
@@ -78,7 +78,7 @@ function TutoringSessionsPage() {
           </p>
         </div>
         <Button asChild size="lg" className="h-12 shrink-0 rounded-[10px] px-4">
-          <Link to={STUDENT_TUTORING_BOOK_HREF}>Book More Sessions</Link>
+          <Link to={STUDENT_TUTORING_SESSIONS_HREF}>Book More Sessions</Link>
         </Button>
       </header>
 

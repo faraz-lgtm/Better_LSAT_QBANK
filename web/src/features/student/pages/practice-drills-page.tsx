@@ -133,7 +133,11 @@ function PracticeDrillsPage() {
   }
 
   return (
-    <StudentMain className="drills-page bg-[var(--primary-0)]" contentClassName="flex flex-col gap-[25px] bg-[var(--primary-0)] pb-[48px]">
+    <StudentMain
+      showLsacLicenseBanner
+      className="drills-page bg-[var(--primary-0)]"
+      contentClassName="flex flex-col gap-[25px] bg-[var(--primary-0)] pb-[48px]"
+    >
       {limitFreeAccess ? (
         <PracticeDrillsFreePreview onLockedAction={handleLockedAction} />
       ) : (

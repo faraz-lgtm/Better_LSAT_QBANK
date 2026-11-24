@@ -25,7 +25,6 @@ export type StudentNavItemIconKey =
   | "insights-drills"
   | "insights-sections"
   | "insights-preptest"
-  | "book-sessions"
   | "tutoring-sessions"
   | "live-classes"
   | "feedback"
@@ -47,7 +46,6 @@ export const STUDENT_NAV_ITEM_ICON_SRC: Record<StudentNavItemIconKey, string> = 
   "insights-drills": "/nav/insights-drills.svg",
   "insights-sections": "/nav/insights-sections.svg",
   "insights-preptest": "/nav/insights-preptest.svg",
-  "book-sessions": "/nav/tutoring-sessions.svg",
   "tutoring-sessions": "/nav/tutoring-sessions.svg",
   "live-classes": "/nav/live-classes.svg",
   feedback: "/nav/feedback.svg",
@@ -103,9 +101,6 @@ export const STUDENT_DIAGNOSTIC_RESULTS_ICON: StudentNavItemIconKey = "diagnosti
 
 export const STUDENT_DIAGNOSTIC_EXPLANATION_ICON: StudentNavItemIconKey = "diagnostic-explanation"
 
-/** Book Sessions / packages screen (Figma `Book Sessions` 21584:28663). */
-export const STUDENT_TUTORING_BOOK_HREF = "/app/tutoring/book"
-export const STUDENT_TUTORING_BOOK_SESSIONS_LABEL = "Book 1 on 1 Sessions"
 export const STUDENT_TUTORING_AFTER_BOOKING_HREF = "/app/tutoring/after-booking"
 export const STUDENT_TUTORING_SESSIONS_HREF = "/app/tutoring/sessions"
 export const STUDENT_TUTORING_SESSIONS_ALL_HREF = "/app/tutoring/sessions/all"
@@ -130,11 +125,6 @@ export const STUDENT_NAV_SECTIONS: StudentNavSection[] = [
     label: "TUTORING",
     badge: "NEW",
     items: [
-      {
-        label: STUDENT_TUTORING_BOOK_SESSIONS_LABEL,
-        href: STUDENT_TUTORING_BOOK_HREF,
-        icon: "book-sessions",
-      },
       {
         label: "My Sessions",
         href: STUDENT_TUTORING_SESSIONS_HREF,

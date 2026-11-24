@@ -8,9 +8,13 @@ import { PastSessionsPanel } from "@/features/tutoring/components/past-sessions-
 import { RescheduleSessionDialog } from "@/features/tutoring/components/reschedule-session-dialog"
 import { TodoListSection } from "@/features/tutoring/components/todo-list-section"
 import { TutoringPackagesSection } from "@/features/tutoring/components/tutoring-packages-section"
+import { TutoringTestimonials } from "@/features/tutoring/components/tutoring-testimonials"
 import { UpcomingSessionsList } from "@/features/tutoring/components/upcoming-sessions-list"
-import { STUDENT_TUTORING_BOOK_HREF } from "@/features/app-shell/student-nav-config"
-import { TUTORING_PACKAGES } from "@/features/tutoring/lib/mock-sessions-data"
+import { STUDENT_FREE_STRATEGY_CALL_HREF } from "@/features/app-shell/student-nav-config"
+import {
+  MOCK_TUTORING_SESSIONS,
+  TUTORING_PACKAGES,
+} from "@/features/tutoring/lib/mock-sessions-data"
 import type {
   ActivePackageSummary,
   PastSessionRow,
@@ -238,7 +242,7 @@ function AfterBookingSessionsPage() {
                   No upcoming session scheduled.
                 </p>
                 <Button asChild className="mt-4 h-12 w-fit rounded-[10px]">
-                  <Link to={STUDENT_TUTORING_BOOK_HREF}>Book a session</Link>
+                  <Link to={STUDENT_FREE_STRATEGY_CALL_HREF}>Book a session</Link>
                 </Button>
               </section>
             )}
@@ -274,13 +278,13 @@ function AfterBookingSessionsPage() {
       <TutoringPackagesSection
         packages={TUTORING_PACKAGES}
         title="Book your next Sessions"
-        ctaLabel="Book More Sessions"
         helperLinkLabel="Talk to Us →"
         selectedPackageId={selectedPackageId}
         onSelectPackage={setSelectedPackageId}
-        onCtaClick={() => navigate(STUDENT_TUTORING_BOOK_HREF)}
-        onHelperClick={() => navigate(STUDENT_TUTORING_BOOK_HREF)}
+        onHelperClick={() => navigate(STUDENT_FREE_STRATEGY_CALL_HREF)}
       />
+
+      <TutoringTestimonials testimonials={MOCK_TUTORING_SESSIONS.testimonials} />
 
       <RescheduleSessionDialog
         open={rescheduleSession != null}

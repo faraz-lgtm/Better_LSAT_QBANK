@@ -78,7 +78,9 @@ export async function handleTutoringCreateBooking(req: Request): Promise<Respons
     })
     return json(result, {}, cors)
   } catch (error) {
-    return json({ error: formatUnknownError(error) }, { status: 500 }, cors)
+    const message = formatUnknownError(error)
+    const status = message === 'Free strategy call can only be booked once' ? 409 : 500
+    return json({ error: message }, { status }, cors)
   }
 }
 

@@ -103,7 +103,22 @@ function TutoringPackagesSection({
 
       {ctaLabel ? (
         <div className="flex justify-center pt-2">
-          <Button type="button" size="lg" className="h-12 min-w-[194px] rounded-[10px] px-4" onClick={onCtaClick}>
+          <Button
+            type="button"
+            size="lg"
+            className="h-12 min-w-[194px] rounded-[10px] px-4"
+            onClick={() => {
+              if (onCtaClick) {
+                onCtaClick()
+                return
+              }
+              const selected =
+                packages.find((pkg) => pkg.id === selectedPackageId) ??
+                packages.find((pkg) => pkg.popular) ??
+                packages[0]
+              if (selected) setBookingPackage(selected)
+            }}
+          >
             {ctaLabel}
           </Button>
         </div>

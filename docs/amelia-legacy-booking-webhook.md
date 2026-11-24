@@ -34,6 +34,11 @@ booking to the deployed Supabase Edge Function.
 - The Amelia customer email must exactly match the email on the student's
   BetterLSAT profile. This is how the webhook associates an external booking
   with the signed-in student.
+- Amelia `bookingStart` / `bookingEnd` are UTC wall times; we store them as
+  timestamptz without re-applying the customer zone.
+- The customer's booking timezone is read from `bookings[].info` JSON
+  (`timeZone`, e.g. `Asia/Karachi`) and stored on `tutoring_sessions.timezone`
+  so Free Strategy Call **displays** the same zone the student picked when booking.
 - Make one test booking using a test BetterLSAT account. Confirm:
   1. Amelia sends the appointment email with a Zoom join link.
   2. `tutoring_sessions` has a row with `status = scheduled`.

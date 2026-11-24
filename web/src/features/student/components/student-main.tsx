@@ -12,8 +12,8 @@ type StudentMainProps = {
   layout?: "scroll" | "locked" | "immersive"
   /** Skip the 1168px page container so a 3-col shell can cap only the center pane. */
   fullBleed?: boolean
-  /** Hide the LSAC license strip (shown by default on scroll layout pages). */
-  hideLsacLicenseBanner?: boolean
+  /** Show the LSAC license strip (Prep drills / sections / PrepTest list only). */
+  showLsacLicenseBanner?: boolean
 }
 
 function StudentMain({
@@ -22,12 +22,12 @@ function StudentMain({
   contentClassName = "",
   layout = "scroll",
   fullBleed = false,
-  hideLsacLicenseBanner = false,
+  showLsacLicenseBanner = false,
 }: StudentMainProps) {
   const locked = layout === "locked"
   const immersive = layout === "immersive"
   const contained = !immersive && !fullBleed
-  const showLsacLicenseBanner = !immersive && !locked && !hideLsacLicenseBanner
+  const renderLsacLicenseBanner = showLsacLicenseBanner && !immersive && !locked
 
   return (
     <main
@@ -51,7 +51,7 @@ function StudentMain({
         )}
       >
         {children}
-        {showLsacLicenseBanner ? <LsacLicenseBanner className="mt-6 shrink-0" /> : null}
+        {renderLsacLicenseBanner ? <LsacLicenseBanner className="mt-6 shrink-0" /> : null}
       </div>
     </main>
   )

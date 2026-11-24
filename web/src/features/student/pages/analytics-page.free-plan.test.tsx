@@ -94,7 +94,6 @@ describe("AnalyticsPage free plan", () => {
     renderOverview()
 
     expect(screen.getByTestId("analytics-insights-free-preview")).toBeInTheDocument()
-    expect(screen.getByText("Official LSAC licensed prep")).toBeInTheDocument()
     expect(getPageBundle).not.toHaveBeenCalled()
   })
 })
