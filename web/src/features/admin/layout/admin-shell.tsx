@@ -11,7 +11,7 @@ function AdminShell() {
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <AdminTopbar />
         <main className="flex min-h-0 flex-1 flex-col overflow-auto">
-          <div className="mx-auto flex w-full max-w-[1168px] flex-1 flex-col p-6">
+          <div className="mx-auto flex w-full max-w-[1320px] flex-1 flex-col px-8 pb-12 pt-7">
             <Outlet />
           </div>
         </main>

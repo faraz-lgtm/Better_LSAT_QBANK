@@ -1645,6 +1645,86 @@ export function createAdminRepository(client: SupabaseClient) {
         tests: testsR.data ?? [],
       }
     },
+
+    async listStudentRecords() {
+      const { data, error } = await client.rpc("admin_list_student_records")
+      if (error) throw error
+      return Array.isArray(data) ? data : []
+    },
+
+    async getLatestInsightsSnapshot() {
+      const { data, error } = await client
+        .from("admin_insights_snapshots")
+        .select("id,computed_at,timezone,payload")
+        .order("computed_at", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      if (error) throw error
+      return data
+    },
+
+    async buildInsightsPayload(range: { from: string; to: string }) {
+      const { data, error } = await client.rpc("admin_build_insights_payload", {
+        p_from: range.from,
+        p_to: range.to,
+      })
+      if (error) throw error
+      return data as Record<string, unknown>
+    },
+
+    async recomputeInsightsSnapshot() {
+      const { data, error } = await client.rpc("admin_recompute_insights_snapshot")
+      if (error) throw error
+      return data
+    },
+
+    async listStudentNotes(studentUserId: string) {
+      const { data, error } = await client
+        .from("admin_student_notes")
+        .select("id,student_user_id,author_admin_id,body,created_at")
+        .eq("student_user_id", studentUserId)
+        .order("created_at", { ascending: false })
+        .limit(50)
+      if (error) throw error
+      return data ?? []
+    },
+
+    async addStudentNote(input: { studentUserId: string; authorAdminId: string; body: string }) {
+      const { data, error } = await client
+        .from("admin_student_notes")
+        .insert({
+          student_user_id: input.studentUserId,
+          author_admin_id: input.authorAdminId,
+          body: input.body,
+        })
+        .select("id,student_user_id,author_admin_id,body,created_at")
+        .single()
+      if (error) throw error
+      return data
+    },
+
+
+    async listActiveSubscriptionsForUsers(userIds: string[]) {
+      if (userIds.length === 0) return []
+      const { data, error } = await client
+        .from("billing_subscriptions")
+        .select("id,user_id,stripe_subscription_id,status,cancel_at_period_end")
+        .in("user_id", userIds)
+        .in("status", ["active", "trialing"])
+      if (error) throw error
+      return data ?? []
+    },
+
+    async markSubscriptionCancelAtPeriodEnd(stripeSubscriptionId: string) {
+      const { error } = await client
+        .from("billing_subscriptions")
+        .update({
+          cancel_at_period_end: true,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("stripe_subscription_id", stripeSubscriptionId)
+      if (error) throw error
+    },
   }
 }
 

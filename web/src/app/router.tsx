@@ -244,6 +244,14 @@ const AdminDashboardPage = lazyNamed(
   () => import("@/features/admin/pages/admin-dashboard-page"),
   "AdminDashboardPage",
 )
+const AdminInsightsPage = lazyNamed(
+  () => import("@/features/admin/pages/admin-insights-page"),
+  "AdminInsightsPage",
+)
+const AdminStudentsPage = lazyNamed(
+  () => import("@/features/admin/pages/admin-students-page"),
+  "AdminStudentsPage",
+)
 const AdminTaxonomyPage = lazyNamed(
   () => import("@/features/admin/pages/admin-taxonomy-page"),
   "AdminTaxonomyPage",
@@ -1308,6 +1316,22 @@ const router = createBrowserRouter([
             element: (
               <LazyPage>
                 <AdminDashboardPage />
+              </LazyPage>
+            ),
+          },
+          {
+            path: "insights",
+            element: (
+              <LazyPage>
+                <AdminInsightsPage />
+              </LazyPage>
+            ),
+          },
+          {
+            path: "students",
+            element: (
+              <LazyPage>
+                <AdminStudentsPage />
               </LazyPage>
             ),
           },

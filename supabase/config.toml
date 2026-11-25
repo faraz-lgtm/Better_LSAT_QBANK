@@ -92,7 +92,7 @@ openai_api_key = "env(OPENAI_API_KEY)"
 
 # Email testing server. Emails sent with the local dev setup are not actually sent - rather, they
 # are monitored, and you can view the emails that would have been sent from the web interface.
-[inbucket]
+[local_smtp]
 enabled = true
 # Port to use for the email testing server web interface.
 port = 54324
@@ -406,6 +406,9 @@ verify_jwt = false
 [functions.admin-create-you-try-question]
 verify_jwt = false
 
+[functions.admin-add-student-note]
+verify_jwt = false
+
 [functions.admin-dashboard]
 verify_jwt = false
 
@@ -442,6 +445,9 @@ verify_jwt = false
 [functions.admin-get-user-detail]
 verify_jwt = false
 
+[functions.admin-get-insights]
+verify_jwt = false
+
 [functions.admin-get-you-try-question]
 verify_jwt = false
 
@@ -472,7 +478,16 @@ verify_jwt = false
 [functions.admin-list-users]
 verify_jwt = false
 
+[functions.admin-list-student-notes]
+verify_jwt = false
+
+[functions.admin-list-student-records]
+verify_jwt = false
+
 [functions.admin-list-you-try-questions]
+verify_jwt = false
+
+[functions.admin-recompute-insights]
 verify_jwt = false
 
 [functions.admin-reorder-lessons]
@@ -515,6 +530,9 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.admin-update-score-row]
+verify_jwt = false
+
+[functions.admin-unsubscribe-students]
 verify_jwt = false
 
 [functions.admin-update-you-try-question]
