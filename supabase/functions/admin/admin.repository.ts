@@ -1703,6 +1703,23 @@ export function createAdminRepository(client: SupabaseClient) {
       return data
     },
 
+    async getStudentRole(studentUserId: string) {
+      const { data, error } = await client
+        .from("profiles")
+        .select("id,role,deleted_at")
+        .eq("id", studentUserId)
+        .maybeSingle()
+      if (error) throw error
+      return data
+    },
+
+    async softDeleteStudent(userId: string) {
+      const now = new Date().toISOString()
+      const { error: profileError } = await client.from("profiles").update({ deleted_at: now }).eq("id", userId)
+      if (profileError) throw profileError
+     const { error: banError } = await client.auth.admin.updateUserById(userId, { ban_duration: "876000h" })
+      if (banError) throw banError
+    },
 
     async listActiveSubscriptionsForUsers(userIds: string[]) {
       if (userIds.length === 0) return []

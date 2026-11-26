@@ -18,10 +18,26 @@ import {
 import { useAdminApi } from "@/features/admin/use-admin-api"
 import type { AdminStudentRecord } from "@/lib/api/admin"
 
-type RangeKey = "7" | "30" | "90" | "custom"
+type RangeKey = "all" | "7" | "30" | "90" | "custom"
 
 /** Preview rows on each dashboard worklist; full lists open via View All. */
 const DASHBOARD_PREVIEW_LIMIT = 3
+
+function toYmd(d: Date) {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, "0")
+  const day = String(d.getDate()).padStart(2, "0")
+  return `${y}-${m}-${day}`
+}
+
+function recentSignupsStudentsHref(range: RangeKey, activeRange: DateRangeValue) {
+  const base = "/admin/students?view=recent_signups&sort=newest"
+  if (range === "all") return `${base}&days=all`
+  if (range === "custom") {
+    return `${base}&from=${toYmd(activeRange.start)}&to=${toYmd(activeRange.end)}`
+  }
+  return `${base}&days=${range}`
+}
 
 function sparkData(seed: number) {
   return Array.from({ length: 12 }, (_, i) => ({
@@ -41,7 +57,7 @@ function AdminDashboardPage() {
   const navigate = useNavigate()
   const adminApi = useAdminApi()
   const { rows, loading, error } = useAdminStudentRecords()
-  const [range, setRange] = useState<RangeKey>("30")
+  const [range, setRange] = useState<RangeKey>("all")
   const [courses, setCourses] = useState<Array<Record<string, unknown>>>([])
   const [customOpen, setCustomOpen] = useState(false)
   const [customRange, setCustomRange] = useState<DateRangeValue>(() => {
@@ -76,12 +92,17 @@ function AdminDashboardPage() {
 
   const activeRange = useMemo(() => {
     if (range === "custom") return customRange
+    if (range === "all") {
+      const end = startOfDay(new Date())
+      return { start: launchDate ? startOfDay(launchDate) : end, end }
+    }
     const end = startOfDay(new Date())
     const days = Number(range)
     return { start: addDays(end, -(days - 1)), end }
-  }, [range, customRange])
+  }, [range, customRange, launchDate])
 
-  const rangeDays = daysInclusive(activeRange.start, activeRange.end)
+  const rangeAll = range === "all"
+  const rangeDays = rangeAll ? null : daysInclusive(activeRange.start, activeRange.end)
   const sinceMs = startOfDay(activeRange.start).getTime()
   const untilMs = startOfDay(activeRange.end).getTime() + 86400000 - 1
   const prevUntilMs = sinceMs - 1
@@ -89,14 +110,15 @@ function AdminDashboardPage() {
 
   const stats = useMemo(() => {
     const paid = rows.filter((r) => r.is_paid)
-    const newPaidInRange = paid.filter((r) => {
-      const t = Date.parse(r.created_at)
-      return t >= sinceMs && t <= untilMs
-    })
-    const newPaidPrev = paid.filter((r) => {
-      const t = Date.parse(r.created_at)
-      return t >= prevSinceMs && t <= prevUntilMs
-    })
+    const inRange = (r: AdminStudentRecord) =>
+      rangeAll ? true : createdAtInRange(r, sinceMs, untilMs)
+    const newPaidInRange = paid.filter((r) => inRange(r))
+    const newPaidPrev = rangeAll
+      ? []
+      : paid.filter((r) => {
+          const t = Date.parse(r.created_at)
+          return t >= prevSinceMs && t <= prevUntilMs
+        })
     const mrr = paid.reduce((sum, r) => sum + monthlyEquivalentUsd(r.plan_label), 0)
     const mrrFromNew = newPaidInRange.reduce((sum, r) => sum + monthlyEquivalentUsd(r.plan_label), 0)
     const mrrFromPrevNew = newPaidPrev.reduce((sum, r) => sum + monthlyEquivalentUsd(r.plan_label), 0)
@@ -112,12 +134,14 @@ function AdminDashboardPage() {
     const freeTotal = rows.filter((r) => !r.is_paid).length || 1
     const activityRate = rows.length === 0 ? 0 : Math.round((100 * active7.length) / rows.length)
     const prevActivityRate = rows.length === 0 ? 0 : Math.round((100 * activePrev7.length) / rows.length)
-    const inRange = (r: AdminStudentRecord) => createdAtInRange(r, sinceMs, untilMs)
+    const recent = [...rows.filter((r) => inRange(r))].sort(
+      (a, b) => Date.parse(b.created_at) - Date.parse(a.created_at),
+    )
     return {
       mrr,
-      mrrDelta: mrrFromNew - mrrFromPrevNew,
+      mrrDelta: rangeAll ? null : mrrFromNew - mrrFromPrevNew,
       newPaid: newPaidInRange.length,
-      newPaidDelta: newPaidInRange.length - newPaidPrev.length,
+      newPaidDelta: rangeAll ? null : newPaidInRange.length - newPaidPrev.length,
       paidCount: paid.length,
       total: rows.length,
       activityRate,
@@ -125,21 +149,24 @@ function AdminDashboardPage() {
       paidActivityPct: Math.round((100 * paidActive) / paidTotal),
       freeActivityPct: Math.round((100 * freeActive) / freeTotal),
       paidActive7: paidActive,
-      // Worklists + matching chips follow the selected signup window.
+      // Worklists follow the selected signup window (all = no cut).
       atRisk: rows.filter((r) => r.at_risk && inRange(r)),
       upgrade: rows.filter((r) => r.upgrade_candidate && inRange(r)),
-      recent: rows.filter((r) => inRange(r)),
+      recent,
       failedPayments: 0,
       testDateLow: rows.filter((r) => r.test_date_under_30 && (r.days_inactive ?? 99) >= 7),
       neverDiag: rows.filter((r) => r.never_started_diagnostic),
       rangeDays,
+      rangeLabel: rangeAll ? "all time" : `${rangeDays} days`,
     }
-  }, [rows, sinceMs, untilMs, prevSinceMs, prevUntilMs, rangeDays])
+  }, [rows, sinceMs, untilMs, prevSinceMs, prevUntilMs, rangeDays, rangeAll])
 
   const customLabel =
     range === "custom"
       ? `${activeRange.start.toLocaleDateString(undefined, { month: "short", day: "numeric" })} – ${activeRange.end.toLocaleDateString(undefined, { month: "short", day: "numeric" })}`
       : "Custom"
+
+  const recentStudentsHref = recentSignupsStudentsHref(range, activeRange)
 
   return (
     <section className="flex flex-col gap-5">
@@ -154,6 +181,17 @@ function AdminDashboardPage() {
           </p>
         </div>
         <div className="flex items-center rounded-[10px] border border-[#e3e8ef] bg-white p-[3px]">
+          <button
+            type="button"
+            className={`min-h-9 rounded-[7px] px-3 py-2 text-sm ${
+              range === "all"
+                ? "bg-[#1e40af] font-semibold text-white"
+                : "font-normal text-[#475569] hover:bg-[var(--surface3)]"
+            }`}
+            onClick={() => setRange("all")}
+          >
+            All
+          </button>
           {(["7", "30", "90"] as const).map((key) => (
             <button
               key={key}
@@ -201,15 +239,15 @@ function AdminDashboardPage() {
           label="Monthly recurring revenue"
           info="Sum of monthly-equivalent plan value for currently paid students."
           value={`$${stats.mrr.toLocaleString()}`}
-          delta={formatSignedMoney(stats.mrrDelta)}
-          hint={`vs previous ${stats.rangeDays} days`}
+          delta={stats.mrrDelta == null ? "—" : formatSignedMoney(stats.mrrDelta)}
+          hint={rangeAll ? "all time" : `vs previous ${stats.rangeDays} days`}
           spark={sparkData(20)}
         />
         <KpiCard
           label="New paid students"
           info="Paid accounts whose signup falls in the selected date range."
           value={String(stats.newPaid)}
-          delta={formatSigned(stats.newPaidDelta)}
+          delta={stats.newPaidDelta == null ? "—" : formatSigned(stats.newPaidDelta)}
           hint={`${stats.paidCount} paid of ${stats.total} students`}
           spark={sparkData(8)}
         />
@@ -346,8 +384,8 @@ function AdminDashboardPage() {
         <WorklistCard
           title="Recent signups"
           count={stats.recent.length}
-          subtitle={`Source is here so a bad paid-ads day shows the same day. · selected ${stats.rangeDays} days`}
-          viewAllTo="/admin/students?view=recent_signups"
+          subtitle={`Source is here so a bad paid-ads day shows the same day. · ${stats.rangeLabel}`}
+          viewAllTo={recentStudentsHref}
         >
           <StudentTable>
             <thead>
@@ -382,7 +420,7 @@ function AdminDashboardPage() {
               {stats.recent.length === 0 && (
                 <tr>
                   <td colSpan={4} className="px-4 py-6 text-[var(--text3)]">
-                    No signups in the selected date range.
+                    {rangeAll ? "No signups yet." : "No signups in the selected date range."}
                   </td>
                 </tr>
               )}

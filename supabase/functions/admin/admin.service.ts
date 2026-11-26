@@ -1107,6 +1107,40 @@ export function createAdminService(deps: { repository: AdminRepository }) {
       })
     },
 
+    async deleteStudents(userId: string, studentUserIds: string[]) {
+      await requireAdmin(userId)
+      const unique = Array.from(new Set(studentUserIds.filter(Boolean)))
+      if (unique.length === 0) throw new Error("studentUserIds is required")
+      let deleted = 0
+      const errors: string[] = []
+      for (const id of unique) {
+        if (id === userId) {
+          errors.push(`${id}: cannot delete yourself`)
+          continue
+        }
+        const profile = await deps.repository.getStudentRole(id)
+        if (!profile) {
+          errors.push(`${id}: not found`)
+          continue
+        }
+        if (profile.role !== "student") {
+          errors.push(`${id}: only student accounts can be deleted here`)
+          continue
+        }
+        if (profile.deleted_at) {
+          deleted += 1
+          continue
+        }
+        try {
+          await deps.repository.softDeleteStudent(id)
+          deleted += 1
+        } catch (e) {
+          errors.push(`${id}: ${e instanceof Error ? e.message : "delete failed"}`)
+        }
+      }
+      return { deleted, errors }
+    },
+
     async unsubscribeStudents(userId: string, studentUserIds: string[]) {
       await requireAdmin(userId)
       const unique = Array.from(new Set(studentUserIds.filter(Boolean)))
