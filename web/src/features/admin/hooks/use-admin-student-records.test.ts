@@ -3,7 +3,9 @@ import { describe, expect, it } from "vitest"
 import {
   createdAtInRange,
   filterStudentRecords,
+  matchesRecentSignupWindow,
   monthlyEquivalentUsd,
+  resolveRecentSignupWindow,
   sortStudentRecords,
 } from "@/features/admin/hooks/use-admin-student-records"
 import type { AdminStudentRecord } from "@/lib/api/admin"
@@ -75,6 +77,52 @@ describe("filterStudentRecords", () => {
 
   it("filters by source and plan", () => {
     expect(filterStudentRecords(rows, { source: "Reddit", plan: "6 mo" }).map((r) => r.id)).toEqual(["3"])
+  })
+
+  it("filters recent_signups by signup window, not the 24h SQL flag", () => {
+    const recentRows = [
+      row({ id: "old", created_at: "2026-01-01T12:00:00Z", recent_signup_24h: false }),
+      row({ id: "mid", created_at: "2026-11-20T12:00:00Z", recent_signup_24h: false }),
+      row({ id: "new", created_at: "2026-11-26T12:00:00Z", recent_signup_24h: true }),
+    ]
+    const ids = filterStudentRecords(recentRows, {
+      view: "recent_signups",
+      recentSignupWindow: {
+        mode: "range",
+        fromMs: Date.parse("2026-11-20T00:00:00.000Z"),
+        toMs: Date.parse("2026-11-26T23:59:59.999Z"),
+      },
+    }).map((r) => r.id)
+    expect(ids).toEqual(["mid", "new"])
+  })
+
+  it("includes every signup when recent window is all", () => {
+    const recentRows = [
+      row({ id: "old", created_at: "2020-01-01T12:00:00Z", recent_signup_24h: false }),
+      row({ id: "new", created_at: "2026-11-26T12:00:00Z", recent_signup_24h: false }),
+    ]
+    expect(
+      filterStudentRecords(recentRows, {
+        view: "recent_signups",
+        recentSignupWindow: { mode: "all" },
+      }).map((r) => r.id),
+    ).toEqual(["old", "new"])
+  })
+})
+
+describe("resolveRecentSignupWindow", () => {
+  it("defaults to 30 days", () => {
+    expect(resolveRecentSignupWindow({})).toEqual({ mode: "days", days: 30 })
+  })
+
+  it("accepts all and custom ymd bounds", () => {
+    expect(resolveRecentSignupWindow({ days: "all" })).toEqual({ mode: "all" })
+    const window = resolveRecentSignupWindow({ from: "2026-11-01", to: "2026-11-30" })
+    expect(window.mode).toBe("range")
+    if (window.mode === "range") {
+      expect(matchesRecentSignupWindow(row({ created_at: "2026-11-15T12:00:00" }), window)).toBe(true)
+      expect(matchesRecentSignupWindow(row({ created_at: "2026-10-31T12:00:00" }), window)).toBe(false)
+    }
   })
 })
 

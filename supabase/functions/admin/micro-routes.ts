@@ -454,6 +454,14 @@ export async function handleAdminMicro(req: Request, slug: string): Promise<Resp
       }
       return json({ row: await service.addStudentNote(user.id, studentUserId, noteBody) }, {}, corsHeaders)
     }
+    if (action === "admin-delete-students") {
+      const ids = body.studentUserIds
+      const studentUserIds = Array.isArray(ids) ? ids.filter((v): v is string => typeof v === "string") : []
+      if (studentUserIds.length === 0) {
+        return json({ error: "studentUserIds is required" }, { status: 400 }, corsHeaders)
+      }
+      return json({ result: await service.deleteStudents(user.id, studentUserIds) }, {}, corsHeaders)
+    }
     if (action === "admin-unsubscribe-students") {
       const ids = body.studentUserIds
       const studentUserIds = Array.isArray(ids) ? ids.filter((v): v is string => typeof v === "string") : []

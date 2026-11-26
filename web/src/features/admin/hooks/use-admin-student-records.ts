@@ -82,6 +82,64 @@ export function createdAtInRange(
   return Number.isFinite(t) && t >= sinceMs && t <= untilMs
 }
 
+export const DEFAULT_RECENT_SIGNUP_DAYS = 30
+
+
+export type RecentSignupWindow =
+  | { mode: "all" }
+  | { mode: "days"; days: number }
+  | { mode: "range"; fromMs: number; toMs: number }
+
+function parseLocalYmdStart(ymd: string): number | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(ymd.trim())
+  if (!m) {
+    const t = Date.parse(ymd)
+    return Number.isFinite(t) ? t : null
+  }
+  return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])).getTime()
+}
+
+function parseLocalYmdEnd(ymd: string): number | null {
+  const start = parseLocalYmdStart(ymd)
+  if (start == null) return null
+  return start + 86400000 - 1
+}
+
+export function resolveRecentSignupWindow(opts: {
+  days?: string | null
+  from?: string | null
+  to?: string | null
+}): RecentSignupWindow {
+  if (opts.from && opts.to) {
+    const fromMs = parseLocalYmdStart(opts.from)
+    const toMs = parseLocalYmdEnd(opts.to)
+    if (fromMs != null && toMs != null) {
+      return { mode: "range", fromMs, toMs }
+    }
+  }
+  if (opts.days === "all") return { mode: "all" }
+  if (opts.days) {
+    const days = Number(opts.days)
+    if (Number.isFinite(days) && days > 0) return { mode: "days", days }
+  }
+  return { mode: "days", days: DEFAULT_RECENT_SIGNUP_DAYS }
+}
+
+export function matchesRecentSignupWindow(
+  row: Pick<AdminStudentRecord, "created_at">,
+  window: RecentSignupWindow,
+  nowMs = Date.now(),
+): boolean {
+  if (window.mode === "all") return true
+  if (window.mode === "range") return createdAtInRange(row, window.fromMs, window.toMs)
+  // Calendar window matching dashboard pills: last N days including today.
+  const end = new Date(nowMs)
+  const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate())
+  const startDay = new Date(endDay)
+  startDay.setDate(startDay.getDate() - (window.days - 1))
+  return createdAtInRange(row, startDay.getTime(), endDay.getTime() + 86400000 - 1)
+}
+
 export function filterStudentRecords(
   rows: AdminStudentRecord[],
   opts: {
@@ -90,16 +148,22 @@ export function filterStudentRecords(
     plan?: string
     source?: string
     activity?: string
+    recentSignupWindow?: RecentSignupWindow | null
   },
 ) {
   const search = (opts.search ?? "").trim().toLowerCase()
+  const recentWindow =
+    opts.recentSignupWindow ??
+    (opts.view === "recent_signups" ? resolveRecentSignupWindow({}) : null)
   return rows.filter((row) => {
     if (opts.view === "at_risk" && !row.at_risk) return false
     if (opts.view === "upgrade_candidates" && !row.upgrade_candidate) return false
     if (opts.view === "never_diagnostic" && !row.never_started_diagnostic) return false
     if (opts.view === "test_date_under_30" && !row.test_date_under_30) return false
     if (opts.view === "cancelled_this_month" && !row.cancelled_this_month) return false
-    if (opts.view === "recent_signups" && !row.recent_signup_24h) return false
+    if (opts.view === "recent_signups" && recentWindow && !matchesRecentSignupWindow(row, recentWindow)) {
+      return false
+    }
 
     if (opts.plan && opts.plan !== "all") {
       if (opts.plan === "free" && row.is_paid) return false

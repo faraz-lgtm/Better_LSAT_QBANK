@@ -16,8 +16,11 @@ import {
   type AdminStudentsFilterOption,
 } from "@/features/admin/components/admin-students-filter-dropdown"
 import {
+  DEFAULT_RECENT_SIGNUP_DAYS,
   filterStudentRecords,
   formatRelativeDays,
+  matchesRecentSignupWindow,
+  resolveRecentSignupWindow,
   sortStudentRecords,
   useAdminStudentRecords,
 } from "@/features/admin/hooks/use-admin-student-records"
@@ -53,12 +56,26 @@ function AdminStudentsPage() {
   const plan = params.get("plan") ?? "all"
   const source = params.get("source") ?? "all"
   const activity = params.get("activity") ?? "all"
-  const sort = params.get("sort") ?? "test_date"
+  const sort =
+    params.get("sort") ?? (view === "recent_signups" ? "newest" : "test_date")
   const page = Math.max(1, Number(params.get("page") ?? "1") || 1)
   const pageSize = PAGE_SIZE_OPTIONS.includes(Number(params.get("pageSize")))
     ? Number(params.get("pageSize"))
     : 25
   const selectedStudentId = params.get("student")
+  const recentSignupWindow = useMemo(
+    () =>
+      resolveRecentSignupWindow({
+        days: params.get("days"),
+        from: params.get("from"),
+        to: params.get("to"),
+      }),
+    [params],
+  )
+  const recentSignupChipWindow = useMemo(
+    () => resolveRecentSignupWindow({ days: String(DEFAULT_RECENT_SIGNUP_DAYS) }),
+    [],
+  )
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [actionMsg, setActionMsg] = useState<string | null>(null)
@@ -72,9 +89,9 @@ function AdminStudentsPage() {
       atRisk: rows.filter((r) => r.at_risk).length,
       neverDiag: rows.filter((r) => r.never_started_diagnostic).length,
       testDate: rows.filter((r) => r.test_date_under_30).length,
-      recentSignups: rows.filter((r) => r.recent_signup_24h).length,
+      recentSignups: rows.filter((r) => matchesRecentSignupWindow(r, recentSignupChipWindow)).length,
     }),
-    [rows],
+    [rows, recentSignupChipWindow],
   )
 
   const filtered = useMemo(() => {
@@ -84,9 +101,10 @@ function AdminStudentsPage() {
       plan,
       source,
       activity,
+      recentSignupWindow: view === "recent_signups" ? recentSignupWindow : null,
     })
     return sortStudentRecords(base, sort)
-  }, [rows, view, search, plan, source, activity, sort])
+  }, [rows, view, search, plan, source, activity, sort, recentSignupWindow])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
   const safePage = Math.min(page, totalPages)
@@ -102,10 +120,23 @@ function AdminStudentsPage() {
     return [...preferred, ...rest]
   }, [rows])
 
+  const viewFilterOpts = useMemo(
+    () => ({
+      view: view === "all" ? null : view,
+      recentSignupWindow: view === "recent_signups" ? recentSignupWindow : null,
+    }),
+    [view, recentSignupWindow],
+  )
+
   const planOptions = useMemo((): AdminStudentsFilterOption[] => {
     const countPlan = (value: string) =>
-      filterStudentRecords(rows, { view: view === "all" ? null : view, search, plan: value, source: "all", activity: "all" })
-        .length
+      filterStudentRecords(rows, {
+        ...viewFilterOpts,
+        search,
+        plan: value,
+        source: "all",
+        activity: "all",
+      }).length
     const extras = ["1 mo", "12 mo"].filter((p) => rows.some((r) => r.plan_label === p))
     return [
       { value: "all", label: "All plans", count: countPlan("all"), dividerAfter: true },
@@ -134,12 +165,12 @@ function AdminStudentsPage() {
         count: countPlan("free"),
       },
     ]
-  }, [rows, view, search])
+  }, [rows, viewFilterOpts, search])
 
   const sourceOptions = useMemo((): AdminStudentsFilterOption[] => {
     const countSource = (value: string) =>
       filterStudentRecords(rows, {
-        view: view === "all" ? null : view,
+        ...viewFilterOpts,
         search,
         plan: "all",
         source: value,
@@ -154,12 +185,12 @@ function AdminStudentsPage() {
         dotColor: SOURCE_DOT[s] ?? "#64748b",
       })),
     ]
-  }, [rows, view, search, sources])
+  }, [rows, viewFilterOpts, search, sources])
 
   const activityOptions = useMemo((): AdminStudentsFilterOption[] => {
     const countActivity = (value: string) =>
       filterStudentRecords(rows, {
-        view: view === "all" ? null : view,
+        ...viewFilterOpts,
         search,
         plan: "all",
         source: "all",
@@ -196,7 +227,7 @@ function AdminStudentsPage() {
         dotColor: ACTIVITY_DOT.dormant,
       },
     ]
-  }, [rows, view, search])
+  }, [rows, viewFilterOpts, search])
 
   const sortOptions = useMemo(
     (): AdminStudentsFilterOption[] => [
@@ -227,8 +258,15 @@ function AdminStudentsPage() {
   function patchParams(next: Record<string, string | null>) {
     const copy = new URLSearchParams(params)
     for (const [k, v] of Object.entries(next)) {
-      if (v == null || v === "" || v === "all") copy.delete(k)
+      // `days=all` is meaningful for recent_signups; other filters treat "all" as unset.
+      if (v == null || v === "" || (v === "all" && k !== "days")) copy.delete(k)
       else copy.set(k, v)
+    }
+    const nextView = next.view === undefined ? copy.get("view") : next.view
+    if (nextView !== "recent_signups") {
+      copy.delete("days")
+      copy.delete("from")
+      copy.delete("to")
     }
     setParams(copy, { replace: true })
   }
@@ -250,8 +288,28 @@ function AdminStudentsPage() {
     })
   }
 
-  function handleDeleteSelected() {
-    // Dummy for now — no delete/soft-delete backend wired.
+  async function handleDeleteSelected() {
+    if (!adminApi || selectedIds.size === 0) return
+    const ok = window.confirm(
+      `Soft-delete ${selectedIds.size} student account(s)? They will be hidden from this list and Insights, and blocked from signing in. Data is kept.`,
+    )
+    if (!ok) return
+    setBulkBusy(true)
+    setActionMsg(null)
+    try {
+      const result = await adminApi.deleteStudents(Array.from(selectedIds))
+      setSelectedIds(new Set())
+      setActionMsg(
+        result.errors.length > 0
+          ? `Soft-deleted ${result.deleted}. Issues: ${result.errors.slice(0, 3).join("; ")}`
+          : `Soft-deleted ${result.deleted} student(s)`,
+      )
+      await reload()
+    } catch (e) {
+      setActionMsg(e instanceof Error ? e.message : "Delete failed")
+    } finally {
+      setBulkBusy(false)
+    }
   }
 
   async function handleUnsubscribeSelected() {
@@ -336,7 +394,16 @@ function AdminStudentsPage() {
         </ViewPill>
         <ViewPill
           active={view === "recent_signups"}
-          onClick={() => patchParams({ view: "recent_signups", page: "1" })}
+          onClick={() =>
+            patchParams({
+              view: "recent_signups",
+              page: "1",
+              days: String(DEFAULT_RECENT_SIGNUP_DAYS),
+              from: null,
+              to: null,
+              sort: "newest",
+            })
+          }
         >
           Recent signups · {counts.recentSignups}
         </ViewPill>
@@ -398,7 +465,7 @@ function AdminStudentsPage() {
               type="button"
               className="rounded-lg border border-[var(--border2)] bg-white px-3.5 py-2 text-[13px] font-medium text-[var(--text)] disabled:opacity-50"
               disabled={bulkBusy}
-              onClick={handleDeleteSelected}
+              onClick={() => void handleDeleteSelected()}
             >
               Delete
             </button>

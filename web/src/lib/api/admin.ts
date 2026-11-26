@@ -785,6 +785,15 @@ export function createAdminApi(supabase: SupabaseClient) {
       return data?.row
     },
 
+    async deleteStudents(studentUserIds: string[]) {
+      const { data, error } = await invokeAdminFn<{ result: { deleted: number; errors: string[] } }>(
+        "admin-delete-students",
+        { method: "POST", body: { studentUserIds } },
+      )
+      if (error) throw error
+      return data?.result ?? { deleted: 0, errors: [] }
+    },
+
     async unsubscribeStudents(studentUserIds: string[]) {
       const { data, error } = await invokeAdminFn<{
         result: { unsubscribed: number; skipped: number; errors: string[] }
@@ -792,5 +801,6 @@ export function createAdminApi(supabase: SupabaseClient) {
       if (error) throw error
       return data?.result ?? { unsubscribed: 0, skipped: 0, errors: [] }
     },
+
   }
 }

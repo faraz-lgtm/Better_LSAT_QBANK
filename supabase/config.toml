@@ -418,6 +418,9 @@ verify_jwt = false
 [functions.admin-delete-course]
 verify_jwt = false
 
+[functions.admin-delete-students]
+verify_jwt = false
+
 [functions.admin-delete-lesson]
 verify_jwt = false
 
