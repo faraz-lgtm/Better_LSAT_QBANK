@@ -94,6 +94,47 @@ export type AdminBulkImportDryRunResult = {
   rows: AdminBulkImportPreviewRow[]
 }
 
+export type AdminStudentRecord = {
+  id: string
+  email: string
+  full_name: string
+  created_at: string
+  stripe_customer_id: string | null
+  plan_label: string
+  is_paid: boolean
+  sub_status: string | null
+  days_left: number | null
+  cancel_at_period_end: boolean | null
+  current_period_end: string | null
+  planned_lsat_date: string | null
+  days_to_test: number | null
+  goal_score: number | null
+  diagnostic_score: number | null
+  latest_score: number | null
+  score_delta: number | null
+  preptest_done: number
+  last_active_at: string | null
+  days_inactive: number | null
+  activity_band: "high" | "medium" | "dormant" | string
+  source_label: string
+  has_diagnostic: boolean
+  at_risk: boolean
+  upgrade_candidate: boolean
+  never_started_diagnostic: boolean
+  test_date_under_30: boolean
+  cancelled_this_month: boolean
+  recent_signup_24h: boolean
+  risk_why: string | null
+  upgrade_why: string | null
+}
+
+export type AdminInsightsSnapshot = {
+  id?: string
+  computed_at: string
+  timezone: string
+  payload: Record<string, unknown>
+}
+
 export function createAdminApi(supabase: SupabaseClient) {
   async function invokeAdminFn<T>(
     functionName: string,
@@ -695,6 +736,61 @@ export function createAdminApi(supabase: SupabaseClient) {
       if (error) throw error
       if (!data) throw new Error("No user detail returned")
       return data
+    },
+
+    async listStudentRecords() {
+      const { data, error } = await invokeAdminFn<{ rows: AdminStudentRecord[] }>("admin-list-student-records", {
+        method: "POST",
+        body: {},
+      })
+      if (error) throw error
+      return data?.rows ?? []
+    },
+
+    async getInsights(range?: { from: string; to: string }) {
+      const { data, error } = await invokeAdminFn<{ snapshot: AdminInsightsSnapshot }>("admin-get-insights", {
+        method: "POST",
+        body: range?.from && range?.to ? { from: range.from, to: range.to } : {},
+      })
+      if (error) throw error
+      if (!data?.snapshot) throw new Error("No insights snapshot returned")
+      return data.snapshot
+    },
+
+    async recomputeInsights() {
+      const { data, error } = await invokeAdminFn<{ snapshot: AdminInsightsSnapshot }>("admin-recompute-insights", {
+        method: "POST",
+        body: {},
+      })
+      if (error) throw error
+      if (!data?.snapshot) throw new Error("No insights snapshot returned")
+      return data.snapshot
+    },
+
+    async listStudentNotes(studentUserId: string) {
+      const { data, error } = await invokeAdminFn<{ rows: unknown[] }>("admin-list-student-notes", {
+        method: "POST",
+        body: { studentUserId },
+      })
+      if (error) throw error
+      return data?.rows ?? []
+    },
+
+    async addStudentNote(studentUserId: string, body: string) {
+      const { data, error } = await invokeAdminFn<{ row: unknown }>("admin-add-student-note", {
+        method: "POST",
+        body: { studentUserId, body },
+      })
+      if (error) throw error
+      return data?.row
+    },
+
+    async unsubscribeStudents(studentUserIds: string[]) {
+      const { data, error } = await invokeAdminFn<{
+        result: { unsubscribed: number; skipped: number; errors: string[] }
+      }>("admin-unsubscribe-students", { method: "POST", body: { studentUserIds } })
+      if (error) throw error
+      return data?.result ?? { unsubscribed: 0, skipped: 0, errors: [] }
     },
   }
 }

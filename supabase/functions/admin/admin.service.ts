@@ -2,6 +2,8 @@ import { browserFacingSupabaseApiBaseUrl } from "../_shared/browser-facing-supab
 import { LESSON_IMAGES_BUCKET } from "../_shared/lesson-images.ts"
 import { QUESTION_EXPLANATION_VIDEOS_BUCKET } from "../_shared/question-explanation-videos.ts"
 import { coercePrepLessonType, isPrepLessonType, type PrepLessonType } from "../_shared/prep-lesson-type.ts"
+import { createStripeClient } from "../_shared/stripe-client.ts"
+import { parseStripeEnv } from "../_shared/stripe-env.ts"
 import type { AdminRepository, BulkImportTokenCourse as RepoBulkImportTokenCourse } from "./admin.repository.ts"
 import JSZip from "npm:jszip@3.10.1"
 import { XMLParser } from "npm:fast-xml-parser@4.5.0"
@@ -1045,6 +1047,92 @@ export function createAdminService(deps: { repository: AdminRepository }) {
     async getUserDetail(userId: string, targetUserId: string) {
       await requireAdmin(userId)
       return deps.repository.getUserDetail(targetUserId)
+    },
+
+    async listStudentRecords(userId: string) {
+      await requireAdmin(userId)
+      return deps.repository.listStudentRecords()
+    },
+
+    async getInsights(userId: string, range?: { from: string; to: string }) {
+      await requireAdmin(userId)
+      if (range?.from && range?.to) {
+        const fromMs = Date.parse(range.from)
+        const toMs = Date.parse(range.to)
+        if (!Number.isFinite(fromMs) || !Number.isFinite(toMs)) {
+          throw new Error("from and to must be valid ISO timestamps")
+        }
+        if (toMs < fromMs) throw new Error("to must be >= from")
+        const payload = await deps.repository.buildInsightsPayload({
+          from: new Date(fromMs).toISOString(),
+          to: new Date(toMs).toISOString(),
+        })
+        return {
+          computed_at: typeof payload.computed_at === "string" ? payload.computed_at : new Date().toISOString(),
+          timezone: typeof payload.timezone === "string" ? payload.timezone : "America/Toronto",
+          payload,
+        }
+      }
+      const row = await deps.repository.getLatestInsightsSnapshot()
+      if (!row) {
+        const recomputed = await deps.repository.recomputeInsightsSnapshot()
+        return recomputed
+      }
+      return row
+    },
+
+    async recomputeInsights(userId: string) {
+      await requireAdmin(userId)
+      return deps.repository.recomputeInsightsSnapshot()
+    },
+
+    /** Cron / secret-gated path (no admin user). */
+    async recomputeInsightsCron() {
+      return deps.repository.recomputeInsightsSnapshot()
+    },
+
+    async listStudentNotes(userId: string, studentUserId: string) {
+      await requireAdmin(userId)
+      return deps.repository.listStudentNotes(studentUserId)
+    },
+
+    async addStudentNote(userId: string, studentUserId: string, body: string) {
+      await requireAdmin(userId)
+      const trimmed = body.trim()
+      if (!trimmed) throw new Error("body is required")
+      return deps.repository.addStudentNote({
+        studentUserId,
+        authorAdminId: userId,
+        body: trimmed,
+      })
+    },
+
+    async unsubscribeStudents(userId: string, studentUserIds: string[]) {
+      await requireAdmin(userId)
+      const unique = Array.from(new Set(studentUserIds.filter(Boolean)))
+      if (unique.length === 0) throw new Error("studentUserIds is required")
+
+      const env = parseStripeEnv(Deno.env.toObject())
+      if (!env) throw new Error("Stripe is not configured")
+      const stripe = createStripeClient({ getEnv: () => env })
+
+      const subs = await deps.repository.listActiveSubscriptionsForUsers(unique)
+      let unsubscribed = 0
+      const errors: string[] = []
+      const seen = new Set<string>()
+      for (const sub of subs) {
+        const stripeSubId = String(sub.stripe_subscription_id ?? "").trim()
+        if (!stripeSubId || seen.has(stripeSubId)) continue
+        seen.add(stripeSubId)
+        try {
+          await stripe.subscriptions.update(stripeSubId, { cancel_at_period_end: true })
+          await deps.repository.markSubscriptionCancelAtPeriodEnd(stripeSubId)
+          unsubscribed += 1
+        } catch (e) {
+          errors.push(`${stripeSubId}: ${e instanceof Error ? e.message : "unsubscribe failed"}`)
+        }
+      }
+      return { unsubscribed, skipped: Math.max(0, unique.length - seen.size), errors }
     },
   }
 }

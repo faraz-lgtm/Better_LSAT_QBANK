@@ -36,6 +36,25 @@ export async function handleAdminMicro(req: Request, slug: string): Promise<Resp
     return json({ error: "Server misconfigured" }, { status: 500 }, corsHeaders)
   }
 
+  const service = createAdminService({
+    repository: createAdminRepository(createServiceRoleClient()),
+  })
+
+  // Cron / secret path for daily insights recompute (no user JWT).
+  if (slug === "admin-recompute-insights") {
+    const cronSecret = Deno.env.get("CRON_SECRET")?.trim()
+    const provided = (req.headers.get("x-cron-secret") ?? "").trim()
+    if (cronSecret && provided && provided === cronSecret) {
+      try {
+        return json({ snapshot: await service.recomputeInsightsCron() }, {}, corsHeaders)
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Internal error"
+        console.error(error)
+        return json({ error: message }, { status: 500 }, corsHeaders)
+      }
+    }
+  }
+
   const authHeader = req.headers.get("Authorization") ?? ""
   const userClient = createClient(supabaseUrl, supabaseAnonKey, {
     global: { headers: { Authorization: authHeader } },
@@ -45,10 +64,6 @@ export async function handleAdminMicro(req: Request, slug: string): Promise<Resp
     error: userErr,
   } = await userClient.auth.getUser()
   if (userErr || !user) return json({ error: "Unauthorized" }, { status: 401 }, corsHeaders)
-
-  const service = createAdminService({
-    repository: createAdminRepository(createServiceRoleClient()),
-  })
 
   try {
     const body = (await req.json().catch(() => ({}))) as Record<string, unknown>
@@ -413,6 +428,39 @@ export async function handleAdminMicro(req: Request, slug: string): Promise<Resp
       const userId = readString(body, "userId")
       if (!userId) return json({ error: "userId is required" }, { status: 400 }, corsHeaders)
       return json(await service.getUserDetail(user.id, userId), {}, corsHeaders)
+    }
+    if (action === "admin-list-student-records") {
+      return json({ rows: await service.listStudentRecords(user.id) }, {}, corsHeaders)
+    }
+    if (action === "admin-get-insights") {
+      const from = readString(body, "from")
+      const to = readString(body, "to")
+      const range = from && to ? { from, to } : undefined
+      return json({ snapshot: await service.getInsights(user.id, range) }, {}, corsHeaders)
+    }
+    if (action === "admin-recompute-insights") {
+      return json({ snapshot: await service.recomputeInsights(user.id) }, {}, corsHeaders)
+    }
+    if (action === "admin-list-student-notes") {
+      const studentUserId = readString(body, "studentUserId")
+      if (!studentUserId) return json({ error: "studentUserId is required" }, { status: 400 }, corsHeaders)
+      return json({ rows: await service.listStudentNotes(user.id, studentUserId) }, {}, corsHeaders)
+    }
+    if (action === "admin-add-student-note") {
+      const studentUserId = readString(body, "studentUserId")
+      const noteBody = readString(body, "body")
+      if (!studentUserId || !noteBody) {
+        return json({ error: "studentUserId and body are required" }, { status: 400 }, corsHeaders)
+      }
+      return json({ row: await service.addStudentNote(user.id, studentUserId, noteBody) }, {}, corsHeaders)
+    }
+    if (action === "admin-unsubscribe-students") {
+      const ids = body.studentUserIds
+      const studentUserIds = Array.isArray(ids) ? ids.filter((v): v is string => typeof v === "string") : []
+      if (studentUserIds.length === 0) {
+        return json({ error: "studentUserIds is required" }, { status: 400 }, corsHeaders)
+      }
+      return json({ result: await service.unsubscribeStudents(user.id, studentUserIds) }, {}, corsHeaders)
     }
 
     return json({ error: "Unknown admin slug" }, { status: 400 }, corsHeaders)

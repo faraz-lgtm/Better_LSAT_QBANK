@@ -1,24 +1,25 @@
 .admin-page {
-  --bg: #ffffff;
+  --bg: #f6f8fb;
   --surface: #ffffff;
   --surface2: #f9fafb;
   --surface3: #eff3f8;
-  --border: #e5e7eb;
-  --border2: #d1d5dc;
-  --text: #101828;
-  --text2: #364153;
-  --text3: #6a7282;
+  --border: #e3e8ef;
+  --border2: #c9d0dc;
+  --text: #1a1b25;
+  --text2: #3a4458;
+  --text3: #5a6478;
   --accent: #0d47a1;
-  --accent-dim: #0b3d8a;
-  --accent-bg: #eff6ff;
-  --teal: #0f9d58;
+  --accent-dim: #1e40af;
+  --accent-bg: #eef3ff;
+  --teal: #067647;
   --teal-bg: #eaf8f0;
   --coral: #ea4335;
   --amber: #956321;
   --amber-bg: #fff6e0;
   --blue: #0d47a1;
-  --blue-bg: #eff6ff;
-  --red: #d93025;
+  --blue-bg: #eef3ff;
+  --red: #b42318;
+  --red-bg: #fef3f2;
   --radius: 14px;
   --radius-sm: 10px;
   color-scheme: light;
@@ -32,22 +33,22 @@
 }
 
 .admin-typo-h1 {
-  color: #101828;
+  color: #062357;
   font-family: "Inter", "Geist Variable", system-ui, sans-serif;
-  font-size: 24px;
+  font-size: 26px;
   font-style: normal;
   font-weight: 700;
-  line-height: 32px;
-  letter-spacing: -0.6px;
+  line-height: 38px;
+  letter-spacing: -0.52px;
 }
 
 .admin-typo-subtitle {
-  color: #6a7282;
+  color: #5a6478;
   font-family: "Inter", "Geist Variable", system-ui, sans-serif;
-  font-size: 16px;
+  font-size: 14px;
   font-style: normal;
   font-weight: 400;
-  line-height: 24px;
+  line-height: 20px;
 }
 
 .admin-typo-body-md {
@@ -98,9 +99,9 @@
 }
 
 .admin-btn-primary {
-  background: var(--accent);
+  background: var(--accent-dim);
   color: #ffffff;
-  border-color: var(--accent);
+  border-color: var(--accent-dim);
 }
 
 .admin-btn-ghost {

@@ -8,7 +8,10 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
 const links: Array<{ to: string; label: string; section: "Content" | "Settings"; badge?: string }> = [
   { to: "/admin/dashboard", label: "Dashboard", section: "Content" },
+  { to: "/admin/insights", label: "Insights", section: "Content" },
+  { to: "/admin/students", label: "Students", section: "Content" },
   { to: "/admin/preptests", label: "PrepTests", section: "Content" },
+  { to: "/admin/preptests", label: "Question editor", section: "Content" },
   { to: "/admin/courses", label: "Courses", section: "Content" },
   { to: "/admin/taxonomy", label: "Taxonomy", section: "Settings" },
   { to: "/admin/config", label: "Config", section: "Settings" },
@@ -52,10 +55,10 @@ function AdminSidebar() {
   const linksWithBadges = useMemo(
     () =>
       links.map((link) => {
-        if (link.to === "/admin/preptests" && prepTestsCount !== null) {
+        if (link.label === "PrepTests" && prepTestsCount !== null) {
           return { ...link, badge: String(prepTestsCount) }
         }
-        if (link.to === "/admin/courses" && coursesCount !== null) {
+        if (link.label === "Courses" && coursesCount !== null) {
           return { ...link, badge: String(coursesCount) }
         }
         return link
@@ -75,38 +78,41 @@ function AdminSidebar() {
   }
 
   return (
-    <aside className="flex h-full w-64 flex-col border-r border-[var(--border)] bg-[var(--surface2)]">
-      <div className="mb-4 border-b border-[var(--border)] px-4 py-4">
-        <div className="flex items-center gap-2">
-          <img src="/betterLSAT_LOGO.png" alt="betterLSAT" className="h-8 w-auto dark:brightness-0 dark:invert" />
-        </div>
+    <aside className="flex h-full w-64 flex-col border-r border-[#dfe1e7] bg-white">
+      <div className="flex h-14 shrink-0 items-center border-b border-[#dfe1e7] px-6">
+        <img src="/betterLSAT_LOGO.png" alt="betterLSAT" className="h-[18px] w-auto" />
       </div>
-      <nav className="space-y-5 flex-1 px-3">
+      <nav className="flex-1 space-y-6 overflow-auto px-3 pt-4">
         {(["Content", "Settings"] as const).map((section) => (
-          <div key={section}>
-            <p className="px-2 pb-2 text-[11px] uppercase tracking-[0.08em] text-[var(--text3)]">{section}</p>
+          <div key={section} className="space-y-2.5">
+            <p className="px-1 text-xs uppercase tracking-[0.6px] text-[#666d80]">{section}</p>
             <div className="space-y-1">
               {linksWithBadges.filter((link) => link.section === section).map((link) => (
                 <NavLink
-                  key={link.to}
+                  key={`${link.to}-${link.label}`}
                   to={link.to}
+                  end={link.to === "/admin/dashboard"}
                   className={({ isActive }) =>
-                    `flex items-center rounded-[10px] border px-3 py-2 text-[14px] font-medium leading-5 ${
+                    `flex h-9 items-center rounded-[10px] px-3 text-sm font-medium leading-5 ${
                       isActive
-                        ? "border-transparent bg-[var(--accent-bg)] font-medium text-black"
-                        : "border-transparent text-[var(--text2)] hover:bg-[#f3f4f6] hover:text-black"
+                        ? "bg-[#f3f7ff] text-[var(--accent)]"
+                        : "text-[var(--text)] hover:bg-[#f3f7ff]/hover:text-[var(--accent)]"
                     }`
                   }
                 >
                   <span>{link.label}</span>
-                  {link.badge && <span className="ml-auto rounded-full bg-[var(--surface3)] px-1.5 py-0.5 text-[10px] text-[var(--text3)]">{link.badge}</span>}
+                  {link.badge && (
+                    <span className="ml-auto rounded-full bg-[var(--surface3)] px-1.5 py-0.5 text-[10px] text-[var(--text3)]">
+                      {link.badge}
+                    </span>
+                  )}
                 </NavLink>
               ))}
             </div>
           </div>
         ))}
       </nav>
-      <div className="mt-3 border-t border-[var(--border)] p-3">
+      <div className="shrink-0 border-t border-[#dfe1e7] p-3">
         <button type="button" className="admin-btn admin-btn-ghost w-full justify-center" onClick={() => void handleLogout()}>
           Log out
         </button>
