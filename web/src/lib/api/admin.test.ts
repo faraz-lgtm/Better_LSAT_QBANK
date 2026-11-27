@@ -58,4 +58,35 @@ describe("createAdminApi catalog queries", () => {
       headers: { Authorization: "Bearer t1" },
     })
   })
+
+  it("impersonateStudent returns token hash and student summary", async () => {
+    const invoke = vi.fn().mockResolvedValue({
+      data: {
+        tokenHash: "hash-1",
+        student: { id: "s1", email: "s@x.com", full_name: "Sam" },
+      },
+      error: null,
+    })
+    const api = createAdminApi(mockSupabase(invoke))
+    await expect(api.impersonateStudent("s1")).resolves.toEqual({
+      tokenHash: "hash-1",
+      student: { id: "s1", email: "s@x.com", full_name: "Sam" },
+    })
+    expect(invoke).toHaveBeenCalledWith("admin-impersonate-student", {
+      method: "POST",
+      body: { studentUserId: "s1" },
+      headers: { Authorization: "Bearer t1" },
+    })
+  })
+
+  it("endImpersonation posts studentUserId", async () => {
+    const invoke = vi.fn().mockResolvedValue({ data: { success: true }, error: null })
+    const api = createAdminApi(mockSupabase(invoke))
+    await expect(api.endImpersonation("s1")).resolves.toBe(true)
+    expect(invoke).toHaveBeenCalledWith("admin-end-impersonation", {
+      method: "POST",
+      body: { studentUserId: "s1" },
+      headers: { Authorization: "Bearer t1" },
+    })
+  })
 })

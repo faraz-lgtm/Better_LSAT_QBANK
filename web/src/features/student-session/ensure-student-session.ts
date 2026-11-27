@@ -89,13 +89,29 @@ export async function ensureProfile(): Promise<UserProfile | null> {
   return inflight.profile
 }
 
+
+async function dropCacheIfAuthUserMismatch(): Promise<boolean> {
+  const current = session()
+  if (!current.profile?.id) return false
+  const authUserId = await currentAuthUserId()
+  if (authUserId && current.profile.id === authUserId) return false
+  dropStaleSessionCache()
+  return true
+}
+
 /**
  * Return cached entitlement or share one in-flight load.
  * Returns null when the entitlement request fails.
  */
 export async function ensureEntitlement(): Promise<UserEntitlement | null> {
   const current = session()
-  if (current.entitlementStatus === "succeeded") return current.entitlement
+  if (current.entitlementStatus === "succeeded") {
+    if (await dropCacheIfAuthUserMismatch()) {
+      // fall through to reload for the current auth user
+    } else {
+      return current.entitlement
+    }
+  }
   if (inflight.entitlement) return inflight.entitlement
 
   const store = getAppStore()
@@ -119,7 +135,13 @@ export async function ensureEntitlement(): Promise<UserEntitlement | null> {
 /** Return cached study context or share one in-flight load. */
 export async function ensureStudyContext(): Promise<StudentStudyContext | null> {
   const current = session()
-  if (current.studyContextStatus === "succeeded") return current.studyContext
+  if (current.studyContextStatus === "succeeded") {
+    if (await dropCacheIfAuthUserMismatch()) {
+      // fall through to reload for the current auth user
+    } else {
+      return current.studyContext
+    }
+  }
   if (inflight.studyContext) return inflight.studyContext
 
   const store = getAppStore()

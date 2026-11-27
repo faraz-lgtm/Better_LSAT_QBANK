@@ -135,6 +135,17 @@ export type AdminInsightsSnapshot = {
   payload: Record<string, unknown>
 }
 
+export type AdminImpersonationStudent = {
+  id: string
+  email: string
+  full_name: string
+}
+
+export type AdminImpersonateStudentResult = {
+  tokenHash: string
+  student: AdminImpersonationStudent
+}
+
 export function createAdminApi(supabase: SupabaseClient) {
   async function invokeAdminFn<T>(
     functionName: string,
@@ -800,6 +811,25 @@ export function createAdminApi(supabase: SupabaseClient) {
       }>("admin-unsubscribe-students", { method: "POST", body: { studentUserIds } })
       if (error) throw error
       return data?.result ?? { unsubscribed: 0, skipped: 0, errors: [] }
+    },
+
+    async impersonateStudent(studentUserId: string) {
+      const { data, error } = await invokeAdminFn<AdminImpersonateStudentResult>("admin-impersonate-student", {
+        method: "POST",
+        body: { studentUserId },
+      })
+      if (error) throw error
+      if (!data?.tokenHash || !data.student?.id) throw new Error("Invalid impersonation response")
+      return data
+    },
+
+    async endImpersonation(studentUserId: string) {
+      const { data, error } = await invokeAdminFn<{ success: boolean }>("admin-end-impersonation", {
+        method: "POST",
+        body: { studentUserId },
+      })
+      if (error) throw error
+      return data?.success ?? false
     },
 
   }

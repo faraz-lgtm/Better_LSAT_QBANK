@@ -1168,6 +1168,61 @@ export function createAdminService(deps: { repository: AdminRepository }) {
       }
       return { unsubscribed, skipped: Math.max(0, unique.length - seen.size), errors }
     },
+
+    async impersonateStudent(
+      userId: string,
+      studentUserId: string,
+      options?: { userAgent?: string | null },
+    ) {
+      await requireAdmin(userId)
+      const targetId = studentUserId.trim()
+      if (!targetId) throw new Error("studentUserId is required")
+      if (targetId === userId) throw new Error("Cannot impersonate yourself")
+
+      const profile = await deps.repository.getImpersonationTargetProfile(targetId)
+      if (!profile) throw new Error("Student not found")
+      if (profile.deleted_at) throw new Error("Cannot impersonate a deleted student")
+      if (profile.role === "admin" || profile.role === "super_admin") {
+        throw new Error("Cannot impersonate an admin account")
+      }
+      if (profile.role !== "student") throw new Error("Only student accounts can be impersonated")
+      const email = typeof profile.email === "string" ? profile.email.trim() : ""
+      if (!email) throw new Error("Student email is required for impersonation")
+
+      const tokenHash = await deps.repository.generateMagicLinkTokenHash(email)
+      await deps.repository.insertImpersonationEvent({
+        adminUserId: userId,
+        studentUserId: targetId,
+        action: "start",
+        userAgent: options?.userAgent ?? null,
+      })
+
+      return {
+        tokenHash,
+        student: {
+          id: profile.id,
+          email,
+          full_name: profile.full_name?.trim() || email,
+        },
+      }
+    },
+
+    async endImpersonation(
+      userId: string,
+      studentUserId: string,
+      options?: { userAgent?: string | null },
+    ) {
+      await requireAdmin(userId)
+      const targetId = studentUserId.trim()
+      if (!targetId) throw new Error("studentUserId is required")
+      await deps.repository.insertImpersonationEvent({
+        adminUserId: userId,
+        studentUserId: targetId,
+        action: "end",
+        userAgent: options?.userAgent ?? null,
+      })
+      return { success: true }
+    },
   }
 }
 

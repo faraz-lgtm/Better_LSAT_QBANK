@@ -26,6 +26,7 @@ import {
 } from "@/features/admin/hooks/use-admin-student-records"
 import { useAdminApi } from "@/features/admin/use-admin-api"
 import type { AdminStudentRecord } from "@/lib/api/admin"
+import { startImpersonation } from "@/lib/auth/impersonation"
 
 const SOURCE_DOT: Record<string, string> = {
   "Organic search": "#2563eb",
@@ -627,9 +628,11 @@ function AdminStudentsPage() {
 
 function StudentDetailDrawer({ row, onClose }: { row: AdminStudentRecord; onClose: () => void }) {
   const adminApi = useAdminApi()
+  const navigate = useNavigate()
   const [notes, setNotes] = useState<Array<{ id: string; body: string; created_at: string }>>([])
   const [noteText, setNoteText] = useState("")
   const [busy, setBusy] = useState(false)
+  const [viewAsBusy, setViewAsBusy] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
 
   useEffect(() => {
@@ -674,6 +677,17 @@ function StudentDetailDrawer({ row, onClose }: { row: AdminStudentRecord; onClos
     }
   }
 
+  async function viewAsStudent() {
+    setViewAsBusy(true)
+    setMsg(null)
+    try {
+      await startImpersonation(row.id, (to) => navigate(to, { replace: true }))
+    } catch (e) {
+      setMsg(e instanceof Error ? e.message : "Failed to view as student")
+      setViewAsBusy(false)
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-40 flex justify-end bg-black/30" onClick={onClose}>
       <aside
@@ -706,8 +720,13 @@ function StudentDetailDrawer({ row, onClose }: { row: AdminStudentRecord; onClos
           <button type="button" className="admin-btn admin-btn-ghost !px-3 !py-1.5 !text-sm" disabled title="Coming soon">
             Send email
           </button>
-          <button type="button" className="admin-btn admin-btn-ghost !px-3 !py-1.5 !text-sm" disabled title="Coming soon">
-            View as student
+          <button
+            type="button"
+            className="admin-btn admin-btn-ghost !px-3 !py-1.5 !text-sm"
+            disabled={viewAsBusy}
+            onClick={() => void viewAsStudent()}
+          >
+            {viewAsBusy ? "Opening…" : "View as student"}
           </button>
           <button type="button" className="admin-btn admin-btn-primary !px-3 !py-1.5 !text-sm" disabled={busy} onClick={() => void addNote()}>
             Add note

@@ -1,6 +1,7 @@
 import { useCallback, useLayoutEffect, useState } from "react"
 import { Outlet, useLocation } from "react-router-dom"
 
+import { ImpersonationBanner } from "@/features/app-shell/impersonation-banner"
 import { StudentAppHeader } from "@/features/app-shell/student-app-header"
 import { PortalChatWidget } from "@/features/app-shell/portal-chat-widget"
 import { isPrepCourseLessonRoute } from "@/features/app-shell/prep-course-lesson-route"
@@ -71,6 +72,7 @@ function StudentAppShellLayout() {
             <StudentAppSidebar mobileOpen={mobileNavOpen} onMobileClose={closeMobileNav} />
           )}
           <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+            <ImpersonationBanner />
             {immersive ? null : (
               <StudentAppHeader
                 onOpenMobileNav={() => setMobileNavOpen(true)}

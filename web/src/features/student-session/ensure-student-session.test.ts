@@ -28,7 +28,7 @@ import {
   ensureProfile,
   resetEnsureStudentSessionInflight,
 } from "./ensure-student-session"
-import { resetStudentSession } from "./studentSessionSlice"
+import { loadProfile, resetStudentSession } from "./studentSessionSlice"
 
 const studentProfile = {
   id: "u1",
@@ -139,5 +139,39 @@ describe("ensureStudentSession", () => {
     mockAuthUser(null)
     expect(await ensureProfile()).toBeNull()
     expect(getMyProfile).toHaveBeenCalledTimes(1)
+  })
+
+  it("refetches entitlement when cached profile belongs to a different auth user", async () => {
+    getMyProfile.mockResolvedValueOnce({
+      ...studentProfile,
+      id: "admin-1",
+      role: "super_admin",
+    })
+    getEntitlementState
+      .mockResolvedValueOnce({
+        isAuthenticated: true,
+        isLsacLinked: true,
+        isLsacEligible: true,
+        hasActiveCore: true,
+        accessState: "FULL_ACCESS",
+      })
+      .mockResolvedValueOnce({
+        isAuthenticated: true,
+        isLsacLinked: false,
+        isLsacEligible: false,
+        hasActiveCore: false,
+        accessState: "PAYMENT_REQUIRED",
+      })
+
+    mockAuthUser("admin-1")
+    await store.dispatch(loadProfile())
+    await ensureEntitlement()
+    expect(getEntitlementState).toHaveBeenCalledTimes(1)
+
+    mockAuthUser("u1")
+    getMyProfile.mockResolvedValueOnce(studentProfile)
+    const next = await ensureEntitlement()
+    expect(getEntitlementState).toHaveBeenCalledTimes(2)
+    expect(next?.accessState).toBe("PAYMENT_REQUIRED")
   })
 })

@@ -470,6 +470,26 @@ export async function handleAdminMicro(req: Request, slug: string): Promise<Resp
       }
       return json({ result: await service.unsubscribeStudents(user.id, studentUserIds) }, {}, corsHeaders)
     }
+    if (action === "admin-impersonate-student") {
+      const studentUserId = readString(body, "studentUserId")
+      if (!studentUserId) return json({ error: "studentUserId is required" }, { status: 400 }, corsHeaders)
+      const userAgent = req.headers.get("user-agent")
+      return json(
+        await service.impersonateStudent(user.id, studentUserId, { userAgent }),
+        {},
+        corsHeaders,
+      )
+    }
+    if (action === "admin-end-impersonation") {
+      const studentUserId = readString(body, "studentUserId")
+      if (!studentUserId) return json({ error: "studentUserId is required" }, { status: 400 }, corsHeaders)
+      const userAgent = req.headers.get("user-agent")
+      return json(
+        await service.endImpersonation(user.id, studentUserId, { userAgent }),
+        {},
+        corsHeaders,
+      )
+    }
 
     return json({ error: "Unknown admin slug" }, { status: 400 }, corsHeaders)
   } catch (error) {

@@ -1713,6 +1713,49 @@ export function createAdminRepository(client: SupabaseClient) {
       return data
     },
 
+    async getImpersonationTargetProfile(studentUserId: string) {
+      const { data, error } = await client
+        .from("profiles")
+        .select("id,email,full_name,role,deleted_at")
+        .eq("id", studentUserId)
+        .maybeSingle()
+      if (error) throw error
+      return data as {
+        id: string
+        email: string | null
+        full_name: string | null
+        role: string
+        deleted_at: string | null
+      } | null
+    },
+
+    async generateMagicLinkTokenHash(email: string): Promise<string> {
+      const { data, error } = await client.auth.admin.generateLink({
+        type: "magiclink",
+        email,
+      })
+      if (error) throw error
+      const props = data?.properties as { hashed_token?: string } | null | undefined
+      const tokenHash = typeof props?.hashed_token === "string" ? props.hashed_token.trim() : ""
+      if (!tokenHash) throw new Error("Failed to mint impersonation token")
+      return tokenHash
+    },
+
+    async insertImpersonationEvent(input: {
+      adminUserId: string
+      studentUserId: string
+      action: "start" | "end"
+      userAgent?: string | null
+    }) {
+      const { error } = await client.from("admin_impersonation_events").insert({
+        admin_user_id: input.adminUserId,
+        student_user_id: input.studentUserId,
+        action: input.action,
+        user_agent: input.userAgent?.trim() || null,
+      })
+      if (error) throw error
+    },
+
     async softDeleteStudent(userId: string) {
       const now = new Date().toISOString()
       const { error: profileError } = await client.from("profiles").update({ deleted_at: now }).eq("id", userId)
