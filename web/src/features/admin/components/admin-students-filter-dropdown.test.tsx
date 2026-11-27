@@ -6,7 +6,10 @@ import { AdminStudentsFilterDropdown } from "./admin-students-filter-dropdown"
 
 const OPTIONS = [
   { value: "all", label: "All plans", count: 80, dividerAfter: true },
+  { value: "12 mo", label: "12 months", description: "Paid · 12-month access", count: 0 },
   { value: "6 mo", label: "6 months", description: "Paid · 6-month access", count: 34 },
+  { value: "3 mo", label: "3 months", description: "Paid · 3-month access", count: 21 },
+  { value: "1 mo", label: "1 months", description: "Paid · 1-month access", count: 0 },
   { value: "free", label: "Free", description: "No paid plan yet", count: 25 },
 ]
 

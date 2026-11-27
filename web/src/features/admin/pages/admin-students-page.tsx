@@ -137,9 +137,15 @@ function AdminStudentsPage() {
         source: "all",
         activity: "all",
       }).length
-    const extras = ["1 mo", "12 mo"].filter((p) => rows.some((r) => r.plan_label === p))
+    // Figma (21921:27752): All → 12 → 6 → 3 → 1 → Free
     return [
       { value: "all", label: "All plans", count: countPlan("all"), dividerAfter: true },
+      {
+        value: "12 mo",
+        label: "12 months",
+        description: "Paid · 12-month access",
+        count: countPlan("12 mo"),
+      },
       {
         value: "6 mo",
         label: "6 months",
@@ -152,12 +158,12 @@ function AdminStudentsPage() {
         description: "Paid · 3-month access",
         count: countPlan("3 mo"),
       },
-      ...extras.map((p) => ({
-        value: p,
-        label: p === "1 mo" ? "1 month" : "12 months",
-        description: p === "1 mo" ? "Paid · 1-month access" : "Paid · 12-month access",
-        count: countPlan(p),
-      })),
+      {
+        value: "1 mo",
+        label: "1 months",
+        description: "Paid · 1-month access",
+        count: countPlan("1 mo"),
+      },
       {
         value: "free",
         label: "Free",
