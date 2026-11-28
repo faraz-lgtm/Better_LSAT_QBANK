@@ -111,4 +111,79 @@ describe("AfterBookingSessionsPage", () => {
       expect(screen.getByText("Pick a new day")).toBeInTheDocument()
     })
   })
+
+  it("shows Book a session when no upcoming session and free strategy call unused", async () => {
+    listSessions.mockResolvedValue({
+      hasActivePackage: false,
+      hasBookedFreeStrategyCall: false,
+      freeStrategyCall: null,
+      nextSession: null,
+      upcomingSessions: [],
+      pastSessions: [],
+      activePackage: null,
+    })
+
+    render(
+      <MemoryRouter>
+        <AfterBookingSessionsPage />
+      </MemoryRouter>,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText("No upcoming session scheduled.")).toBeInTheDocument()
+    })
+    expect(screen.getByRole("link", { name: "Book a session" })).toHaveAttribute(
+      "href",
+      "/app/free-strategy-call",
+    )
+  })
+
+  it("hides Book a session after free strategy call is already booked or completed", async () => {
+    listSessions.mockResolvedValue({
+      hasActivePackage: false,
+      hasBookedFreeStrategyCall: true,
+      freeStrategyCall: {
+        id: "fsc-1",
+        status: "completed",
+        isCompleted: true,
+        tutorName: "Mustafa Siddiqui",
+        joinUrl: null,
+        startsAt: "2026-11-28T10:15:00.000Z",
+        endsAt: "2026-11-28T10:30:00.000Z",
+        timezone: "America/New_York",
+        dateLabel: "Sat, Nov 28",
+        timeLabel: "3:15 PM",
+        timezoneLabel: "ET",
+        focus: "15-Minute Free Strategy Call",
+        title: "15-Minute Free Strategy Call",
+        transcriptStatus: "ready",
+        recordingStatus: "ready",
+        customerEmail: "student@example.com",
+      },
+      nextSession: null,
+      upcomingSessions: [],
+      pastSessions: [
+        {
+          id: "fsc-1",
+          dateLabel: "Nov 28",
+          tutorName: "Mustafa Siddiqui",
+          focus: "15-Minute Free Strategy Call",
+          transcriptStatus: "ready",
+          recordingStatus: "ready",
+        },
+      ],
+      activePackage: null,
+    })
+
+    render(
+      <MemoryRouter>
+        <AfterBookingSessionsPage />
+      </MemoryRouter>,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText("No upcoming session scheduled.")).toBeInTheDocument()
+    })
+    expect(screen.queryByRole("link", { name: "Book a session" })).not.toBeInTheDocument()
+  })
 })

@@ -57,6 +57,7 @@ function AfterBookingSessionsPage() {
   const [todos, setTodos] = useState<TutoringTodo[]>([])
   const [todosLoading, setTodosLoading] = useState(false)
   const [activePackage, setActivePackage] = useState<ActivePackageSummary | null>(null)
+  const [hasBookedFreeStrategyCall, setHasBookedFreeStrategyCall] = useState(false)
   const [loading, setLoading] = useState(true)
   const [rescheduleSession, setRescheduleSession] = useState<TutoringSessionSummary | null>(null)
 
@@ -105,6 +106,7 @@ function AfterBookingSessionsPage() {
       }))
       setPastSessions(past)
       setActivePackage(data.activePackage)
+      setHasBookedFreeStrategyCall(Boolean(data.hasBookedFreeStrategyCall))
       return past
     },
     [api],
@@ -135,6 +137,7 @@ function AfterBookingSessionsPage() {
         setUpcomingSessions([])
         setPastSessions([])
         setActivePackage(null)
+        setHasBookedFreeStrategyCall(false)
         setSelectedSessionId(null)
         setTranscript(null)
         setTodos([])
@@ -236,14 +239,22 @@ function AfterBookingSessionsPage() {
                 }}
               />
             ) : (
-              <section className="flex min-h-[231px] flex-1 flex-col justify-center rounded-[16px] border border-[var(--primary-25)] bg-[var(--greyscale-0)] p-6">
+              <section
+                className={
+                  hasBookedFreeStrategyCall
+                    ? "flex flex-1 flex-col rounded-[16px] border border-[var(--primary-25)] bg-[var(--greyscale-0)] p-6"
+                    : "flex min-h-[231px] flex-1 flex-col justify-center rounded-[16px] border border-[var(--primary-25)] bg-[var(--greyscale-0)] p-6"
+                }
+              >
                 <p className="text-xs font-bold tracking-[0.02em] text-[var(--primary)]">NEXT SESSION</p>
                 <p className="mt-2.5 text-sm text-[var(--greyscale-500)]">
                   No upcoming session scheduled.
                 </p>
-                <Button asChild className="mt-4 h-12 w-fit rounded-[10px]">
-                  <Link to={STUDENT_FREE_STRATEGY_CALL_HREF}>Book a session</Link>
-                </Button>
+                {!hasBookedFreeStrategyCall ? (
+                  <Button asChild className="mt-4 h-12 w-fit rounded-[10px]">
+                    <Link to={STUDENT_FREE_STRATEGY_CALL_HREF}>Book a session</Link>
+                  </Button>
+                ) : null}
               </section>
             )}
             {activePackage ? <PackageStatusCard packageSummary={activePackage} /> : null}

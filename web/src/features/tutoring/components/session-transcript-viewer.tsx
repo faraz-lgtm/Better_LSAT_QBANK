@@ -64,15 +64,15 @@ function transcriptDownloadFilename(title: string, sessionId: string): string {
 
 function SessionTranscriptViewer({ transcript, className }: SessionTranscriptViewerProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null)
+  const progressTrackRef = useRef<HTMLDivElement | null>(null)
   const lineRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const copiedResetRef = useRef<number | null>(null)
+  const rafRef = useRef<number | null>(null)
   const [activeSegmentId, setActiveSegmentId] = useState(transcript.segments[0]?.id ?? "")
   const [query, setQuery] = useState("")
   const [playing, setPlaying] = useState(false)
   const [copied, setCopied] = useState(false)
-  const [currentSeconds, setCurrentSeconds] = useState(() =>
-    parseClockToSeconds(transcript.currentTime || "00:00"),
-  )
+  const [currentSeconds, setCurrentSeconds] = useState(0)
   const [durationSeconds, setDurationSeconds] = useState(() =>
     parseClockToSeconds(transcript.totalTime || "00:00"),
   )
@@ -90,18 +90,104 @@ function SessionTranscriptViewer({ transcript, className }: SessionTranscriptVie
   const progressPct =
     durationSeconds > 0 ? Math.min(100, Math.max(0, (currentSeconds / durationSeconds) * 100)) : 0
 
+  function syncPlaybackClock(video: HTMLVideoElement) {
+    if (Number.isFinite(video.currentTime)) {
+      setCurrentSeconds(video.currentTime)
+    }
+    if (Number.isFinite(video.duration) && video.duration > 0) {
+      setDurationSeconds(video.duration)
+    }
+  }
+
+  function stopProgressLoop() {
+    if (rafRef.current != null) {
+      window.cancelAnimationFrame(rafRef.current)
+      rafRef.current = null
+    }
+  }
+
+  function startProgressLoop() {
+    stopProgressLoop()
+    const tick = () => {
+      const video = videoRef.current
+      if (!video || video.paused || video.ended) {
+        rafRef.current = null
+        return
+      }
+      syncPlaybackClock(video)
+      rafRef.current = window.requestAnimationFrame(tick)
+    }
+    rafRef.current = window.requestAnimationFrame(tick)
+  }
+
+  // Only reset transport when the session/recording identity changes — not when
+  // parent re-renders with a fresh segments array or static currentTime label.
   useEffect(() => {
     setActiveSegmentId(transcript.segments[0]?.id ?? "")
-    setCurrentSeconds(parseClockToSeconds(transcript.currentTime || "00:00"))
+    setCurrentSeconds(0)
     setDurationSeconds(parseClockToSeconds(transcript.totalTime || "00:00"))
     setPlaying(false)
-  }, [transcript.sessionId, transcript.currentTime, transcript.totalTime, transcript.segments])
+    stopProgressLoop()
+    const video = videoRef.current
+    if (video) {
+      video.pause()
+      video.currentTime = 0
+    }
+  }, [transcript.sessionId, transcript.recordingUrl])
 
   useEffect(() => {
     return () => {
       if (copiedResetRef.current != null) window.clearTimeout(copiedResetRef.current)
+      stopProgressLoop()
     }
   }, [])
+
+  useEffect(() => {
+    const video = videoRef.current
+    if (!video) return
+
+    const onPlay = () => {
+      setPlaying(true)
+      syncPlaybackClock(video)
+      startProgressLoop()
+    }
+    const onPause = () => {
+      setPlaying(false)
+      syncPlaybackClock(video)
+      stopProgressLoop()
+    }
+    const onEnded = () => {
+      setPlaying(false)
+      syncPlaybackClock(video)
+      stopProgressLoop()
+    }
+    const onTimeUpdate = () => syncPlaybackClock(video)
+    const onSeeked = () => syncPlaybackClock(video)
+    const onLoadedMetadata = () => syncPlaybackClock(video)
+
+    video.addEventListener("play", onPlay)
+    video.addEventListener("pause", onPause)
+    video.addEventListener("ended", onEnded)
+    video.addEventListener("timeupdate", onTimeUpdate)
+    video.addEventListener("seeked", onSeeked)
+    video.addEventListener("loadedmetadata", onLoadedMetadata)
+
+    syncPlaybackClock(video)
+    if (!video.paused && !video.ended) {
+      setPlaying(true)
+      startProgressLoop()
+    }
+
+    return () => {
+      video.removeEventListener("play", onPlay)
+      video.removeEventListener("pause", onPause)
+      video.removeEventListener("ended", onEnded)
+      video.removeEventListener("timeupdate", onTimeUpdate)
+      video.removeEventListener("seeked", onSeeked)
+      video.removeEventListener("loadedmetadata", onLoadedMetadata)
+      stopProgressLoop()
+    }
+  }, [transcript.sessionId, transcript.recordingUrl])
 
   useEffect(() => {
     if (transcript.segments.length === 0) return
@@ -114,12 +200,25 @@ function SessionTranscriptViewer({ transcript, className }: SessionTranscriptVie
 
   function seekToSeconds(seconds: number, autoplay = true) {
     const video = videoRef.current
-    setCurrentSeconds(seconds)
+    const next = Math.max(0, seconds)
+    setCurrentSeconds(next)
     if (!video) return
-    video.currentTime = Math.max(0, seconds)
+    video.currentTime = next
     if (autoplay) {
-      void video.play().then(() => setPlaying(true)).catch(() => setPlaying(false))
+      void video.play().then(() => {
+        setPlaying(true)
+        startProgressLoop()
+      }).catch(() => setPlaying(false))
     }
+  }
+
+  function seekFromPointer(clientX: number, autoplay = true) {
+    const track = progressTrackRef.current
+    if (!track || durationSeconds <= 0) return
+    const rect = track.getBoundingClientRect()
+    if (rect.width <= 0) return
+    const ratio = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width))
+    seekToSeconds(ratio * durationSeconds, autoplay)
   }
 
   function seekToTimeLabel(time: string, segmentId?: string) {
@@ -145,10 +244,14 @@ function SessionTranscriptViewer({ transcript, className }: SessionTranscriptVie
       return
     }
     if (video.paused) {
-      void video.play().then(() => setPlaying(true)).catch(() => setPlaying(false))
+      void video.play().then(() => {
+        setPlaying(true)
+        startProgressLoop()
+      }).catch(() => setPlaying(false))
     } else {
       video.pause()
       setPlaying(false)
+      stopProgressLoop()
     }
   }
 
@@ -222,14 +325,6 @@ function SessionTranscriptViewer({ transcript, className }: SessionTranscriptVie
             controls
             preload="metadata"
             src={transcript.recordingUrl}
-            onPlay={() => setPlaying(true)}
-            onPause={() => setPlaying(false)}
-            onTimeUpdate={(event) => setCurrentSeconds(event.currentTarget.currentTime)}
-            onLoadedMetadata={(event) => {
-              if (Number.isFinite(event.currentTarget.duration) && event.currentTarget.duration > 0) {
-                setDurationSeconds(event.currentTarget.duration)
-              }
-            }}
           >
             <track kind="captions" />
           </video>
@@ -292,11 +387,44 @@ function SessionTranscriptViewer({ transcript, className }: SessionTranscriptVie
                   <Play className="size-3.5 fill-current" aria-hidden />
                 )}
               </button>
-              <div className="relative h-[26px] min-w-0 flex-1">
+              <div
+                ref={progressTrackRef}
+                role="slider"
+                tabIndex={hasVideo || durationSeconds > 0 ? 0 : -1}
+                aria-label="Seek recording"
+                aria-valuemin={0}
+                aria-valuemax={Math.max(0, Math.floor(durationSeconds))}
+                aria-valuenow={Math.max(0, Math.floor(currentSeconds))}
+                aria-valuetext={`${formatClock(currentSeconds)} of ${formatClock(durationSeconds)}`}
+                className="relative h-[26px] min-w-0 flex-1 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]"
+                onClick={(event) => seekFromPointer(event.clientX, true)}
+                onKeyDown={(event) => {
+                  if (durationSeconds <= 0) return
+                  const step = event.shiftKey ? 10 : 5
+                  if (event.key === "ArrowRight" || event.key === "ArrowUp") {
+                    event.preventDefault()
+                    seekToSeconds(Math.min(durationSeconds, currentSeconds + step), playing)
+                  } else if (event.key === "ArrowLeft" || event.key === "ArrowDown") {
+                    event.preventDefault()
+                    seekToSeconds(Math.max(0, currentSeconds - step), playing)
+                  } else if (event.key === "Home") {
+                    event.preventDefault()
+                    seekToSeconds(0, playing)
+                  } else if (event.key === "End") {
+                    event.preventDefault()
+                    seekToSeconds(durationSeconds, playing)
+                  }
+                }}
+              >
                 <div className="absolute top-[10px] right-0 left-0 h-1.5 rounded-full bg-[#eceff3]" />
                 <div
                   className="absolute top-[10px] left-0 h-1.5 rounded-full bg-[var(--primary)]"
                   style={{ width: `${progressPct}%` }}
+                />
+                <div
+                  className="absolute top-1 size-3.5 rounded-full border-2 border-white bg-[var(--primary)] shadow-sm"
+                  style={{ left: `calc(${progressPct}% - 7px)` }}
+                  aria-hidden
                 />
                 {transcript.segments.map((segment) => {
                   const active = activeSegmentId === segment.id
@@ -309,7 +437,10 @@ function SessionTranscriptViewer({ transcript, className }: SessionTranscriptVie
                       key={segment.id}
                       type="button"
                       aria-label={`Jump to ${segment.label} (${segment.time})`}
-                      onClick={() => seekToTimeLabel(segment.time, segment.id)}
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        seekToTimeLabel(segment.time, segment.id)
+                      }}
                       className={cn(
                         "absolute top-1.5 size-3.5 rounded-full border-2",
                         active

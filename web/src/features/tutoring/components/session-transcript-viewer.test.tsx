@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react"
+import { act, fireEvent, render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 
@@ -10,7 +10,7 @@ const transcript: SessionTranscript = {
   title: "15-Minute Free Strategy Call",
   metaLabel: "Today",
   takeaways: ["Covered login troubleshooting."],
-  currentTime: "00:00",
+  currentTime: "00:43",
   totalTime: "00:40",
   segments: [
     { id: "topic-1", time: "00:10", label: "Screen Sharing Troubleshooting", kind: "topic" },
@@ -37,25 +37,40 @@ const transcript: SessionTranscript = {
   recordingUrl: "https://example.com/recording.mp4",
 }
 
+function mockMediaElement() {
+  const play = vi.fn().mockResolvedValue(undefined)
+  const pause = vi.fn()
+  Object.defineProperty(window.HTMLMediaElement.prototype, "play", {
+    configurable: true,
+    value: play,
+  })
+  Object.defineProperty(window.HTMLMediaElement.prototype, "pause", {
+    configurable: true,
+    value: pause,
+  })
+  Object.defineProperty(window.HTMLMediaElement.prototype, "paused", {
+    configurable: true,
+    get() {
+      return (this as HTMLMediaElement & { _paused?: boolean })._paused !== false
+    },
+  })
+  Object.defineProperty(window.HTMLMediaElement.prototype, "currentTime", {
+    configurable: true,
+    writable: true,
+    value: 0,
+  })
+  Object.defineProperty(window.HTMLMediaElement.prototype, "duration", {
+    configurable: true,
+    writable: true,
+    value: 40,
+  })
+  return { play, pause }
+}
+
 describe("SessionTranscriptViewer", () => {
   it("renders Actions needed time tag and seeks video on play/segment click", async () => {
     const user = userEvent.setup()
-    const play = vi.fn().mockResolvedValue(undefined)
-    const pause = vi.fn()
-
-    Object.defineProperty(window.HTMLMediaElement.prototype, "play", {
-      configurable: true,
-      value: play,
-    })
-    Object.defineProperty(window.HTMLMediaElement.prototype, "pause", {
-      configurable: true,
-      value: pause,
-    })
-    Object.defineProperty(window.HTMLMediaElement.prototype, "currentTime", {
-      configurable: true,
-      writable: true,
-      value: 0,
-    })
+    const { play } = mockMediaElement()
 
     render(<SessionTranscriptViewer transcript={transcript} />)
 
@@ -71,6 +86,85 @@ describe("SessionTranscriptViewer", () => {
     const video = document.querySelector("video")
     expect(video).toBeTruthy()
     expect((video as HTMLVideoElement).currentTime).toBe(30)
+  })
+
+  it("keeps the external progress clock in sync with native video playback", () => {
+    mockMediaElement()
+    render(<SessionTranscriptViewer transcript={transcript} />)
+
+    expect(screen.getByText("00:00 / 00:40")).toBeInTheDocument()
+
+    const video = document.querySelector("video") as HTMLVideoElement
+    expect(video).toBeTruthy()
+
+    act(() => {
+      Object.defineProperty(video, "currentTime", { configurable: true, writable: true, value: 162 })
+      Object.defineProperty(video, "duration", { configurable: true, writable: true, value: 1306 })
+      fireEvent.loadedMetadata(video)
+      fireEvent.play(video)
+      fireEvent.timeUpdate(video)
+    })
+
+    expect(screen.getByText("02:42 / 21:46")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Pause recording" })).toBeInTheDocument()
+  })
+
+  it("does not reset playback progress when transcript segments are a new array reference", () => {
+    mockMediaElement()
+    const { rerender } = render(<SessionTranscriptViewer transcript={transcript} />)
+    const video = document.querySelector("video") as HTMLVideoElement
+
+    act(() => {
+      Object.defineProperty(video, "currentTime", { configurable: true, writable: true, value: 162 })
+      Object.defineProperty(video, "duration", { configurable: true, writable: true, value: 1306 })
+      fireEvent.loadedMetadata(video)
+      fireEvent.play(video)
+      fireEvent.timeUpdate(video)
+    })
+    expect(screen.getByText("02:42 / 21:46")).toBeInTheDocument()
+
+    rerender(
+      <SessionTranscriptViewer
+        transcript={{
+          ...transcript,
+          segments: transcript.segments.map((segment) => ({ ...segment })),
+        }}
+      />,
+    )
+
+    expect(screen.getByText("02:42 / 21:46")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Pause recording" })).toBeInTheDocument()
+  })
+
+  it("seeks the video when the external progress bar is clicked", async () => {
+    const user = userEvent.setup()
+    mockMediaElement()
+    render(<SessionTranscriptViewer transcript={transcript} />)
+
+    const video = document.querySelector("video") as HTMLVideoElement
+    act(() => {
+      Object.defineProperty(video, "duration", { configurable: true, writable: true, value: 40 })
+      fireEvent.loadedMetadata(video)
+    })
+
+    const scrubber = screen.getByRole("slider", { name: "Seek recording" })
+    scrubber.getBoundingClientRect = () =>
+      ({
+        x: 0,
+        y: 0,
+        width: 100,
+        height: 26,
+        top: 0,
+        left: 0,
+        bottom: 26,
+        right: 100,
+        toJSON: () => ({}),
+      }) as DOMRect
+
+    await user.pointer({ keys: "[MouseLeft]", target: scrubber, coords: { clientX: 50, clientY: 13 } })
+
+    expect(video.currentTime).toBe(20)
+    expect(screen.getByText("00:20 / 00:40")).toBeInTheDocument()
   })
 
   it("copies transcript text to the clipboard", async () => {
